@@ -4,14 +4,27 @@ declare(strict_types=1);
 
 namespace ParcelMap\Bootstrap;
 
+use ParcelMap\Application\Map\GetMapConfiguration;
+use ParcelMap\Handler\GetMapConfigurationHandler;
 use ParcelMap\Handler\Http\HttpKernel;
+use ParcelMap\Handler\Http\Route;
 use ParcelMap\Handler\Http\Router;
 use ParcelMap\Handler\Http\StderrErrorReporter;
+use ParcelMap\Infrastructure\Map\StaticMapSettings;
 
 final readonly class Container
 {
     public function httpKernel(): HttpKernel
     {
-        return new HttpKernel(new Router(), new StderrErrorReporter());
+        return new HttpKernel(
+            new Router(
+                new Route(
+                    'GET',
+                    '/api/map-config',
+                    new GetMapConfigurationHandler(new GetMapConfiguration(new StaticMapSettings())),
+                ),
+            ),
+            new StderrErrorReporter(),
+        );
     }
 }

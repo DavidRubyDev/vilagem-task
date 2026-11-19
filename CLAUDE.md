@@ -242,3 +242,10 @@ Source-data term (Czech) → name used in code.
 | katastr nemovitostí (KN)              | Cadastre             |                                                                |
 | RÚIAN, VFR                            | —                    | ČÚZK register and its exchange format (data source).           |
 | S-JTSK (EPSG:5514)                    | —                    | Source coordinate system; the map uses WGS84 / Web Mercator.   |
+| —                                     | `Coordinates`        | WGS84 longitude/latitude in degrees. Longitude first, as in MapLibre and GeoJSON. |
+| —                                     | `ZoomLevel`          | Web map zoom, 0–24 (MapLibre zoom, fractional allowed).        |
+| —                                     | `MapView`            | Camera position the map opens with: center + zoom.             |
+| —                                     | `BaseMap`            | Background raster tile layer under the data (OSM in task 001). |
+| —                                     | `TileUrlTemplate`    | `https` URL with `{z}`, `{x}`, `{y}` placeholders.             |
+| —                                     | `Attribution`        | Required data credit shown on the map: text + link.            |
+| —                                     | Map configuration    | What the frontend needs to start the map: initial `MapView` + `BaseMap` (`GET /api/map-config`). |

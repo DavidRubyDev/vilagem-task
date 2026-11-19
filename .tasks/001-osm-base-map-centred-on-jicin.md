@@ -1187,3 +1187,17 @@ Filled in by the implement agent, one entry per step.
   once over the new files.
 - `.deptrac.cache` (deptrac default cache location) is git-ignored.
 - Manual deptrac check of the layer rule is done in step 2, when a Domain class exists.
+
+### Step 2: Map configuration API
+
+- Built as planned: Domain `Map` value objects and exceptions, Application port/use case/DTOs,
+  `StaticMapSettings`, `GetMapConfigurationHandler`, route in `Container`, fake
+  `tests/Fake/InMemoryMapSettings.php`, unit tests, API tests, Glossary rows, README status.
+- Outer API test first: it failed with 404 / 404 where 200 / 405 were expected.
+- A unit test caught a real bug: `sprintf('%s', NAN)` raises a PHP warning ("unexpected NAN value
+  was coerced to string") in `InvalidZoomLevel::outOfRange`. It now formats the value with
+  `var_export`. `InvalidCoordinates` is not affected (its range messages only see finite values).
+- PHPStan rejects data provider arrays with integer keys declared `array<string, …>`, so those
+  providers use descriptive string keys.
+- Manual deptrac check done and not committed: a Domain class using `PHPUnit\Framework\TestCase`
+  and a Handler class using a Domain and an Infrastructure class gave 3 violations and exit 2.

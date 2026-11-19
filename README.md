@@ -6,8 +6,9 @@ district is in view.
 
 Built as an interview task for Viagem a.s.
 
-> **Status:** the walking skeleton exists (HTTP front controller, router, tooling, CI). Every
-> request is answered with a JSON 404 for now. The application itself is built in the tasks in
+> **Status:** the walking skeleton exists (HTTP front controller, router, tooling, CI) and
+> `GET /api/map-config` serves the initial map view (Jičín, zoom 12) and the OpenStreetMap base
+> map. Every other path answers a JSON 404 for now. The application itself is built in the tasks in
 > [`.tasks/`](.tasks/). This README is updated as features land.
 
 ## Prerequisites
@@ -25,7 +26,8 @@ docker compose build
 docker compose up        # http://localhost:8000 (also: make up)
 ```
 
-At this stage every path answers `404 {"error":"not_found"}`.
+`GET /api/map-config` returns the map configuration; every other path answers
+`404 {"error":"not_found"}`.
 
 ## Testing and QA
 
@@ -76,7 +78,7 @@ Hexagonal architecture with DDD, written in plain PHP (no framework):
 | `Domain`         | Parcels, cadastral areas and their rules. No dependencies.          |
 | `Application`    | Use cases and the ports they need.                                  |
 | `Infrastructure` | Outbound adapters: data storage, ČÚZK data download, geo tooling.   |
-| `Handler`        | Inbound HTTP adapters (map tiles, parcel detail API).               |
+| `Handler`        | Inbound HTTP adapters (map configuration, later tiles and parcel detail). |
 | `Command`        | Inbound CLI adapters (data download and import).                    |
 
 The data is downloaded from ČÚZK and preprocessed ahead of time. It is not fetched live at
