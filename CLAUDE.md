@@ -14,6 +14,7 @@ design decision.
 - Frontend: MapLibre GL JS (open choice, decided per task).
 - Data: ČÚZK open data (RÚIAN / INSPIRE), downloaded and preprocessed ahead of time,
   not fetched live at request time.
+- Everything runs in Docker. Do not rely on tools installed on the host.
 - Language: English everywhere (code, comments, tests, commits, docs, task files).
   Czech terms appear only where they name source data (see Glossary).
 
@@ -195,6 +196,20 @@ and the implement agent.
 - History is rewritten only on task branches, never on `main`. If the developer has already
   pushed the branch, say so in the report: they will need to force-push
   (`--force-with-lease`).
+
+## Commands
+
+All commands run inside Docker. The test/QA scripts are created by the first task (walking
+skeleton); until then only the Docker image exists.
+
+```bash
+docker compose build                 # build the image
+docker compose up                    # run the app at http://localhost:8000
+docker compose run --rm app <cmd>    # run any command in the app container
+```
+
+When the first task adds Composer/npm scripts or a Makefile, update this section in the same
+commit.
 
 ## Glossary
 

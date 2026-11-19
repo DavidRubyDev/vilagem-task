@@ -9,6 +9,22 @@ Built as an interview task for Viagem a.s.
 > **Status:** repository setup. The application itself is built in the tasks in
 > [`.tasks/`](.tasks/). This README is updated as features land.
 
+## Prerequisites
+
+- Docker 24+ with Docker Compose v2
+
+Nothing else is required on the host. PHP 8.6, Composer and all other tooling run inside the
+container.
+
+## Running
+
+```bash
+docker compose build
+docker compose up        # http://localhost:8000
+```
+
+Commands for tests, QA and data import are added with the first tasks and documented here.
+
 ## Architecture
 
 Hexagonal architecture with DDD, written in plain PHP (no framework):
@@ -55,6 +71,9 @@ A running log of decisions, surprises and what I would do with more time.
   costs about the same as covering four cadastral areas.
 - **Plain PHP, hexagonal architecture.** No framework; the domain stays independent of storage
   and delivery, so the storage can change (e.g. to PostGIS) without touching the domain.
+- **Docker for everything.** Same PHP version and tools on every machine.
+- **PHP 8.6.** It is still at the RC stage at the time of setup (`php:8.6-rc-cli` image). The
+  Dockerfile switches to the GA image once it is released.
 
 ### Surprises
 

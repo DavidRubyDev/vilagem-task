@@ -36,6 +36,8 @@ translate it into code faithfully, not to redesign it.
    together, everything green at that commit. Conventional Commits with the task number.
    Never push.
 
+Run all commands inside Docker, as described in CLAUDE.md.
+
 ## When to stop and report instead of continuing
 
 - The task file is ambiguous, contradicts itself, contradicts CLAUDE.md, or contradicts the
