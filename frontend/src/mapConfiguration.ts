@@ -11,6 +11,8 @@ export interface MapConfiguration {
   };
 }
 
+export class MapConfigurationError extends Error {}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -39,11 +41,27 @@ function isMapConfiguration(value: unknown): value is MapConfiguration {
   );
 }
 
+async function fetchBody(fetchFn: typeof fetch, url: string): Promise<unknown> {
+  let response: Response;
+  try {
+    response = await fetchFn(url, { headers: { Accept: 'application/json' } });
+  } catch (error) {
+    throw new MapConfigurationError(`The map configuration could not be requested: ${String(error)}`, { cause: error });
+  }
+  if (!response.ok) {
+    throw new MapConfigurationError(`The map configuration request failed with status ${String(response.status)}.`);
+  }
+  try {
+    return await response.json();
+  } catch (error) {
+    throw new MapConfigurationError('The map configuration is not valid JSON.', { cause: error });
+  }
+}
+
 export async function loadMapConfiguration(fetchFn: typeof fetch, url: string): Promise<MapConfiguration> {
-  const response = await fetchFn(url, { headers: { Accept: 'application/json' } });
-  const body: unknown = await response.json();
+  const body = await fetchBody(fetchFn, url);
   if (!isMapConfiguration(body)) {
-    throw new Error('The map configuration has an unexpected shape.');
+    throw new MapConfigurationError('The map configuration is missing a field or has a field of the wrong type.');
   }
   return body;
 }

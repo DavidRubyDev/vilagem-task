@@ -15,6 +15,8 @@ export interface TileLog {
 
 interface Fixtures {
   offlineTiles: TileLog;
+  /** Console error messages matching one of these patterns are not failures (e.g. a stubbed 500). */
+  allowedConsoleErrors: RegExp[];
 }
 
 /**
@@ -23,8 +25,13 @@ interface Fixtures {
  * traffic that forces tile rendering.
  */
 export const test = base.extend<Fixtures>({
+  // Playwright requires the destructuring pattern, even when empty.
+  // eslint-disable-next-line no-empty-pattern
+  allowedConsoleErrors: async ({}, use) => {
+    await use([]);
+  },
   offlineTiles: [
-    async ({ context, baseURL }, use) => {
+    async ({ context, baseURL, allowedConsoleErrors }, use) => {
       const appOrigin = new URL(baseURL ?? 'http://parcel-map:8000').origin;
       const tiles: string[] = [];
       const waiters: { tile: string; resolve: () => void }[] = [];
@@ -56,7 +63,10 @@ export const test = base.extend<Fixtures>({
           pageErrors.push(error.message);
         });
         page.on('console', (message) => {
-          if (message.type() === 'error' && !message.text().includes('GL Driver Message')) {
+          const text = message.text();
+          const allowed =
+            text.includes('GL Driver Message') || allowedConsoleErrors.some((pattern) => pattern.test(text));
+          if (message.type() === 'error' && !allowed) {
             consoleErrors.push(message.text());
           }
         });

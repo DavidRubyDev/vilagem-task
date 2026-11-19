@@ -1,6 +1,6 @@
 # 001: OSM base map centred on Jičín
 
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-11-19
 - **Request:** "The first end-user MVP: a web page showing an OpenStreetMap base map centred on
   Jičín (the district town, Czech Republic), with tests. No parcels, no ČÚZK data, no import
@@ -1236,3 +1236,17 @@ Filled in by the implement agent, one entry per step.
   gzip); a grep of `frontend/src` finds no `.on(` / `move` / `render` listeners; the E2E first
   tile request happens well within the 5 s wait (a whole test takes about 0.3 s). I did not look
   at the page in a visible browser; the headless E2E covers rendering.
+
+### Step 4: Error state
+
+- Built as planned: `MapConfigurationError` and the validation in `loadMapConfiguration`
+  (network error, non-2xx, non-JSON body, wrong shape), error rendering in `main.ts`, `.map-error`
+  CSS, 7 new Vitest cases, `tests/E2E/map-error.spec.ts`. Vitest (7 failed) and the E2E case
+  (alert not found, page error) were seen red before the code.
+- Below plan level: `main.ts` wraps everything after finding `#map` in one `try/catch`, logs
+  `console.warn` and calls `showError`. A missing `#map` element still throws, because the page
+  shell is then broken, not the configuration.
+- The offline-tiles fixture fails on console errors, and the browser logs the stubbed 500 as one.
+  The fixture therefore gained a plain fixture `allowedConsoleErrors: RegExp[]`; the error spec
+  adds `/status of 500/`. Page errors (uncaught exceptions) still fail the test.
+- README status line needs no change.
