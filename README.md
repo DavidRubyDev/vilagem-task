@@ -6,9 +6,9 @@ district is in view.
 
 Built as an interview task for Viagem a.s.
 
-> **Status:** the walking skeleton exists (HTTP front controller, router, tooling, CI) and
-> `GET /api/map-config` serves the initial map view (Jičín, zoom 12) and the OpenStreetMap base
-> map. Every other path answers a JSON 404 for now. The application itself is built in the tasks in
+> **Status:** the map page works: http://localhost:8000 shows an OpenStreetMap base map centred
+> on Jičín (zoom 12) with the OSM attribution. `GET /api/map-config` serves the map
+> configuration. Parcels are not shown yet. The application is built in the tasks in
 > [`.tasks/`](.tasks/). This README is updated as features land.
 
 ## Prerequisites
@@ -23,28 +23,42 @@ container.
 
 ```bash
 docker compose build
-docker compose up        # http://localhost:8000 (also: make up)
+docker compose up        # installs dependencies, builds the frontend, serves http://localhost:8000
 ```
 
-`GET /api/map-config` returns the map configuration; every other path answers
-`404 {"error":"not_found"}`.
+`docker compose up` runs a one-shot `node` service (`npm ci && npm run build`), then starts the
+PHP server. The first run pulls the Playwright image (about 2 GB), which is also used for all
+Node tooling. `GET /` is the map page, `GET /api/map-config` the map configuration, and every
+other path answers `404 {"error":"not_found"}`.
+
+### Frontend
+
+TypeScript, built with Vite, MapLibre GL JS from npm (bundled, no CDN). Edit `frontend/`, then run
+`make assets` or keep `make watch` running. The build goes to `public/build/` (git-ignored).
 
 ## Testing and QA
 
 `make` wraps `docker compose`; the plain command is shown for each target. `PHP` below means
-`docker compose run --rm --no-deps app`.
+`docker compose run --rm --no-deps app` and `NODE` means `docker compose run --rm --no-deps node`.
 
 | Make target       | Plain command                                                                 | What it does                                  |
 |-------------------|-------------------------------------------------------------------------------|-----------------------------------------------|
 | `make check`      | (runs every check group, see below)                                           | Full local check, same groups as CI           |
-| `make qa`         | `cs`, `phpstan`, `deptrac`, `lint-ci`                                          | All static checks                             |
-| `make test`       | `test-unit`, `test-api`                                                       | All tests                                     |
+| `make qa`         | `cs`, `phpstan`, `deptrac`, `lint-ci`, `typecheck`, `lint-frontend`           | All static checks                             |
+| `make test`       | `test-unit`, `test-api`, `test-frontend`, `test-e2e`                          | All tests                                     |
 | `make test-unit`  | `PHP vendor/bin/phpunit --testsuite unit`                                     | Unit tests                                    |
 | `make test-api`   | `docker compose up -d --wait --no-deps app`, then `PHP vendor/bin/phpunit --testsuite api` | API tests over real HTTP         |
 | `make cs`         | `PHP vendor/bin/php-cs-fixer check --diff`                                    | Code style (PER-CS)                           |
 | `make cs-fix`     | `PHP vendor/bin/php-cs-fixer fix`                                             | Fix code style                                |
 | `make phpstan`    | `PHP vendor/bin/phpstan analyse --no-progress`                                | Static analysis, level max                    |
 | `make deptrac`    | `PHP vendor/bin/deptrac analyse --no-progress --fail-on-uncovered --report-uncovered` | Layer dependency rules                |
+| `make typecheck`  | `NODE npm run typecheck`                                                      | `tsc -b`                                      |
+| `make lint-frontend` | `NODE npm run lint`, `NODE npm run format:check`                           | ESLint (type-aware) and Prettier check        |
+| `make format`     | `PHP vendor/bin/php-cs-fixer fix`, `NODE npm run format`                      | Format PHP and frontend code                  |
+| `make test-frontend` | `NODE npm test`                                                            | Vitest unit tests                             |
+| `make test-e2e`   | `docker compose up -d --wait --no-deps app`, then `NODE npm run e2e`          | Playwright E2E (needs `make assets` first)    |
+| `make assets`     | `NODE npm ci`, `NODE npm run build`                                           | Build the frontend into `public/build/`       |
+| `make watch`      | `NODE npm run watch`                                                          | Rebuild the frontend on change                |
 | `make lint-ci`    | `docker run --rm -v "$PWD":/repo -w /repo rhysd/actionlint:1.7.12 .github/workflows/ci.yml` | Lint the GitHub workflow        |
 
 Run `composer install` first (`make install-php`); the `make` check groups do it for you.
@@ -118,6 +132,15 @@ A running log of decisions, surprises and what I would do with more time.
 - **Docker for everything.** Same PHP version and tools on every machine.
 - **PHP 8.6.** It is still at the RC stage at the time of setup (`php:8.6-rc-cli` image). The
   Dockerfile switches to the GA image once it is released.
+- **Vite with fixed asset names** (`/build/app.js`, `/build/app.css`). The hand-written HTML
+  shell can reference them without a manifest. Cost: no cache-busting yet.
+- **The Playwright image is used for all Node tooling.** One platform (glibc) for `node_modules`.
+  The image and `@playwright/test` must have the same version; bump them together.
+- **TypeScript 6.0.3** until typescript-eslint supports TypeScript 7.
+- **E2E tests never contact OpenStreetMap.** Tiles are stubbed in the browser and any other
+  request that leaves the app fails the test (the OSM tile policy forbids automated traffic).
+- **E2E reaches the app as `parcel-map`, not `app`.** Chromium treats the single-label host `app`
+  as the HSTS-preloaded `.app` TLD and upgrades it to HTTPS.
 - **PHP-CS-Fixer runs with `setUnsupportedPhpVersionAllowed(true)`** until it supports PHP 8.6.
 
 ### Surprises

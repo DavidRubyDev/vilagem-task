@@ -37,7 +37,18 @@ jobs:
           path: var/cache/composer
           key: composer-${{ hashFiles('composer.lock') }}
           restore-keys: composer-
+      - uses: actions/cache@v6
+        with:
+          path: var/cache/npm
+          key: npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: npm-
       - run: make ${{ matrix.target }}
+      - if: failure() && matrix.target == 'e2e'
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-results
+          path: var/playwright
+          if-no-files-found: ignore
   check: # the only required status check; stable when groups are added
     name: check
     needs: [targets, run]

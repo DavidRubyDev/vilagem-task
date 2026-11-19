@@ -1,11 +1,35 @@
 services:
+  node:
+    # Must equal the @playwright/test version in package.json; bump both together.
+    image: mcr.microsoft.com/playwright:v1.65.1-noble
+    user: '${UID:-1000}:${GID:-1000}'
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      HOME: /tmp
+      npm_config_cache: /app/var/cache/npm
+      CI: '${CI:-}'
+    init: true
+    ipc: host
+    command: ['sh', '-c', 'npm ci --no-audit --no-fund && npm run build']
+
   app:
     build: .
-    user: "${UID:-1000}:${GID:-1000}"
+    user: '${UID:-1000}:${GID:-1000}'
     volumes:
       - .:/app
     ports:
-      - "8000:8000"
+      - '8000:8000'
+    networks:
+      default:
+        aliases:
+          # Chromium treats the single-label host "app" as the HSTS-preloaded .app TLD and upgrades
+          # it to HTTPS, so the E2E tests reach the app under this name instead.
+          - parcel-map
+    depends_on:
+      node:
+        condition: service_completed_successfully
     environment:
       COMPOSER_CACHE_DIR: /app/var/cache/composer
     command:
@@ -13,7 +37,7 @@ services:
       - -c
       - composer install --no-interaction --no-progress && exec php -S 0.0.0.0:8000 -t public
     healthcheck:
-      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 8000) ? 0 : 1);"]
+      test: ['CMD', 'php', '-r', "exit(@fsockopen('127.0.0.1', 8000) ? 0 : 1);"]
       interval: 2s
       timeout: 2s
       retries: 60

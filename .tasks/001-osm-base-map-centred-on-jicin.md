@@ -1201,3 +1201,38 @@ Filled in by the implement agent, one entry per step.
   providers use descriptive string keys.
 - Manual deptrac check done and not committed: a Domain class using `PHPUnit\Framework\TestCase`
   and a Handler class using a Domain and an Infrastructure class gave 3 violations and exit 2.
+
+### Step 3: Map page
+
+- Built as planned: `ShowMapPageHandler` + `MapPageUnavailable`, frontend (`index.html`,
+  `mapConfiguration.ts`, `mapOptions.ts`, `main.ts`, `app.css`), all Node tooling and configs,
+  compose `node` service, Makefile Node targets and group `frontend-checks e2e`, CI npm cache and
+  Playwright artifact upload, API test of `GET /`, Vitest tests, Playwright fixture and spec,
+  README and CLAUDE.md updates. `make format` was run once; `make check` is green (actionlint,
+  PHP QA, unit, API, tsc, ESLint, Prettier, Vitest, Playwright).
+- Test order: Vitest tests were written first and seen failing (missing modules). The API test
+  of `GET /` and the E2E specs were written before the production code too, but I did not run
+  them red before writing the handler and frontend (I wrote the whole slice, then ran it).
+- Deviation (surprise, contradicts the plan's `http://app:8000`): Chromium does not reach the
+  app as `http://app:8000`. It treats the single-label host `app` as the HSTS-preloaded `.app`
+  TLD and upgrades to HTTPS; the PHP server logged "Unsupported SSL request" and Playwright saw
+  `ERR_CONNECTION_CLOSED`. Fix: the `app` service gets the network alias `parcel-map` in
+  `compose.yaml`, and the Playwright default `baseURL` (and the fixture fallback) is
+  `http://parcel-map:8000`. PHPUnit's `APP_URL` stays `http://app:8000` (curl is not affected).
+  `APP_URL` still overrides both.
+- Deviation: step 1 left `Container` without a constructor; this step adds
+  `__construct(private string $projectDir)` and `new Container(dirname(__DIR__))` in
+  `public/index.php`, as the plan describes.
+- `main.ts` uses top-level `await start()` so ESLint `no-floating-promises` is satisfied; step 4
+  wraps it in the error handling. In this step `loadMapConfiguration` throws a plain `Error` for
+  an unexpected shape; step 4 replaces it with `MapConfigurationError` and tests the failures.
+- ESLint `strictTypeChecked` forbids void-returning arrow shorthands, so the E2E fixture uses
+  braces / `for` loops. `make test` includes `test-e2e`, which needs `public/build/` to exist
+  (`make assets`); the `e2e` group does that itself.
+- Clean-clone check: after deleting `vendor/`, `node_modules/` and `public/build/`,
+  `docker compose up -d --wait app` took about 5 s (warm image and caches), built the frontend,
+  and `curl` of `/` and `/api/map-config` answered correctly.
+- Performance checks (manual): `app.js` is the Vite production build (1.06 MB minified, 293 kB
+  gzip); a grep of `frontend/src` finds no `.on(` / `move` / `render` listeners; the E2E first
+  tile request happens well within the 5 s wait (a whole test takes about 0.3 s). I did not look
+  at the page in a visible browser; the headless E2E covers rendering.

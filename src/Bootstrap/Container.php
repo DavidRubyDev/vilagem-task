@@ -10,10 +10,13 @@ use ParcelMap\Handler\Http\HttpKernel;
 use ParcelMap\Handler\Http\Route;
 use ParcelMap\Handler\Http\Router;
 use ParcelMap\Handler\Http\StderrErrorReporter;
+use ParcelMap\Handler\ShowMapPageHandler;
 use ParcelMap\Infrastructure\Map\StaticMapSettings;
 
 final readonly class Container
 {
+    public function __construct(private string $projectDir) {}
+
     public function httpKernel(): HttpKernel
     {
         return new HttpKernel(
@@ -23,6 +26,7 @@ final readonly class Container
                     '/api/map-config',
                     new GetMapConfigurationHandler(new GetMapConfiguration(new StaticMapSettings())),
                 ),
+                new Route('GET', '/', new ShowMapPageHandler($this->projectDir . '/frontend/index.html')),
             ),
             new StderrErrorReporter(),
         );

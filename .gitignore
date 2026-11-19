@@ -3,3 +3,5 @@
 /vendor/
 /var/
 /.deptrac.cache
+/node_modules/
+/public/build/
