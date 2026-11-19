@@ -199,17 +199,28 @@ and the implement agent.
 
 ## Commands
 
-All commands run inside Docker. The test/QA scripts are created by the first task (walking
-skeleton); until then only the Docker image exists.
+All commands run inside Docker. `make` (GNU make, a host tool) wraps `docker compose`; the plain
+form is shown where useful. `PHP` below means `docker compose run --rm --no-deps app`.
 
 ```bash
+make check          # full test + QA (what CI runs, one after another); use for git rebase --exec
+make qa             # cs phpstan deptrac lint-ci
+make test           # test-unit test-api
+make test-unit      # PHP vendor/bin/phpunit --testsuite unit
+make test-api       # starts the app, then PHP vendor/bin/phpunit --testsuite api
+make cs             # PHP vendor/bin/php-cs-fixer check --diff   (make cs-fix fixes)
+make phpstan        # PHP vendor/bin/phpstan analyse --no-progress
+make deptrac        # PHP vendor/bin/deptrac analyse --no-progress --fail-on-uncovered --report-uncovered
+make lint-ci        # actionlint on .github/workflows/ci.yml
+make up / make down # docker compose up / down (app at http://localhost:8000)
 docker compose build                 # build the image
-docker compose up                    # run the app at http://localhost:8000
 docker compose run --rm app <cmd>    # run any command in the app container
 ```
 
-When the first task adds Composer/npm scripts or a Makefile, update this section in the same
-commit.
+`make check` runs the groups in `CHECK_TARGETS` (Makefile); CI runs the same groups as parallel
+jobs. Add a group there and CI follows.
+
+When a task adds targets or prerequisites, update this section in the same commit.
 
 ## Glossary
 

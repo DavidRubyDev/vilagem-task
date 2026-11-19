@@ -1,6 +1,6 @@
 # 001: OSM base map centred on Jičín
 
-- **Status:** approved
+- **Status:** in-progress
 - **Created:** 2026-11-19
 - **Request:** "The first end-user MVP: a web page showing an OpenStreetMap base map centred on
   Jičín (the district town, Czech Republic), with tests. No parcels, no ČÚZK data, no import
@@ -1164,3 +1164,26 @@ Observable, checkable outcomes, including performance where relevant.
 ## Implementation log
 
 Filled in by the implement agent, one entry per step.
+
+### Step 1: Walking skeleton
+
+- Built as planned: Dockerfile `mbstring`, compose `app` service, Composer project (PHPUnit
+  13.4.8, PHPStan 2.3.7, PHP-CS-Fixer 3.95.x, deptrac 4.7.x), config files, Makefile, CI
+  workflow, HTTP plumbing, API test and unit tests. `make check` passes (actionlint included).
+- Outer test first: the API test failed with `text/html; charset=UTF-8` (the PHP server's
+  default 404) before the code existed; unit tests failed on missing classes.
+- Deviation 1: `Request::fromServer` is documented `@param array<mixed> $server` instead of
+  `array<string, mixed>`, because PHPStan max types `$_SERVER` as `array<mixed>` and rejects the
+  narrower type at the call site in `public/index.php`.
+- Deviation 2: `Container` has no constructor in this step and `public/index.php` calls
+  `new Container()`. A promoted `$projectDir` that nothing reads fails PHPStan
+  (`property.onlyWritten`). Step 3 adds the constructor with `$projectDir` and the argument in
+  `index.php`, when `ShowMapPageHandler` first needs it.
+- Below plan level: the test HTTP client is `tests/Api/HttpClient.php` + `HttpResult.php`
+  (curl, with a message pointing to `make up-app` when the app is unreachable). Unit test fakes
+  (`FixedResponseHandler`, `ThrowingHandler`, `RecordingErrorReporter`) live next to the tests in
+  `tests/Unit/Handler/Http/`. `Response::methodNotAllowed` joins several methods with `, `.
+  `.php-cs-fixer` reformats empty constructors to `{}` on one line (PER-CS), so the fixer was run
+  once over the new files.
+- `.deptrac.cache` (deptrac default cache location) is git-ignored.
+- Manual deptrac check of the layer rule is done in step 2, when a Domain class exists.

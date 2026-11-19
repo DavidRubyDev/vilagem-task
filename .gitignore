@@ -1,2 +1,5 @@
 # Local Claude settings
 .claude/settings.local.json
+/vendor/
+/var/
+/.deptrac.cache

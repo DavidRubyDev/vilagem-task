@@ -1,0 +1,57 @@
+deptrac:
+  paths:
+    - ./src
+  layers:
+    - name: Domain
+      collectors:
+        - type: classLike
+          value: '^ParcelMap\\Domain\\.*'
+    - name: Application
+      collectors:
+        - type: classLike
+          value: '^ParcelMap\\Application\\.*'
+    - name: Infrastructure
+      collectors:
+        - type: classLike
+          value: '^ParcelMap\\Infrastructure\\.*'
+    - name: Handler
+      collectors:
+        - type: classLike
+          value: '^ParcelMap\\Handler\\.*'
+    - name: Command
+      collectors:
+        - type: classLike
+          value: '^ParcelMap\\Command\\.*'
+    - name: Bootstrap
+      collectors:
+        - type: classLike
+          value: '^ParcelMap\\Bootstrap\\.*'
+    - name: Vendor
+      collectors:
+        - type: bool
+          must:
+            - type: classLike
+              value: '^(?!ParcelMap\\).*'
+          must_not:
+            - type: php_internal
+              value: '.*'
+  ruleset:
+    Domain: ~
+    Application:
+      - Domain
+    Infrastructure:
+      - Domain
+      - Application
+      - Vendor
+    Handler:
+      - Application
+    Command:
+      - Application
+    Bootstrap:
+      - Domain
+      - Application
+      - Infrastructure
+      - Handler
+      - Command
+      - Vendor
+    Vendor: ~

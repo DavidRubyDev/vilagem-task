@@ -6,3 +6,14 @@ services:
       - .:/app
     ports:
       - "8000:8000"
+    environment:
+      COMPOSER_CACHE_DIR: /app/var/cache/composer
+    command:
+      - sh
+      - -c
+      - composer install --no-interaction --no-progress && exec php -S 0.0.0.0:8000 -t public
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 8000) ? 0 : 1);"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
