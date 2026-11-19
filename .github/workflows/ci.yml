@@ -1,0 +1,61 @@
+name: CI
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  targets: # reads the check groups from the Makefile (single source of truth)
+    name: targets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      list: ${{ steps.list.outputs.list }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: list
+        run: echo "list=$(make --no-print-directory -s ci-targets)" >> "$GITHUB_OUTPUT"
+  run:
+    name: ${{ matrix.target }}
+    needs: targets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.targets.outputs.list) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: var/cache/composer
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+      - uses: actions/cache@v6
+        with:
+          path: var/cache/npm
+          key: npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: npm-
+      - run: make ${{ matrix.target }}
+      - if: failure() && matrix.target == 'e2e'
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-results
+          path: var/playwright
+          if-no-files-found: ignore
+  check: # the only required status check; stable when groups are added
+    name: check
+    needs: [targets, run]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every job to succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1

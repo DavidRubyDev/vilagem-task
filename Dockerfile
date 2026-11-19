@@ -6,7 +6,8 @@ FROM composer:2 AS composer
 FROM ${PHP_IMAGE}
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git unzip \
+    && apt-get install -y --no-install-recommends git unzip libonig-dev \
+    && docker-php-ext-install -j"$(nproc)" mbstring \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer

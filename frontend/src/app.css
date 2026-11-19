@@ -1,0 +1,28 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+#map {
+  position: absolute;
+  inset: 0;
+}
+
+.map-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 24rem;
+  margin: 0;
+  padding: 1rem 1.5rem;
+  font:
+    1rem/1.4 system-ui,
+    sans-serif;
+  color: #5c1a1a;
+  background: #fdecec;
+  border: 1px solid #e0a3a3;
+  border-radius: 6px;
+  text-align: center;
+}

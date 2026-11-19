@@ -199,17 +199,35 @@ and the implement agent.
 
 ## Commands
 
-All commands run inside Docker. The test/QA scripts are created by the first task (walking
-skeleton); until then only the Docker image exists.
+All commands run inside Docker. `make` (GNU make, a host tool) wraps `docker compose`; the plain
+form is shown where useful. `PHP` below means `docker compose run --rm --no-deps app`, `NODE` means
+`docker compose run --rm --no-deps node` (the Playwright image; Node, Vite and Chromium).
 
 ```bash
+make check          # full test + QA (what CI runs, one after another); use for git rebase --exec
+make qa             # cs phpstan deptrac lint-ci typecheck lint-frontend
+make test           # test-unit test-api test-frontend test-e2e (run make assets first)
+make test-unit      # PHP vendor/bin/phpunit --testsuite unit
+make test-api       # starts the app, then PHP vendor/bin/phpunit --testsuite api
+make cs             # PHP vendor/bin/php-cs-fixer check --diff   (make cs-fix fixes)
+make phpstan        # PHP vendor/bin/phpstan analyse --no-progress
+make deptrac        # PHP vendor/bin/deptrac analyse --no-progress --fail-on-uncovered --report-uncovered
+make typecheck      # NODE npm run typecheck (tsc -b)
+make lint-frontend  # NODE npm run lint (ESLint) and npm run format:check (Prettier)
+make format         # cs-fix + NODE npm run format
+make test-frontend  # NODE npm test (Vitest)
+make test-e2e       # starts the app, then NODE npm run e2e (Playwright; needs make assets first)
+make assets         # NODE npm ci && npm run build -> public/build/   (make watch rebuilds on change)
+make lint-ci        # actionlint on .github/workflows/ci.yml
+make up / make down # docker compose up / down (app at http://localhost:8000)
 docker compose build                 # build the image
-docker compose up                    # run the app at http://localhost:8000
 docker compose run --rm app <cmd>    # run any command in the app container
 ```
 
-When the first task adds Composer/npm scripts or a Makefile, update this section in the same
-commit.
+`make check` runs the groups in `CHECK_TARGETS` (Makefile); CI runs the same groups as parallel
+jobs. Add a group there and CI follows.
+
+When a task adds targets or prerequisites, update this section in the same commit.
 
 ## Glossary
 
@@ -231,3 +249,10 @@ Source-data term (Czech) → name used in code.
 | katastr nemovitostí (KN)              | Cadastre             |                                                                |
 | RÚIAN, VFR                            | —                    | ČÚZK register and its exchange format (data source).           |
 | S-JTSK (EPSG:5514)                    | —                    | Source coordinate system; the map uses WGS84 / Web Mercator.   |
+| —                                     | `Coordinates`        | WGS84 longitude/latitude in degrees. Longitude first, as in MapLibre and GeoJSON. |
+| —                                     | `ZoomLevel`          | Web map zoom, 0–24 (MapLibre zoom, fractional allowed).        |
+| —                                     | `MapView`            | Camera position the map opens with: center + zoom.             |
+| —                                     | `BaseMap`            | Background raster tile layer under the data (OSM in task 001). |
+| —                                     | `TileUrlTemplate`    | `https` URL with `{z}`, `{x}`, `{y}` placeholders.             |
+| —                                     | `Attribution`        | Required data credit shown on the map: text + link.            |
+| —                                     | Map configuration    | What the frontend needs to start the map: initial `MapView` + `BaseMap` (`GET /api/map-config`). |
