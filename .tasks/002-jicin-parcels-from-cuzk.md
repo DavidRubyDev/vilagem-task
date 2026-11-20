@@ -1,6 +1,6 @@
 # 002: Jičín parcels from ČÚZK
 
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-11-20
 - **Request:** "Show the real land parcels of the cadastral area Jičín … on the existing map. The data
   comes from ČÚZK, downloaded ahead of time and served by our backend as vector tiles. A data
@@ -1063,3 +1063,20 @@ Filled in by the implement agent, one entry per step.
 - `landTypeFillColour()` builds the `match` expression from `LAND_TYPE_COLOURS` and casts through `unknown`
   because TypeScript cannot type a spread inside a `match` tuple.
 - The map-config Handler adds `Cache-Control: no-cache` and the `parcels` member as specified.
+
+### Step 6: no-data notice
+
+- Red run: `no-parcel-data.spec.ts` failed with `element(s) not found` for the status notice (the second test, no
+  notice when data exists, passes by nature before the change).
+- The notice has `pointer-events: none` so it never blocks the map or the zoom buttons.
+
+### Finish
+
+- `make data` against real ČÚZK: first run 9.8 s wall time (one 3.8 MB download, convert, tile build; image already
+  built), second run 8.1 s from the cache. 16,972 parcels, `data/tiles/parcels.mbtiles` 3.5 MB.
+- Performance, measured on the real tileset (all 5 areas) through the running app: the largest of the 334 tiles is
+  199,436 bytes (gzip, within the 200 KB budget); 100 sequential requests of `14/8890/5525` (127,842 bytes) on
+  localhost: median 2.5 ms, maximum 17 ms. The frontend adds no `move`/`render` listeners. NOT done (needs a
+  person with Chrome DevTools): the performance-panel check for long tasks over 50 ms while panning and zooming
+  between z12 and z16, and the visual check of the parcels over Jičín in a real browser with real data.
+- `make check` takes about 26 s (warm).

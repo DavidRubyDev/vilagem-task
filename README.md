@@ -26,7 +26,12 @@ container.
 ```bash
 docker compose build
 docker compose up        # installs dependencies, builds the frontend, serves http://localhost:8000
+make data                # once: download the ČÚZK parcels and build the tileset (see Data)
 ```
+
+Before `make data` the page shows only the OpenStreetMap base map and a notice, "Parcel data has not
+been imported yet. Run make data, then reload this page." After `make data`, reload the page: the parcels
+appear over Jičín.
 
 `docker compose up` runs a one-shot `node` service (`npm ci && npm run build`), then starts the
 PHP server. The first run pulls the Playwright image (about 2 GB), which is also used for all
