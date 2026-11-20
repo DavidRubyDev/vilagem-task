@@ -1144,3 +1144,15 @@ Filled in by the implement agent, one entry per step.
   is the last constructor parameter, as specified, so `ParcelConverterUsingOgr2ogrTest` passes `true`/`false`.
 - The "resume" API test stops the download server and reruns with the default fixture coverage, which needs only
   municipality 572659 that the failed run had cached.
+
+### Step 4: tile budget gate
+
+- Red runs seen: `TileSizeBudgetTest`, `ZoomTileStatisticsTest`, `TilesetStatisticsTest` (class not found);
+  `ImportParcelsUseCaseTest` (fatal: the fake builder's `build()` with a budget is incompatible with the old
+  interface); the API test of the statistics lines (stdout had no `Tiles per zoom level` section);
+  `TilesetInspectorUsingMbtilesTest`, the changed `TilesetBuilderUsingTippecanoeTest` (the budget test needed the
+  new signature). After the domain, application, inspector, builder and command changes everything was green.
+- The 1,000-byte budget test passes on the fixture; it asserts with SQL that no tile is larger, so it also guards
+  the tippecanoe option.
+- Below the plan's level: kB are printed with `%.1F` (locale independent); the inspector reads the tileset with
+  one grouped query and one prepared lookup per zoom level.

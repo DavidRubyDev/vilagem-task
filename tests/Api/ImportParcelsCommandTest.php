@@ -51,6 +51,29 @@ final class ImportParcelsCommandTest extends TestCase
     }
 
     #[Test]
+    public function it_prints_the_tile_statistics_per_zoom_level_before_the_published_line(): void
+    {
+        $result = $this->import(['parcels:import', '--export-date=2026-10-31']);
+
+        self::assertSame(0, $result->exitCode, $result->stderr);
+        self::assertStringContainsString("Tiles per zoom level (budget 200.0 kB per tile):\n", $result->stdout);
+        foreach (range(9, 16) as $zoom) {
+            self::assertMatchesRegularExpression(
+                sprintf('/^  zoom %d: \d+ tiles?, largest \d+\.\d kB$/m', $zoom),
+                $result->stdout,
+            );
+        }
+        self::assertLessThan(
+            (int) strpos($result->stdout, 'Published tileset'),
+            (int) strpos($result->stdout, '  zoom 16: '),
+        );
+        self::assertLessThan(
+            (int) strpos($result->stdout, '  zoom 9: '),
+            (int) strpos($result->stdout, 'Tiles per zoom level'),
+        );
+    }
+
+    #[Test]
     public function it_reports_the_progress_of_the_downloads_and_conversions(): void
     {
         $result = $this->import(['parcels:import', '--export-date=2026-10-31'], 'two-municipalities.csv');

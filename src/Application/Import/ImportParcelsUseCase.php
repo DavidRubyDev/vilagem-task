@@ -13,7 +13,10 @@ use ParcelMap\Domain\Cadastre\CoverageUnavailable;
 use ParcelMap\Domain\Cadastre\ExportDate;
 use ParcelMap\Domain\Cadastre\InvalidExportDate;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
+use ParcelMap\Domain\Map\TilesetStatistics;
 use ParcelMap\Domain\Map\TilesetVersion;
+use ParcelMap\Domain\Map\TileSizeBudget;
+use ParcelMap\Domain\Map\ZoomTileStatistics;
 
 final readonly class ImportParcelsUseCase
 {
@@ -22,8 +25,10 @@ final readonly class ImportParcelsUseCase
         private RuianExportDownloader $downloader,
         private ParcelConverter $converter,
         private TilesetBuilder $builder,
+        private TilesetInspector $inspector,
         private TilesetPublisher $publisher,
         private Clock $clock,
+        private TileSizeBudget $budget,
     ) {}
 
     /**
@@ -68,7 +73,9 @@ final readonly class ImportParcelsUseCase
         $exportDate = array_first($exports)->date;
         $totalParcels = array_sum(array_map(static fn(ConvertedParcels $parcels): int => $parcels->totalParcelCount(), $converted));
         $progress->tilesetBuildStarted($totalParcels);
-        $tileset = $this->builder->build($converted);
+        $tileset = $this->builder->build($converted, $this->budget);
+        $statistics = $this->inspector->inspect($tileset);
+        $this->requireWithinBudget($statistics);
         $version = TilesetVersion::fromTime($this->clock->now());
         $this->publisher->publish($tileset, $version, $exportDate);
 
@@ -77,6 +84,28 @@ final readonly class ImportParcelsUseCase
             $version->value,
             $areas,
             $totalParcels,
+            $this->budget->maxBytes,
+            array_map(
+                static fn(ZoomTileStatistics $zoom): ZoomTilesOutput => new ZoomTilesOutput($zoom->zoom, $zoom->tileCount, $zoom->largestTileBytes),
+                $statistics->zooms(),
+            ),
+        );
+    }
+
+    private function requireWithinBudget(TilesetStatistics $statistics): void
+    {
+        if ($statistics->fitsWithin($this->budget)) {
+            return;
+        }
+
+        $largest = $statistics->largest();
+
+        throw TilesetOverBudget::largestTile(
+            $largest->zoom,
+            $largest->largestTile->x,
+            $largest->largestTile->y,
+            $largest->largestTileBytes,
+            $this->budget->maxBytes,
         );
     }
 

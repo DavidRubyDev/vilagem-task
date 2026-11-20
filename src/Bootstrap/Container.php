@@ -11,6 +11,7 @@ use ParcelMap\Application\Map\GetParcelTileUseCase;
 use ParcelMap\Command\Console\ConsoleApplication;
 use ParcelMap\Command\GenerateCoverageCommand;
 use ParcelMap\Command\ImportParcelsCommand;
+use ParcelMap\Domain\Map\TileSizeBudget;
 use ParcelMap\Handler\GetMapConfigurationHandler;
 use ParcelMap\Handler\GetParcelTileHandler;
 use ParcelMap\Handler\Http\HttpKernel;
@@ -27,6 +28,7 @@ use ParcelMap\Infrastructure\Http\ZipFileDownloader;
 use ParcelMap\Infrastructure\Import\ParcelConverterUsingOgr2ogr;
 use ParcelMap\Infrastructure\Import\RuianExportDownloaderUsingHttp;
 use ParcelMap\Infrastructure\Import\TilesetBuilderUsingTippecanoe;
+use ParcelMap\Infrastructure\Import\TilesetInspectorUsingMbtiles;
 use ParcelMap\Infrastructure\Import\TilesetPublisherUsingMbtiles;
 use ParcelMap\Infrastructure\Map\MapSettingsRepositoryUsingConstants;
 use ParcelMap\Infrastructure\Map\ParcelTilesetRepositoryUsingMbtiles;
@@ -61,8 +63,10 @@ final readonly class Container
                     new RuianExportDownloaderUsingHttp($zipDownloader, $ruianBaseUrl, $dataDir . '/cache/ruian'),
                     new ParcelConverterUsingOgr2ogr($runner, $dataDir . '/build'),
                     new TilesetBuilderUsingTippecanoe($runner, $dataDir . '/build'),
+                    new TilesetInspectorUsingMbtiles(),
                     new TilesetPublisherUsingMbtiles($this->tilesetFile()),
                     new ClockUsingSystemTime(),
+                    TileSizeBudget::smoothMap(),
                 ),
             ),
             new GenerateCoverageCommand(

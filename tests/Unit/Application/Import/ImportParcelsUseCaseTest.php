@@ -12,6 +12,8 @@ use ParcelMap\Application\Import\ImportParcelsInput;
 use ParcelMap\Application\Import\ImportParcelsUseCase;
 use ParcelMap\Application\Import\InvalidImportRequest;
 use ParcelMap\Application\Import\TileBuildFailed;
+use ParcelMap\Application\Import\TilesetInspectionFailed;
+use ParcelMap\Application\Import\TilesetOverBudget;
 use ParcelMap\Application\Import\TilesetPublishFailed;
 use ParcelMap\Application\Import\ConversionFailed;
 use ParcelMap\Domain\Cadastre\CadastralArea;
@@ -19,12 +21,17 @@ use ParcelMap\Domain\Cadastre\CadastralAreaCode;
 use ParcelMap\Domain\Cadastre\Coverage;
 use ParcelMap\Domain\Cadastre\CoverageUnavailable;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
+use ParcelMap\Domain\Map\TileCoordinate;
+use ParcelMap\Domain\Map\TilesetStatistics;
+use ParcelMap\Domain\Map\TileSizeBudget;
+use ParcelMap\Domain\Map\ZoomTileStatistics;
 use ParcelMap\Tests\Fake\ClockUsingFixedTime;
 use ParcelMap\Tests\Fake\CoverageRepositoryUsingMemory;
 use ParcelMap\Tests\Fake\ImportProgressUsingMemory;
 use ParcelMap\Tests\Fake\ParcelConverterUsingMemory;
 use ParcelMap\Tests\Fake\RuianExportDownloaderUsingMemory;
 use ParcelMap\Tests\Fake\TilesetBuilderUsingMemory;
+use ParcelMap\Tests\Fake\TilesetInspectorUsingMemory;
 use ParcelMap\Tests\Fake\TilesetPublisherUsingMemory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -162,6 +169,67 @@ final class ImportParcelsUseCaseTest extends TestCase
     }
 
     #[Test]
+    public function it_builds_with_the_injected_budget(): void
+    {
+        $this->useCase(publishedDates: ['2026-10-31'])->execute(new ImportParcelsInput('2026-10-31'), $this->progress);
+
+        self::assertNotNull($this->builder->budget);
+        self::assertSame(150_000, $this->builder->budget->maxBytes);
+    }
+
+    #[Test]
+    public function it_reports_the_budget_and_the_tiles_per_zoom_in_ascending_order_when_within_budget(): void
+    {
+        $statistics = new TilesetStatistics(
+            new ZoomTileStatistics(12, 41, 150_000, new TileCoordinate(12, 2222, 1381)),
+            new ZoomTileStatistics(9, 4, 120_000, new TileCoordinate(9, 277, 172)),
+        );
+
+        $output = $this->useCase(publishedDates: ['2026-10-31'], statistics: $statistics)
+            ->execute(new ImportParcelsInput('2026-10-31'), $this->progress);
+
+        self::assertSame(150_000, $output->tileSizeBudgetBytes);
+        self::assertSame([9, 12], array_map(static fn($zoom): int => $zoom->zoom, $output->zoomLevels));
+        self::assertSame([4, 41], array_map(static fn($zoom): int => $zoom->tileCount, $output->zoomLevels));
+        self::assertSame([120_000, 150_000], array_map(static fn($zoom): int => $zoom->largestTileBytes, $output->zoomLevels));
+        self::assertCount(1, $this->publisher->published);
+    }
+
+    #[Test]
+    public function it_publishes_nothing_when_a_tile_is_over_budget(): void
+    {
+        $statistics = new TilesetStatistics(
+            new ZoomTileStatistics(9, 4, 120_000, new TileCoordinate(9, 277, 172)),
+            new ZoomTileStatistics(11, 15, 150_001, new TileCoordinate(11, 1111, 690)),
+        );
+        $useCase = $this->useCase(publishedDates: ['2026-10-31'], statistics: $statistics);
+
+        try {
+            $useCase->execute(new ImportParcelsInput('2026-10-31'), $this->progress);
+            self::fail('Expected TilesetOverBudget.');
+        } catch (TilesetOverBudget $exception) {
+            self::assertSame(
+                'Tile 11/1111/690 has 150001 bytes, over the budget of 150000 bytes; the tileset was not published.',
+                $exception->getMessage(),
+            );
+            self::assertSame([], $this->publisher->published);
+        }
+    }
+
+    #[Test]
+    public function it_publishes_nothing_when_the_inspection_fails(): void
+    {
+        $useCase = $this->useCase(publishedDates: ['2026-10-31'], statistics: TilesetInspectionFailed::because('unreadable'));
+
+        try {
+            $useCase->execute(new ImportParcelsInput('2026-10-31'), $this->progress);
+            self::fail('Expected TilesetInspectionFailed.');
+        } catch (TilesetInspectionFailed) {
+            self::assertSame([], $this->publisher->published);
+        }
+    }
+
+    #[Test]
     public function it_propagates_a_publisher_failure(): void
     {
         $useCase = $this->useCase(publishedDates: ['2026-10-31'], failingPublisher: true);
@@ -238,6 +306,7 @@ final class ImportParcelsUseCaseTest extends TestCase
         bool $failingConverter = false,
         bool $failingBuilder = false,
         bool $failingPublisher = false,
+        TilesetStatistics|TilesetInspectionFailed|null $statistics = null,
     ): ImportParcelsUseCase {
         $this->downloader = new RuianExportDownloaderUsingMemory($publishedDates, $cachedMunicipalities);
         $this->progress = new ImportProgressUsingMemory();
@@ -250,9 +319,16 @@ final class ImportParcelsUseCaseTest extends TestCase
             $this->downloader,
             $this->converter,
             $this->builder,
+            new TilesetInspectorUsingMemory($statistics ?? self::withinBudget()),
             $this->publisher,
             new ClockUsingFixedTime(new DateTimeImmutable('2026-11-20 09:30:00', new DateTimeZone('UTC'))),
+            new TileSizeBudget(150_000),
         );
+    }
+
+    private static function withinBudget(): TilesetStatistics
+    {
+        return new TilesetStatistics(new ZoomTileStatistics(9, 4, 100_000, new TileCoordinate(9, 277, 172)));
     }
 
     private static function coverage(): Coverage

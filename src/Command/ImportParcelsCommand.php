@@ -58,6 +58,16 @@ final readonly class ImportParcelsCommand implements Command
         foreach ($result->areas as $area) {
             $output->writeLine(sprintf('%d %s: %d parcels', $area->code, $area->name, $area->parcelCount));
         }
+        $output->writeLine(sprintf('Tiles per zoom level (budget %.1F kB per tile):', $result->tileSizeBudgetBytes / 1000));
+        foreach ($result->zoomLevels as $zoom) {
+            $output->writeLine(sprintf(
+                '  zoom %d: %d %s, largest %.1F kB',
+                $zoom->zoom,
+                $zoom->tileCount,
+                $zoom->tileCount === 1 ? 'tile' : 'tiles',
+                $zoom->largestTileBytes / 1000,
+            ));
+        }
         $output->writeLine(sprintf('Published tileset %s with %d parcels.', $result->tilesetVersion, $result->totalParcels));
 
         return ExitCode::SUCCESS;

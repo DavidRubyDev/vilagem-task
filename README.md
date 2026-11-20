@@ -50,7 +50,8 @@ Run `make data` once (and again whenever you want a newer export). It runs
    `--export-date` the import takes the latest one and falls back once to the month before);
 2. converts the parcels of the listed cadastral areas to WGS84 with GDAL (`ogr2ogr`), reading each
    municipality file once into `data/build/municipalities/{municipality}.geojsonl`;
-3. builds one vector tileset with tippecanoe and publishes it atomically.
+3. builds one vector tileset with tippecanoe, checks it against the tile size budget and publishes it
+   atomically.
 
 The list of cadastral areas, `config/coverage.csv`, is generated from the RÚIAN state structure file
 (`{YYYYMMDD}_ST_UZSZ.xml.zip`, same directory as the municipality files) by `make coverage`, which runs
@@ -64,7 +65,11 @@ the published tileset. `config/coverage.csv` lists the whole district: 240 cadas
 municipalities, 272,011 parcels. The first `make data` downloads 111 municipality files (54 MB per monthly
 export) and takes about 2 minutes; a rerun from the cache about 1.5 minutes. The tileset is about 56 MB and
 the intermediate GeoJSON in `build/` about 130 MB. The tile build needs about 1 to 2 GB of memory (Docker Desktop
-users: allow at least 4 GB). The import prints its progress (one line per municipality download and conversion,
+users: allow at least 4 GB). Smoothness gate: a vector tile is limited to 200 kB (gzip; at most about 20 tiles are visible on a 1920x1080
+screen, so a view stays under 4 MB). The limit is passed to tippecanoe, and after the build the import reads the
+tileset back: if any tile is larger it fails with "Tile z/x/y has N bytes, over the budget of 200000 bytes; the
+tileset was not published." and nothing is published. On success it prints the tile count and the largest tile
+per zoom level. The import prints its progress (one line per municipality download and conversion,
 then the tile build). A failed run keeps the completed downloads in the cache, so a rerun resumes. ČÚZK publishes
 the monthly files over about an hour on the 1st; if a later municipality is not published yet the import stops
 with "The RÚIAN export of … for municipality … is not published": rerun it later or pass `--export-date` of the

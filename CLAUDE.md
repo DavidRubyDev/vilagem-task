@@ -273,6 +273,8 @@ Source-data term (Czech) → name used in code.
 | RÚIAN, VFR                            | —                    | ČÚZK register and its exchange format (data source).           |
 | stavový soubor ČR VFR (`ST_UZSZ`)     | RÚIAN state structure file (`RuianStructureDownloader`, `DownloadedStructure`) | State-wide municipalities and cadastral areas; the source of the coverage list. |
 | S-JTSK (EPSG:5514)                    | —                    | Source coordinate system; the map uses WGS84 / Web Mercator.   |
+| —                                     | `TileSizeBudget`     | Maximum gzip size of one vector tile (200,000 bytes); keeps the map smooth. |
+| —                                     | `TilesetStatistics`  | Tile count and largest tile per zoom level of a built tileset. |
 | —                                     | `Coordinates`        | WGS84 longitude/latitude in degrees. Longitude first, as in MapLibre and GeoJSON. |
 | —                                     | `ZoomLevel`          | Web map zoom, 0–24 (MapLibre zoom, fractional allowed).        |
 | —                                     | `MapView`            | Camera position the map opens with: center + zoom.             |

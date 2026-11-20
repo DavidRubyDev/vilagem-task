@@ -9,10 +9,13 @@ use ParcelMap\Application\Import\ConvertedParcels;
 use ParcelMap\Application\Import\TileBuildFailed;
 use ParcelMap\Domain\Cadastre\CadastralAreaCode;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
+use ParcelMap\Domain\Map\TileSizeBudget;
 use ParcelMap\Infrastructure\Import\TilesetBuilderUsingTippecanoe;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
 use ParcelMap\Tests\Support\TemporaryDirectory;
 use ParcelMap\Tests\Support\MbtilesMetadata;
+use PDO;
+use PDOStatement;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -33,7 +36,7 @@ final class TilesetBuilderUsingTippecanoeTest extends TestCase
     #[Test]
     public function it_builds_an_mbtiles_file_with_the_parcels_layer(): void
     {
-        $built = $this->builder()->build([$this->fixtureParcels()]);
+        $built = $this->builder()->build([$this->fixtureParcels()], TileSizeBudget::smoothMap());
 
         self::assertSame($this->work->path . '/parcels.mbtiles', $built->path);
         $metadata = MbtilesMetadata::read($built->path);
@@ -50,13 +53,23 @@ final class TilesetBuilderUsingTippecanoeTest extends TestCase
     #[Test]
     public function it_keeps_the_parcel_id_and_land_type_in_the_tiles(): void
     {
-        $built = $this->builder()->build([$this->fixtureParcels()]);
+        $built = $this->builder()->build([$this->fixtureParcels()], TileSizeBudget::smoothMap());
 
         $decoded = $this->runTool(['tippecanoe-decode', $built->path, '14', '8890', '5525']);
 
         self::assertStringContainsString('"id": 1753295604', $decoded);
         self::assertStringContainsString('landType', $decoded);
         self::assertStringNotContainsString('areaCode', $decoded);
+    }
+
+    #[Test]
+    public function it_keeps_every_tile_within_a_small_budget(): void
+    {
+        $built = $this->builder()->build([$this->fixtureParcels()], new TileSizeBudget(1000));
+
+        $largest = new PDO('sqlite:' . $built->path)->query('SELECT MAX(LENGTH(tile_data)) FROM tiles');
+        self::assertInstanceOf(PDOStatement::class, $largest);
+        self::assertLessThanOrEqual(1000, (int) $largest->fetchColumn());
     }
 
     #[Test]
@@ -67,7 +80,7 @@ final class TilesetBuilderUsingTippecanoeTest extends TestCase
 
         $this->expectException(TileBuildFailed::class);
 
-        $this->builder()->build([new ConvertedParcels(new MunicipalityCode(572659), $path, [new AreaParcelCount(new CadastralAreaCode(659541), 1)])]);
+        $this->builder()->build([new ConvertedParcels(new MunicipalityCode(572659), $path, [new AreaParcelCount(new CadastralAreaCode(659541), 1)])], TileSizeBudget::smoothMap());
     }
 
     private function builder(): TilesetBuilderUsingTippecanoe
