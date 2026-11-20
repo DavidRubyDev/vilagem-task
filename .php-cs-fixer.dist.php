@@ -7,7 +7,7 @@ use PhpCsFixer\Finder;
 
 $finder = Finder::create()
     ->in([__DIR__ . '/src', __DIR__ . '/tests', __DIR__ . '/public'])
-    ->append([__FILE__]);
+    ->append([__FILE__, __DIR__ . '/bin/console']);
 
 return new Config()
     ->setRiskyAllowed(true)

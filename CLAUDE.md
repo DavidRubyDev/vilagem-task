@@ -238,6 +238,7 @@ make lint-ci        # actionlint on .github/workflows/ci.yml
 make up / make down # docker compose up / down (app at http://localhost:8000)
 docker compose build                 # build the image
 docker compose run --rm app <cmd>    # run any command in the app container
+docker compose run --rm app bin/console   # list the CLI commands
 ```
 
 `make check` runs the groups in `CHECK_TARGETS` (Makefile); CI runs the same groups as parallel

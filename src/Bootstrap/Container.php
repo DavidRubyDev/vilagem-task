@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ParcelMap\Bootstrap;
 
 use ParcelMap\Application\Map\GetMapConfigurationUseCase;
+use ParcelMap\Command\Console\ConsoleApplication;
 use ParcelMap\Handler\GetMapConfigurationHandler;
 use ParcelMap\Handler\Http\HttpKernel;
 use ParcelMap\Handler\Http\Route;
@@ -16,6 +17,11 @@ use ParcelMap\Infrastructure\Map\MapSettingsRepositoryUsingConstants;
 final readonly class Container
 {
     public function __construct(private string $projectDir) {}
+
+    public function console(): ConsoleApplication
+    {
+        return new ConsoleApplication();
+    }
 
     public function httpKernel(): HttpKernel
     {

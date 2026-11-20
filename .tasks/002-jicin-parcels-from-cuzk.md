@@ -1004,3 +1004,12 @@ Filled in by the implement agent, one entry per step.
   not found` (red). Then renamed the production classes per the Rename list; green.
 - CLAUDE.md "Code rules" gained the Naming sub-list. README names none of the renamed classes.
 - Existing API and E2E tests are unchanged.
+
+### Step 2: CLI walking skeleton
+
+- Red runs: unit `ConsoleApplicationTest` failed with `Interface "ParcelMap\Command\Console\ConsoleOutput"
+  not found`; API `ConsoleTest` failed with exit code 1 instead of 0 / 2 (no `bin/console` yet).
+- The API test uses a small `ConsoleRunner` (proc_open of `PHP_BINARY bin/console`).
+- Unknown command: the `Unknown command` line and the command list both go to stderr.
+- phpstan and php-cs-fixer both analyse the extensionless `bin/console` fine. phpstan does not know
+  `$argv` in a script, so `bin/console` reads `$_SERVER['argv']` with a `@var list<string>` annotation.

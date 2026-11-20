@@ -1,0 +1,15 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use ParcelMap\Bootstrap\Container;
+use ParcelMap\Command\Console\StreamConsoleOutput;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+/** @var list<string> $argv */
+$argv = $_SERVER['argv'];
+$arguments = array_slice($argv, 1);
+
+exit(new Container(dirname(__DIR__))->console()->run($arguments, new StreamConsoleOutput()));

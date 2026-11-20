@@ -4,4 +4,5 @@ parameters:
         - src
         - tests
         - public
+        - bin/console
     tmpDir: var/cache/phpstan
