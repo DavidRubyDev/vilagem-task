@@ -237,6 +237,7 @@ make test-frontend  # NODE npm test (Vitest)
 make test-e2e       # starts the test app, then NODE npm run e2e in the test project (Playwright; needs make assets first)
 make up-app         # starts the test app: docker compose -p parcel-map-test -f compose.yaml -f compose.test.yaml up -d --wait --no-deps app
 make data           # PHP bin/console parcels:import: download the RÚIAN export (cached) and build data/tiles/parcels.mbtiles
+make perf           # NODE npm run perf; Playwright measurement of the running app (make up) with real data (make data); not part of check
 make coverage       # PHP bin/console coverage:generate --district=3604; regenerates config/coverage.csv (review the diff, commit it)
 make assets         # NODE npm ci && npm run build -> public/build/   (make watch rebuilds on change)
 make lint-ci        # actionlint on .github/workflows/ci.yml

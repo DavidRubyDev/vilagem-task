@@ -19,7 +19,7 @@ comma := ,
 empty :=
 space := $(empty) $(empty)
 
-.PHONY: build data coverage install-php install-node assets watch up-app up down cs cs-fix phpstan deptrac format \
+.PHONY: build data coverage perf install-php install-node assets watch up-app up down cs cs-fix phpstan deptrac format \
 	test-unit test-integration test-api test-frontend test-e2e typecheck lint-frontend lint-ci \
 	php-qa php-tests check qa test ci-targets $(CHECK_TARGETS)
 
@@ -90,6 +90,10 @@ test-frontend:
 
 test-e2e: up-app
 	$(TEST_COMPOSE) run --rm --no-deps node npm run e2e
+
+# Measures the running app (make up) with real data (make data) in a browser; not part of check.
+perf:
+	$(NODE) npm run perf
 
 lint-ci:
 	docker run --rm -u "$(UID):$(GID)" -v "$(CURDIR)":/repo -w /repo $(ACTIONLINT_IMAGE) -no-color .github/workflows/ci.yml

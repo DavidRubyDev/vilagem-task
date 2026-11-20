@@ -115,6 +115,7 @@ TypeScript, built with Vite, MapLibre GL JS from npm (bundled, no CDN). Edit `fr
 | `make lint-frontend` | `NODE npm run lint`, `NODE npm run format:check`                           | ESLint (type-aware) and Prettier check        |
 | `make format`     | `PHP vendor/bin/php-cs-fixer fix`, `NODE npm run format`                      | Format PHP and frontend code                  |
 | `make test-frontend` | `NODE npm test`                                                            | Vitest unit tests                             |
+| `make perf`       | `NODE npm run perf`                                                           | Browser measurement of the district views against the app of `make up` with real data (`make data` first); not part of `make check` |
 | `make test-e2e`   | starts the test app, then `npm run e2e` in the test project                   | Playwright E2E (needs `make assets` first)    |
 | `make assets`     | `NODE npm ci`, `NODE npm run build`                                           | Build the frontend into `public/build/`       |
 | `make watch`      | `NODE npm run watch`                                                          | Rebuild the frontend on change                |
@@ -125,6 +126,22 @@ Run `composer install` first (`make install-php`); the `make` check groups do it
 The API and E2E tests run against their own app: a separate compose project (`parcel-map-test`,
 `compose.test.yaml`) with no published port and the fixture data in `tests/Fixtures/data`, so
 `make check` never restarts or changes the app of `make up`. `make down` stops both projects.
+
+### Smoothness evidence
+
+The main quality criterion is that the map stays smooth with the whole district in view. Three kinds of evidence:
+
+1. **The tile budget gate** (import time): no vector tile may exceed 200 kB gzip, so a view of at most about 20
+   tiles stays under 4 MB. An import that produces a larger tile fails and publishes nothing.
+2. **`make perf`** (`tests/Perf/district.spec.ts`, Playwright, needs `make up` and `make data`): opens the whole
+   district (zoom 10), Jičín at zoom 12 and at zoom 14 at 1920x1080, then pans around. It asserts budgets that do
+   not depend on the hardware: at most 30 parcel tile requests and 4 MB while loading, a p95 tile response time of at
+   most 100 ms, tiles settled within 5 s, and every tile answering 200 or 204. It also records frame intervals and
+   long tasks and writes the report to `var/perf/district-perf.json`, but does not assert them: Docker's headless
+   Chromium renders WebGL in software, so frame times say little about real hardware. Measured on 2026-11-20: the
+   district view loads 9 tiles (263 kB), Jičín at zoom 12 loads 15 tiles (1.9 MB), tile responses take 13 to 56 ms.
+3. **A manual check in Chrome** on real hardware (performance panel while panning and zooming over the district
+   at zoom 10 and over Jičín at zoom 12 to 16: no long tasks over 50 ms once the tiles have loaded).
 
 ## Continuous integration
 
