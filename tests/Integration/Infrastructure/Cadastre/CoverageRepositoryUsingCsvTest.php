@@ -31,17 +31,27 @@ final class CoverageRepositoryUsingCsvTest extends TestCase
     }
 
     #[Test]
-    public function it_reads_the_committed_coverage_file(): void
+    public function it_reads_the_committed_coverage_file_of_the_whole_district(): void
     {
         $coverage = new CoverageRepositoryUsingCsv(dirname(__DIR__, 4) . '/config/coverage.csv')->get();
 
-        self::assertSame(
-            [659541, 740225, 725838, 740217, 771775],
-            array_map(static fn($area): int => $area->code->value, $coverage->areas()),
-        );
-        self::assertSame('Popovice u Jičína', $coverage->areas()[2]->name);
-        self::assertCount(1, $coverage->municipalities());
-        self::assertSame(572659, $coverage->municipalities()[0]->value);
+        $codes = array_map(static fn(CadastralArea $area): int => $area->code->value, $coverage->areas());
+        self::assertCount(240, $codes);
+        self::assertCount(111, $coverage->municipalities());
+        $sorted = $codes;
+        sort($sorted);
+        self::assertSame($sorted, $codes);
+        self::assertSame(count($codes), count(array_unique($codes)));
+
+        $names = [];
+        foreach ($coverage->areas() as $area) {
+            $names[$area->code->value] = $area->name . ' ' . $area->municipality->value;
+        }
+        self::assertSame('Jičín 572659', $names[659541]);
+        self::assertSame('Robousy 572659', $names[740225]);
+        self::assertSame('Popovice u Jičína 572659', $names[725838]);
+        self::assertSame('Moravčice 572659', $names[740217]);
+        self::assertSame('Hubálov 572659', $names[771775]);
     }
 
     #[Test]

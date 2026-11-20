@@ -8,10 +8,10 @@ Built as an interview task for Viagem a.s.
 
 > **Status:** the map page works: http://localhost:8000 shows an OpenStreetMap base map centred
 > on Jičín (zoom 12) with the OSM attribution. `GET /api/map-config` serves the map
-> configuration. `make data` downloads the ČÚZK parcels of the municipality Jičín and builds a
-> vector tileset from them; the map then shows the parcels over OSM, filled by land type (outlines
-> from zoom 14) with the credit "ČÚZK, 2026". Clicking a parcel is not implemented yet. The application is built in the tasks in
-> [`.tasks/`](.tasks/). This README is updated as features land.
+> configuration. `make data` downloads the ČÚZK parcels of the whole Jičín district (240 cadastral areas,
+> 272,011 parcels) and builds a vector tileset from them; the map then shows the parcels over OSM, filled by
+> land type (outlines from zoom 14) with the credit "ČÚZK, 2026". Clicking a parcel is not implemented yet.
+> The application is built in the tasks in [`.tasks/`](.tasks/). This README is updated as features land.
 
 ## Prerequisites
 
@@ -59,9 +59,11 @@ map are listed (areas without one have no parcel polygons). `make data` never re
 
 Data lives in `data/` (git-ignored): `cache/ruian/` holds the downloads (a cached file is never
 downloaded again, so a rerun is offline), `build/` the intermediate files and `tiles/parcels.mbtiles`
-the published tileset. Today `config/coverage.csv` lists the 5 cadastral areas of the municipality
-Jičín (16,972 parcels, a 3.7 MB download, a 3.5 MB tileset); covering the whole district means
-adding its areas to that file.
+the published tileset. `config/coverage.csv` lists the whole district: 240 cadastral areas of 111
+municipalities, 272,011 parcels. The first `make data` downloads 111 municipality files (54 MB per monthly
+export) and takes about 2.5 minutes; a rerun from the cache about 2 minutes. The tileset is about 56 MB and
+the intermediate GeoJSON in `build/` 127 MB. The tile build needs about 1 to 2 GB of memory (Docker Desktop
+users: allow at least 4 GB). Old cached months and build files are kept; delete them by hand when needed.
 
 The data is licensed CC BY 4.0; the required credit is "ČÚZK, {year of the export}". Conditions:
 https://cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-prostorovych-dat-CUZK.aspx

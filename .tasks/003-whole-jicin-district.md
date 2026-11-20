@@ -1096,3 +1096,20 @@ Filled in by the implement agent, one entry per step.
     pass only the cache path.
   - The extractor's query helper checks the CSV header and the row width; those two error paths have no
     integration test (GDAL cannot be made to emit a wrong header from the fixture).
+
+### Step 1b: cover the whole Jičín district
+
+- Test first: `CoverageRepositoryUsingCsvTest::it_reads_the_committed_coverage_file_of_the_whole_district` (240
+  areas, 111 municipalities, strictly ascending codes, the five named areas). Red: "actual size 5 matches
+  expected size 240".
+- `bin/console coverage:generate --district=3604 --export-date=2026-10-31` ran against the real ČÚZK server (the
+  2026-10-31 file was still served; 4.8 s including the download). Output: `Wrote 240 cadastral areas of 111
+  municipalities in district 3604 from the RÚIAN export of 2026-10-31.` The result has 241 lines and sha256
+  `bf5b1a9219041e9d97dabb170d0062f1bbd5c72c1cb78ab3c54082d84146b55c`, as expected. The file was not edited by hand.
+- Whole-district import with the task 002 code (before steps 2 to 5), to check the data: `make data` on a clean
+  cache took 140 s (111 downloads of 54 MB, about 20 s of that; 49 s conversion; 65 s tile build), 272,011
+  parcels. A rerun from the cache took 119 s. Peak memory of tippecanoe (VmHWM, 16 CPUs): 1.94 GB. Sizes:
+  `data/cache` 59 MB (54 MB municipality files + the 4.7 MB structure file), `data/build` 127 MB,
+  `data/tiles/parcels.mbtiles` 56.7 MB (`--coalesce-densest-as-needed` still in place).
+- The README numbers describe this state (about 2.5 / 2 minutes); steps 2 and 5 make the import faster and the
+  README is updated there.
