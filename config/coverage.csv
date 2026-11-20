@@ -1,6 +1,241 @@
 code,name,municipality_code
+601101,Bašnice,572667
+601462,Běchary,572675
+601829,Bělá u Pecky,573299
+601837,Dolní Javoří,573094
+601845,Horní Javoří,573299
+601853,Radkyně,573248
+601861,Uhlíře,573094
+603813,Bezník,548979
+605930,Boháňka,572705
+605948,Chloumek u Hořic,572705
+605964,Votuz,572705
+607568,Borek u Miletína,548979
+607576,Želejov,548979
+609790,Brdo,573507
+609803,Krsmol,573507
+614793,Březovice,572926
+615064,Bříšťany,548855
+615072,Petrovičky u Hořic,548871
+615188,Budčeves,548952
+615196,Nečas,548952
+616109,Bukovina u Pecky,573299
+616907,Bystřice,572772
+616915,Važice,572772
+617474,Cerekvice nad Bystřicí,572781
+617709,Cidlina,573825
+617725,Zámezí,573825
+620726,Červená Třemešná,548995
+623466,Češov,572811
+623474,Liběšice,572811
+625914,Brodek,572829
+625922,Dětenice,572829
+625931,Osenice,572829
+627071,Dolní Dobrá Voda,572837
+627089,Horní Dobrá Voda,572837
+627101,Bílsko u Hořic,548901
+628891,Dolní Černůtky,572993
+629596,Dolní Lochov,549088
+630985,Domoslavice,573272
+630993,Sylvárův Újezd,573272
+631159,Doubrava,572926
+631809,Drahoraz,573060
+631817,Keteň,573001
+631825,Pševes,573060
+638871,Březina u Jičína,549070
+638889,Hlásná Lhota u Jičína,573329
+641243,Holín,572900
+641251,Horní Lochov,572900
+641260,Ohaveč,548910
+641278,Pařezská Lhota,572900
+641286,Prachov,572900
+641332,Holovousy v Podkrkonoší,572918
+645168,Hořice v Podkrkonoší,572926
+645214,Libonice,572926
+645222,Chvalina,572926
+649180,Hřmenín,573167
+651567,Chlum u Hořic,572926
+652334,Cholenice,549355
+652423,Chomutice,572969
+652431,Chomutičky,572969
+652440,Obora u Chomutic,572969
+654256,Chroustov u Miletína,573671
+655422,Dolany u Chyjic,573001
+655431,Chyjice,549223
+658511,Jeřice,572993
 659541,Jičín,572659
-740225,Robousy,572659
+659631,Bartoušov u Jičíněvsi,573001
+659649,Jičíněves,573001
+659657,Kostelec u Jičíněvsi,548928
+659665,Žitětín,573001
+661252,Jivany,573124
+662101,Kal,573299
+664634,Kdanice,573493
+667081,Kněžnice,573043
+668991,Kamenice u Konecchlumí,573051
+669008,Konecchlumí,573051
+669016,Kovač,548944
+669296,Kopidlno,573060
+678406,Kyje u Jičína,572047
+678813,Labouň,573001
+679283,Brtev,573094
+679291,Dolní Nová Ves,573094
+679305,Horní Nová Ves,573094
+679313,Hřídelec,573094
+679321,Lány u Lázní Bělohradu,573094
+679330,Lázně Bělohrad,573094
+679348,Prostřední Nová Ves,573094
+681679,Libáň,573108
+683281,Dobšice,573116
+683299,Libošovice,573116
+683311,Malechovice,573116
+683337,Nepřívěc,573116
+683353,Rytířova Lhota,573116
+683361,Vesec u Sobotky,573116
+683515,Březka,573124
+683523,Libuň,573124
+683531,Libunec,573124
+684902,Lískovice u Ostroměře,573086
+688819,Černín u Lukavce,573141
+688827,Dobeš,573141
+688835,Lukavec u Hořic,573141
+689238,Lužany u Jičína,573159
+691801,Markvartice u Sobotky,573167
+691836,Příchvoj,573167
+691844,Rakov u Markvartic,573167
+691852,Skuřina,573167
+694665,Miletín,573175
+694991,Bačalky,553701
+695009,Lično u Milkovic,553701
+695025,Záhuby,573183
+695033,Zelenecká Lhota,573183
+695203,Milovice u Hořic,548863
+696871,Hubojedy,573205
+696897,Mladějov v Čechách,573205
+697214,Choteč u Lázní Bělohradu,549037
+697249,Mlázovice,573213
+697257,Svatojanský Újezd,573302
+697265,Šárovcova Lhota,573256
+697371,Mlýnec u Kopidlna,573060
+703273,Nemyčeves,573230
+705128,Nová Paka,573248
+706736,Nové Smrkovice,573272
+713007,Osek u Sobotky,573264
+715727,Ostroměř,573272
+716260,Ostružno u Jičína,573281
+718688,Lhota u Pecky,573299
+718696,Pecka,573299
+718700,Staňkov u Pecky,573299
+721786,Plhov,573442
+723665,Podhorní Újezd,573311
+723673,Vojice,573311
+723738,Čejkovice u Jičína,573329
+723746,Podhradí u Jičína,573329
+723754,Staré Místo,549096
+723851,Podkost,573116
+724521,Brada,549100
+724530,Dílce,549118
+724556,Podůlší,573345
+724564,Jinolice,549151
+724572,Kbelnice u Jičína,549169
 725838,Popovice u Jičína,572659
+736449,Křešice u Psinic,573108
+736457,Psinice,573108
+737801,Dřevěnice,573337
+737810,Lháň,573370
+737828,Radim u Jičína,573370
+737836,Studeňany,573370
+737844,Tužín,573370
+739456,Rašín,549274
 740217,Moravčice,572659
+740225,Robousy,572659
+740501,Rohoznice u Hořic,573221
+740861,Dolní Rokytňany,548898
+740870,Horní Rokytňany,548898
+741451,Karlov u Roškopova,573507
+741469,Roškopov,573507
+741477,Ústí u Staré Paky,573507
+742023,Roveň u Sobotky,573205
+746070,Drštěkryje,573442
+746096,Ohařice,549185
+746100,Samšina,573442
+746118,Zámostí,549193
+746312,Hrobičany,573451
+746321,Sběř,573451
+746339,Velešice,573451
+749842,Milíčeves,573469
+749851,Slatiny,573469
+751499,Sobčice,573477
+751685,Soběraz,573361
+751693,Těšín,573825
+752070,Čálovice,573493
+752088,Lavice,573493
+752096,Sobotka,573493
+752100,Spyšova,573493
+752118,Staňkova Lhota,573493
+752126,Stéblovice,573493
+753823,Stará Paka,573507
+754374,Sedliště u Starých Hradů,548961
+754382,Staré Hrady,530735
+754765,Nevratice,549207
+754773,Staré Smrkovice,573523
+757420,Střeleč,573205
+757551,Nadslav,573540
+757560,Střevač,573540
+757713,Stříbrnice v Čechách,572128
+758329,Heřmanice u Nové Paky,573248
+758337,Kumburský Újezd,573248
+758345,Studénka u Nové Paky,573248
+759406,Sukorady u Hořic,548880
+763764,Štikov,573248
+766551,Tereziny Dary,573086
+766925,Tetín,572756
+766950,Vřesník u Tetína,549029
+770124,Ostrov v Podkrkonoší,573612
+770132,Třebnouševes,573612
+770141,Vinice v Podkrkonoší,573612
+770451,Třebovětice,572781
+771147,Třtěnice,573639
+771767,Butoves,549282
 771775,Hubálov,572659
+771783,Kacákova Lhota,549312
+771791,Tuř,573647
+772461,Česká Proseč,573655
+772496,Stav,573655
+772518,Úbislavice,573655
+772526,Zboží u Nové Paky,573655
+772658,Bílsko u Kopidlna,573663
+772666,Údrnice,573663
+772674,Údrnická Lhota,573663
+772682,Únětice,573663
+773158,Úhlejov,573671
+773867,Újezd pod Troskami,573680
+774154,Řeheč,573698
+774162,Úlibice,573698
+776530,Valdice,573701
+776548,Přibyslav u Nové Paky,573248
+776556,Pustá Proseč,573248
+776564,Valdov,573248
+778117,Bukvice,573353
+778133,Veliš u Jičína,573728
+778141,Vesec u Jičína,573728
+781720,Stupná,573736
+781738,Vidochov,573736
+781746,Vidonice,573299
+782912,Vitiněves,573752
+784664,Volanice,573761
+785954,Vrbice nad Cidlinou,572128
+786519,Vrchovina,573248
+786608,Vršce,573795
+788341,Veselská Lhota,573809
+788350,Vysoké Veselí,573809
+793281,Zliv u Libáně,573108
+796123,Železnice,573825
+796484,Hradíšťko,573833
+796492,Vlhošť,573833
+796506,Žeretice,573833
+796832,Židovice,573841
+797677,Kozojedy u Žlunic,572136
+797685,Sekeřice,572144
+797693,Slavhostice,572187
+797707,Žlunice,573850

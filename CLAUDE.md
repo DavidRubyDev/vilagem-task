@@ -237,6 +237,8 @@ make test-frontend  # NODE npm test (Vitest)
 make test-e2e       # starts the test app, then NODE npm run e2e in the test project (Playwright; needs make assets first)
 make up-app         # starts the test app: docker compose -p parcel-map-test -f compose.yaml -f compose.test.yaml up -d --wait --no-deps app
 make data           # PHP bin/console parcels:import: download the RÚIAN export (cached) and build data/tiles/parcels.mbtiles
+make perf           # NODE npm run perf; Playwright measurement of the running app (make up) with real data (make data); not part of check
+make coverage       # PHP bin/console coverage:generate --district=3604; regenerates config/coverage.csv (review the diff, commit it)
 make assets         # NODE npm ci && npm run build -> public/build/   (make watch rebuilds on change)
 make lint-ci        # actionlint on .github/workflows/ci.yml
 make up / make down # docker compose up / down (app at http://localhost:8000); down also stops the test project
@@ -259,7 +261,8 @@ Source-data term (Czech) → name used in code.
 | parcela                               | `Parcel`             |                                                                |
 | katastrální území (KÚ)                | `CadastralArea`      | Identified by a 6-digit code.                                  |
 | obec                                  | `Municipality`       |                                                                |
-| okres                                 | `District`           | Jičín district.                                                |
+| okres                                 | `District`           | Jičín district, code 3604.                                     |
+| kód okresu                            | `DistrictCode`       | 4 digits; Jičín is 3604.                                       |
 | parcelní číslo                        | `ParcelNumber`       | Base number (kmenové číslo) + optional subdivision (poddělení), e.g. `123/4`. |
 | stavební / pozemková parcela          | `ParcelKind::Building` / `ParcelKind::Land` | Building plots are displayed with the `st.` prefix. `DruhCislovaniKod` 1 = building, 2 = land. |
 | druh pozemku                          | `LandType`           | Arable land, forest, permanent grassland, …                    |
@@ -269,7 +272,10 @@ Source-data term (Czech) → name used in code.
 | zjednodušená evidence (PK / EN)       | `SimplifiedRecordParcel` | Not in RÚIAN or any open source; no own geometry.             |
 | katastr nemovitostí (KN)              | Cadastre             |                                                                |
 | RÚIAN, VFR                            | —                    | ČÚZK register and its exchange format (data source).           |
+| stavový soubor ČR VFR (`ST_UZSZ`)     | RÚIAN state structure file (`RuianStructureDownloader`, `DownloadedStructure`) | State-wide municipalities and cadastral areas; the source of the coverage list. |
 | S-JTSK (EPSG:5514)                    | —                    | Source coordinate system; the map uses WGS84 / Web Mercator.   |
+| —                                     | `TileSizeBudget`     | Maximum gzip size of one vector tile (200,000 bytes); keeps the map smooth. |
+| —                                     | `TilesetStatistics`  | Tile count and largest tile per zoom level of a built tileset. |
 | —                                     | `Coordinates`        | WGS84 longitude/latitude in degrees. Longitude first, as in MapLibre and GeoJSON. |
 | —                                     | `ZoomLevel`          | Web map zoom, 0–24 (MapLibre zoom, fractional allowed).        |
 | —                                     | `MapView`            | Camera position the map opens with: center + zoom.             |

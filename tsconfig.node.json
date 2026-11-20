@@ -14,5 +14,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "playwright.config.ts", "tests/E2E"]
+  "include": ["vite.config.ts", "playwright.config.ts", "playwright.perf.config.ts", "tests/E2E", "tests/Perf"]
 }

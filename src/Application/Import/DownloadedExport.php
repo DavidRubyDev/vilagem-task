@@ -14,5 +14,6 @@ final readonly class DownloadedExport
         public MunicipalityCode $municipality,
         public ExportDate $date,
         public string $path,
+        public bool $fromCache,
     ) {}
 }

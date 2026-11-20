@@ -8,6 +8,7 @@ use ParcelMap\Application\Import\ExportNotPublished;
 use ParcelMap\Application\Import\SourceDownloadFailed;
 use ParcelMap\Domain\Cadastre\ExportDate;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
+use ParcelMap\Infrastructure\Http\ZipFileDownloader;
 use ParcelMap\Infrastructure\Import\RuianExportDownloaderUsingHttp;
 use ParcelMap\Tests\Support\LocalHttpServer;
 use ParcelMap\Tests\Support\TemporaryDirectory;
@@ -45,13 +46,15 @@ final class RuianExportDownloaderUsingHttpTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_the_cached_file_without_a_request(): void
+    public function it_returns_the_cached_file_without_a_request_and_says_so(): void
     {
-        $this->downloader()->download(new MunicipalityCode(572659), ExportDate::fromString('2026-10-31'));
+        $first = $this->downloader()->download(new MunicipalityCode(572659), ExportDate::fromString('2026-10-31'));
         $this->server->stop();
 
         $export = $this->downloader()->download(new MunicipalityCode(572659), ExportDate::fromString('2026-10-31'));
 
+        self::assertFalse($first->fromCache);
+        self::assertTrue($export->fromCache);
         self::assertFileExists($export->path);
     }
 
@@ -98,6 +101,6 @@ final class RuianExportDownloaderUsingHttpTest extends TestCase
 
     private function downloader(): RuianExportDownloaderUsingHttp
     {
-        return new RuianExportDownloaderUsingHttp($this->server->baseUrl(), $this->cache->path . '/cache');
+        return new RuianExportDownloaderUsingHttp(new ZipFileDownloader(), $this->server->baseUrl(), $this->cache->path . '/cache');
     }
 }

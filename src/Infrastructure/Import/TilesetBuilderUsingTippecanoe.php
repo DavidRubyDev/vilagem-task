@@ -8,13 +8,14 @@ use ParcelMap\Application\Import\BuiltTileset;
 use ParcelMap\Application\Import\ConvertedParcels;
 use ParcelMap\Application\Import\TileBuildFailed;
 use ParcelMap\Application\Import\TilesetBuilder;
+use ParcelMap\Domain\Map\TileSizeBudget;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
 
 /**
- * Builds the vector tileset with tippecanoe. The options keep the map smooth:
- * - a tile never exceeds 200 KB (--maximum-tile-bytes); when one would, the densest areas are coalesced
- *   (--coalesce-densest-as-needed), which in practice only happens below zoom 14, so parcels stay separate
- *   where outlines are drawn;
+ * Builds the vector tileset with tippecanoe. The options keep the map smooth and honest:
+ * - a tile never exceeds the budget (--maximum-tile-bytes); when one would, the smallest parcels are left out
+ *   (--drop-smallest-as-needed), which in practice only happens below zoom 14. Parcels are never merged, so every
+ *   drawn parcel keeps its own land type and, from zoom 14, its own outline;
  * - shared borders are detected so simplification does not open gaps between neighbours;
  * - the parcel id becomes the feature id (--use-attribute-for-id) for the later click-to-detail task;
  * - only landType is kept as a property.
@@ -26,7 +27,7 @@ final readonly class TilesetBuilderUsingTippecanoe implements TilesetBuilder
         private string $workDir,
     ) {}
 
-    public function build(array $parcels): BuiltTileset
+    public function build(array $parcels, TileSizeBudget $budget): BuiltTileset
     {
         $temporaryDirectory = $this->workDir . '/tmp';
         if (!is_dir($temporaryDirectory) && !@mkdir($temporaryDirectory, 0o777, true) && !is_dir($temporaryDirectory)) {
@@ -46,8 +47,8 @@ final readonly class TilesetBuilderUsingTippecanoe implements TilesetBuilder
             '--use-attribute-for-id=id',
             '--include=landType',
             '--detect-shared-borders',
-            '--maximum-tile-bytes=200000',
-            '--coalesce-densest-as-needed',
+            '--maximum-tile-bytes=' . $budget->maxBytes,
+            '--drop-smallest-as-needed',
             '--simplification=4',
             '--simplify-only-low-zooms',
             '--extend-zooms-if-still-dropping',

@@ -27,12 +27,36 @@ final readonly class Coverage
         $this->areas = array_values($areas);
     }
 
+    public static function sortedByCode(CadastralArea ...$areas): self
+    {
+        usort($areas, static fn(CadastralArea $a, CadastralArea $b): int => $a->code->value <=> $b->code->value);
+
+        return new self(...$areas);
+    }
+
     /**
      * @return non-empty-list<CadastralArea>
      */
     public function areas(): array
     {
         return $this->areas;
+    }
+
+    /**
+     * @return non-empty-list<CadastralArea> the covered areas of the municipality, in coverage order
+     * @throws MunicipalityNotCovered
+     */
+    public function areasOf(MunicipalityCode $municipality): array
+    {
+        $areas = array_values(array_filter(
+            $this->areas,
+            static fn(CadastralArea $area): bool => $area->municipality->equals($municipality),
+        ));
+        if ($areas === []) {
+            throw MunicipalityNotCovered::code($municipality->value);
+        }
+
+        return $areas;
     }
 
     /**

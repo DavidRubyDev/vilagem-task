@@ -9,6 +9,8 @@ NODE := $(COMPOSE) run --rm --no-deps node
 # API and E2E tests run against their own app (fixture data, no published port), so they never touch the app of `make up`.
 TEST_COMPOSE := $(COMPOSE) -p parcel-map-test -f compose.yaml -f compose.test.yaml
 ACTIONLINT_IMAGE := rhysd/actionlint:1.7.12
+# The district whose cadastral areas `make coverage` writes to config/coverage.csv (Jičín).
+DISTRICT := 3604
 
 # The only list of check groups. CI builds its job matrix from it (make ci-targets).
 CHECK_TARGETS := lint-ci php-qa php-tests frontend-checks e2e
@@ -17,7 +19,7 @@ comma := ,
 empty :=
 space := $(empty) $(empty)
 
-.PHONY: build data install-php install-node assets watch up-app up down cs cs-fix phpstan deptrac format \
+.PHONY: build data coverage perf install-php install-node assets watch up-app up down cs cs-fix phpstan deptrac format \
 	test-unit test-integration test-api test-frontend test-e2e typecheck lint-frontend lint-ci \
 	php-qa php-tests check qa test ci-targets $(CHECK_TARGETS)
 
@@ -26,6 +28,9 @@ build:
 
 data: build
 	$(PHP) bin/console parcels:import
+
+coverage: build
+	$(PHP) bin/console coverage:generate --district=$(DISTRICT)
 
 install-php: build
 	$(PHP) composer install --no-interaction --no-progress
@@ -85,6 +90,10 @@ test-frontend:
 
 test-e2e: up-app
 	$(TEST_COMPOSE) run --rm --no-deps node npm run e2e
+
+# Measures the running app (make up) with real data (make data) in a browser; not part of check.
+perf:
+	$(NODE) npm run perf
 
 lint-ci:
 	docker run --rm -u "$(UID):$(GID)" -v "$(CURDIR)":/repo -w /repo $(ACTIONLINT_IMAGE) -no-color .github/workflows/ci.yml

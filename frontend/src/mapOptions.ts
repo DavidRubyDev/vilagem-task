@@ -30,7 +30,8 @@ function parcelSource(parcels: ParcelLayerConfiguration, origin: string): Source
   };
 }
 
-// Outlines start at zoom 14: below it the tiles coalesce parcels, so outlines would trace merged blobs.
+// Outlines start at zoom 14: below it, tiles leave out the smallest parcels to stay within the tile budget, so
+// outlines would be incomplete.
 const parcelLayers: LayerSpecification[] = [
   {
     id: 'parcels-fill',

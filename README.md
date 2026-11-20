@@ -8,10 +8,10 @@ Built as an interview task for Viagem a.s.
 
 > **Status:** the map page works: http://localhost:8000 shows an OpenStreetMap base map centred
 > on Jičín (zoom 12) with the OSM attribution. `GET /api/map-config` serves the map
-> configuration. `make data` downloads the ČÚZK parcels of the municipality Jičín and builds a
-> vector tileset from them; the map then shows the parcels over OSM, filled by land type (outlines
-> from zoom 14) with the credit "ČÚZK, 2026". Clicking a parcel is not implemented yet. The application is built in the tasks in
-> [`.tasks/`](.tasks/). This README is updated as features land.
+> configuration. `make data` downloads the ČÚZK parcels of the whole Jičín district (240 cadastral areas,
+> 272,011 parcels) and builds a vector tileset from them; the map then shows the parcels over OSM, filled by
+> land type (outlines from zoom 14) with the credit "ČÚZK, 2026". Clicking a parcel is not implemented yet.
+> The application is built in the tasks in [`.tasks/`](.tasks/). This README is updated as features land.
 
 ## Prerequisites
 
@@ -48,14 +48,32 @@ Run `make data` once (and again whenever you want a newer export). It runs
    (`https://vdp.cuzk.gov.cz/vymenny_format/soucasna/{YYYYMMDD}_OB_{municipality}_UKSH.xml.zip`;
    files are dated on the last day of a month and appear the next day, so without
    `--export-date` the import takes the latest one and falls back once to the month before);
-2. converts the parcels of each listed cadastral area to WGS84 with GDAL (`ogr2ogr`);
-3. builds one vector tileset with tippecanoe and publishes it atomically.
+2. converts the parcels of the listed cadastral areas to WGS84 with GDAL (`ogr2ogr`), reading each
+   municipality file once into `data/build/municipalities/{municipality}.geojsonl`;
+3. builds one vector tileset with tippecanoe, checks it against the tile size budget and publishes it
+   atomically.
+
+The list of cadastral areas, `config/coverage.csv`, is generated from the RÚIAN state structure file
+(`{YYYYMMDD}_ST_UZSZ.xml.zip`, same directory as the municipality files) by `make coverage`, which runs
+`bin/console coverage:generate --district=3604 [--export-date=YYYY-MM-DD]`. Only cadastral areas with a digital
+map are listed (areas without one have no parcel polygons). `make data` never rewrites the list: run
+`make coverage` deliberately, review the diff and commit it.
 
 Data lives in `data/` (git-ignored): `cache/ruian/` holds the downloads (a cached file is never
 downloaded again, so a rerun is offline), `build/` the intermediate files and `tiles/parcels.mbtiles`
-the published tileset. Today `config/coverage.csv` lists the 5 cadastral areas of the municipality
-Jičín (16,972 parcels, a 3.7 MB download, a 3.5 MB tileset); covering the whole district means
-adding its areas to that file.
+the published tileset. `config/coverage.csv` lists the whole district: 240 cadastral areas of 111
+municipalities, 272,011 parcels. The first `make data` downloads 111 municipality files (54 MB per monthly
+export) and takes about 1 minute; a rerun from the cache about 45 seconds. The tileset is about 56 MB and
+the intermediate GeoJSON in `build/` about 130 MB. The tile build needs about 1 to 2 GB of memory (Docker Desktop
+users: allow at least 4 GB). Smoothness gate: a vector tile is limited to 200 kB (gzip; at most about 20 tiles are visible on a 1920x1080
+screen, so a view stays under 4 MB). The limit is passed to tippecanoe, and after the build the import reads the
+tileset back: if any tile is larger it fails with "Tile z/x/y has N bytes, over the budget of 200000 bytes; the
+tileset was not published." and nothing is published. On success it prints the tile count and the largest tile
+per zoom level. The import prints its progress (one line per municipality download and conversion,
+then the tile build). A failed run keeps the completed downloads in the cache, so a rerun resumes. ČÚZK publishes
+the monthly files over about an hour on the 1st; if a later municipality is not published yet the import stops
+with "The RÚIAN export of … for municipality … is not published": rerun it later or pass `--export-date` of the
+month before. Old cached months and build files are kept; delete them by hand when needed.
 
 The data is licensed CC BY 4.0; the required credit is "ČÚZK, {year of the export}". Conditions:
 https://cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-prostorovych-dat-CUZK.aspx
@@ -97,6 +115,7 @@ TypeScript, built with Vite, MapLibre GL JS from npm (bundled, no CDN). Edit `fr
 | `make lint-frontend` | `NODE npm run lint`, `NODE npm run format:check`                           | ESLint (type-aware) and Prettier check        |
 | `make format`     | `PHP vendor/bin/php-cs-fixer fix`, `NODE npm run format`                      | Format PHP and frontend code                  |
 | `make test-frontend` | `NODE npm test`                                                            | Vitest unit tests                             |
+| `make perf`       | `NODE npm run perf`                                                           | Browser measurement of the district views against the app of `make up` with real data (`make data` first); not part of `make check` |
 | `make test-e2e`   | starts the test app, then `npm run e2e` in the test project                   | Playwright E2E (needs `make assets` first)    |
 | `make assets`     | `NODE npm ci`, `NODE npm run build`                                           | Build the frontend into `public/build/`       |
 | `make watch`      | `NODE npm run watch`                                                          | Rebuild the frontend on change                |
@@ -107,6 +126,22 @@ Run `composer install` first (`make install-php`); the `make` check groups do it
 The API and E2E tests run against their own app: a separate compose project (`parcel-map-test`,
 `compose.test.yaml`) with no published port and the fixture data in `tests/Fixtures/data`, so
 `make check` never restarts or changes the app of `make up`. `make down` stops both projects.
+
+### Smoothness evidence
+
+The main quality criterion is that the map stays smooth with the whole district in view. Three kinds of evidence:
+
+1. **The tile budget gate** (import time): no vector tile may exceed 200 kB gzip, so a view of at most about 20
+   tiles stays under 4 MB. An import that produces a larger tile fails and publishes nothing.
+2. **`make perf`** (`tests/Perf/district.spec.ts`, Playwright, needs `make up` and `make data`): opens the whole
+   district (zoom 10), Jičín at zoom 12 and at zoom 14 at 1920x1080, then pans around. It asserts budgets that do
+   not depend on the hardware: at most 30 parcel tile requests and 4 MB while loading, a p95 tile response time of at
+   most 100 ms, tiles settled within 5 s, and every tile answering 200 or 204. It also records frame intervals and
+   long tasks and writes the report to `var/perf/district-perf.json`, but does not assert them: Docker's headless
+   Chromium renders WebGL in software, so frame times say little about real hardware. Measured on 2026-11-20: the
+   district view loads 9 tiles (263 kB), Jičín at zoom 12 loads 15 tiles (1.9 MB), tile responses take 13 to 56 ms.
+3. **A manual check in Chrome** on real hardware (performance panel while panning and zooming over the district
+   at zoom 10 and over Jičín at zoom 12 to 16: no long tasks over 50 ms once the tiles have loaded).
 
 ## Continuous integration
 
@@ -183,6 +218,11 @@ A running log of decisions, surprises and what I would do with more time.
   the preferred design (lean runtime image, independent tool upgrades, isolation). One image is
   enough for now: the import is the only consumer and the process adapters need the binaries in
   the same container.
+- **Low zooms leave out the smallest parcels instead of merging them.** A tile over the 200 kB budget drops its
+  smallest parcels (tippecanoe `--drop-smallest-as-needed`, only below zoom 14). Merging them
+  (`--coalesce-densest-as-needed`) painted blocks of several square kilometres with one parcel's land type at zoom
+  9 to 11, so the map showed wrong land types; dropping keeps every drawn parcel true and lets the base map show
+  through the gaps. It is also faster (an 18 s tile build instead of 65 s).
 - **Immutable, versioned tile URLs.** The browser never asks the single-threaded PHP server for the
   same tile twice; empty tiles answer 204 (a 404 would be logged as a console error by the browser).
 - **Docker for everything.** Same PHP version and tools on every machine.
@@ -205,8 +245,10 @@ _To be filled in._
 
 ### With more time
 
+- A generalised land-cover overview layer (parcels dissolved by land type) for low zooms, instead of leaving out
+  small parcels there.
 - Docker layer cache in CI (BuildKit GitHub Actions cache), to avoid rebuilding the PHP image
   in several jobs and pulling the Playwright image on every run.
 - Activate the ruleset once the repository is public.
-- Separate tool containers for GDAL and tippecanoe, import progress output, and a pinned
+- Separate tool containers for GDAL and tippecanoe, and a pinned
   S-JTSK to WGS84 coordinate transformation (GDAL's default is used today).
