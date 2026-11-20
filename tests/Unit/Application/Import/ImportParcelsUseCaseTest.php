@@ -45,14 +45,13 @@ final class ImportParcelsUseCaseTest extends TestCase
         self::assertSame(['572659 2026-10-31', '222222 2026-10-31'], $this->downloader->attempts);
         self::assertSame(
             [
-                '659541 from memory://572659/2026-10-31',
-                '740225 from memory://572659/2026-10-31',
-                '111111 from memory://222222/2026-10-31',
+                '572659: 659541,740225 from memory://572659/2026-10-31',
+                '222222: 111111 from memory://222222/2026-10-31',
             ],
             $this->converter->conversions,
         );
         self::assertSame(
-            ['memory://parcels/659541', 'memory://parcels/740225', 'memory://parcels/111111'],
+            ['memory://municipalities/572659', 'memory://municipalities/222222'],
             $this->builder->builtFrom,
         );
         self::assertSame(['memory://tileset 20261120093000 2026-10-31'], $this->publisher->published);

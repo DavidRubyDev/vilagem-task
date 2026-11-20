@@ -1113,3 +1113,20 @@ Filled in by the implement agent, one entry per step.
   `data/tiles/parcels.mbtiles` 56.7 MB (`--coalesce-densest-as-needed` still in place).
 - The README numbers describe this state (about 2.5 / 2 minutes); steps 2 and 5 make the import faster and the
   README is updated there.
+
+### Step 2: convert each municipality once
+
+- Red runs seen: `CoverageTest` (`areasOf`), `ConvertedParcelsTest`, `AreaParcelCountTest` and the changed
+  `ImportParcelsUseCaseTest` / fake converter all failed to load (missing classes, incompatible `convert()`
+  signature: PHP fatal at class load, which is how this code base shows a missing interface change); the converter
+  integration test failed the same way (`convert()` declaration). After the domain and application code, the unit
+  suite was green; after the adapter, the integration suite was green.
+- `TilesetBuilderUsingTippecanoeTest` only needed the new `ConvertedParcels` shape and the new fixture. Its new
+  assertion that `areaCode` is not in the tiles cannot fail first: `--include=landType` already guaranteed it.
+- Fixture `geojson/572659.geojsonl` (25 lines) was generated with the new converter from the fixture zip, as
+  specified; `geojson/659541.geojsonl` was removed (`git mv`).
+- Below the plan's level: the converter deletes its output file on every failure, including a malformed line
+  (`ConversionFailed`). That error path has no integration test, since GDAL never emits one from valid input.
+- Whole district, from the cache, `make data`: 87 s (22 s conversion + 65 s tile build), down from 119 s;
+  272,011 parcels as before; tippecanoe peak 1.78 GB. `data/build/municipalities` is 131 MB. The task 002 files in
+  `data/build/parcels` (127 MB) stay, as Decision 12 says.

@@ -48,7 +48,8 @@ Run `make data` once (and again whenever you want a newer export). It runs
    (`https://vdp.cuzk.gov.cz/vymenny_format/soucasna/{YYYYMMDD}_OB_{municipality}_UKSH.xml.zip`;
    files are dated on the last day of a month and appear the next day, so without
    `--export-date` the import takes the latest one and falls back once to the month before);
-2. converts the parcels of each listed cadastral area to WGS84 with GDAL (`ogr2ogr`);
+2. converts the parcels of the listed cadastral areas to WGS84 with GDAL (`ogr2ogr`), reading each
+   municipality file once into `data/build/municipalities/{municipality}.geojsonl`;
 3. builds one vector tileset with tippecanoe and publishes it atomically.
 
 The list of cadastral areas, `config/coverage.csv`, is generated from the RÚIAN state structure file
@@ -61,8 +62,8 @@ Data lives in `data/` (git-ignored): `cache/ruian/` holds the downloads (a cache
 downloaded again, so a rerun is offline), `build/` the intermediate files and `tiles/parcels.mbtiles`
 the published tileset. `config/coverage.csv` lists the whole district: 240 cadastral areas of 111
 municipalities, 272,011 parcels. The first `make data` downloads 111 municipality files (54 MB per monthly
-export) and takes about 2.5 minutes; a rerun from the cache about 2 minutes. The tileset is about 56 MB and
-the intermediate GeoJSON in `build/` 127 MB. The tile build needs about 1 to 2 GB of memory (Docker Desktop
+export) and takes about 2 minutes; a rerun from the cache about 1.5 minutes. The tileset is about 56 MB and
+the intermediate GeoJSON in `build/` about 130 MB. The tile build needs about 1 to 2 GB of memory (Docker Desktop
 users: allow at least 4 GB). Old cached months and build files are kept; delete them by hand when needed.
 
 The data is licensed CC BY 4.0; the required credit is "ČÚZK, {year of the export}". Conditions:

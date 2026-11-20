@@ -38,24 +38,36 @@ final class ParcelConverterUsingOgr2ogrTest extends TestCase
     }
 
     #[Test]
-    public function it_converts_the_parcels_of_an_area_to_wgs84_geojson_lines(): void
+    public function it_converts_the_parcels_of_all_given_areas_of_a_municipality_into_one_file(): void
     {
-        $converted = $this->converter()->convert($this->fixtureExport(), self::area(659541, 'Jičín'));
+        $converted = $this->converter()->convert(
+            $this->fixtureExport(),
+            [self::area(659541, 'Jičín'), self::area(740225, 'Robousy')],
+        );
 
-        self::assertSame(22, $converted->parcelCount);
-        self::assertSame(659541, $converted->area->value);
-        self::assertSame($this->work->path . '/parcels/659541.geojsonl', $converted->path);
+        self::assertSame(572659, $converted->municipality->value);
+        self::assertSame($this->work->path . '/municipalities/572659.geojsonl', $converted->path);
+        self::assertSame(22, $converted->parcelCountOf(new CadastralAreaCode(659541)));
+        self::assertSame(3, $converted->parcelCountOf(new CadastralAreaCode(740225)));
+        self::assertSame(25, $converted->totalParcelCount());
+        self::assertSame([$this->work->path . '/municipalities/572659.geojsonl'], glob($this->work->path . '/municipalities/*'));
 
         $lines = file($converted->path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         self::assertIsArray($lines);
-        self::assertCount(22, $lines);
+        self::assertCount(25, $lines);
         $ids = [];
+        $areaCodes = [];
         foreach ($lines as $line) {
             $feature = json_decode($line, true, flags: JSON_THROW_ON_ERROR);
             self::assertIsArray($feature);
             self::assertIsArray($feature['properties']);
-            self::assertSame(['id', 'landType'], array_keys($feature['properties']));
-            $ids[] = $feature['properties']['id'];
+            self::assertSame(['id', 'landType', 'areaCode'], array_keys($feature['properties']));
+            $areaCode = $feature['properties']['areaCode'];
+            self::assertIsInt($areaCode);
+            $areaCodes[] = $areaCode;
+            if ($areaCode === 659541) {
+                $ids[] = $feature['properties']['id'];
+            }
             self::assertIsArray($feature['geometry']);
             self::assertIsArray($feature['geometry']['coordinates']);
             $this->assertInsideJicin($feature['geometry']['coordinates']);
@@ -64,37 +76,43 @@ final class ParcelConverterUsingOgr2ogrTest extends TestCase
         $expected = self::FIXTURE_IDS;
         sort($expected);
         self::assertSame($expected, $ids);
+        self::assertSame([659541 => 22, 740225 => 3], array_count_values($areaCodes));
     }
 
     #[Test]
-    public function it_converts_only_the_requested_area(): void
+    public function it_converts_only_the_given_areas(): void
     {
-        $converted = $this->converter()->convert($this->fixtureExport(), self::area(740225, 'Robousy'));
+        $converted = $this->converter()->convert($this->fixtureExport(), [self::area(740225, 'Robousy')]);
 
-        self::assertSame(3, $converted->parcelCount);
+        self::assertSame(3, $converted->totalParcelCount());
+        self::assertCount(3, file($converted->path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: []);
     }
 
     #[Test]
-    public function it_reports_an_area_that_is_not_in_the_export_and_leaves_no_file(): void
+    public function it_reports_the_first_given_area_without_parcels_and_leaves_no_file(): void
     {
         try {
-            $this->converter()->convert($this->fixtureExport(), self::area(771775, 'Hubálov'));
+            $this->converter()->convert($this->fixtureExport(), [self::area(659541, 'Jičín'), self::area(771775, 'Hubálov')]);
             self::fail('Expected CadastralAreaNotInExport.');
-        } catch (CadastralAreaNotInExport) {
-            self::assertSame([], glob($this->work->path . '/parcels/*'));
+        } catch (CadastralAreaNotInExport $exception) {
+            self::assertStringContainsString('771775', $exception->getMessage());
+            self::assertSame([], glob($this->work->path . '/municipalities/*'));
         }
     }
 
     #[Test]
-    public function it_reports_a_corrupt_zip_file(): void
+    public function it_reports_a_corrupt_zip_file_and_leaves_no_file(): void
     {
         $path = $this->work->path . '/20261031_OB_572659_UKSH.xml.zip';
         file_put_contents($path, 'this is not a zip file');
         $export = new DownloadedExport(new MunicipalityCode(572659), ExportDate::fromString('2026-10-31'), $path);
 
-        $this->expectException(ConversionFailed::class);
-
-        $this->converter()->convert($export, self::area(659541, 'Jičín'));
+        try {
+            $this->converter()->convert($export, [self::area(659541, 'Jičín')]);
+            self::fail('Expected ConversionFailed.');
+        } catch (ConversionFailed) {
+            self::assertSame([], glob($this->work->path . '/municipalities/*'));
+        }
     }
 
     private function converter(): ParcelConverterUsingOgr2ogr

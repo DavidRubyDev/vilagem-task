@@ -39,10 +39,10 @@ Horní Hradiště (municipality Plasy) has no digital map; district 3605 has no 
 
 Two areas of the fixture export: 659541 Jičín and 740225 Robousy (municipality 572659).
 
-## `geojson/659541.geojsonl`
+## `geojson/572659.geojsonl`
 
-The output of `ParcelConverterUsingOgr2ogr` for area 659541 on the fixture zip (22 lines, WGS84), input
-for the tileset builder test.
+The output of `ParcelConverterUsingOgr2ogr` for municipality 572659 with the areas 659541 and 740225 on the
+fixture zip (25 lines, WGS84, properties `id`, `landType` and `areaCode`), input for the tileset builder test.
 
 ## `data/tiles/parcels.mbtiles`
 

@@ -9,8 +9,9 @@ use ParcelMap\Domain\Cadastre\CadastralArea;
 interface ParcelConverter
 {
     /**
+     * @param non-empty-list<CadastralArea> $areas the covered areas of the export's municipality
      * @throws ConversionFailed
-     * @throws CadastralAreaNotInExport
+     * @throws CadastralAreaNotInExport the first given area without parcels
      */
-    public function convert(DownloadedExport $export, CadastralArea $area): ConvertedParcels;
+    public function convert(DownloadedExport $export, array $areas): ConvertedParcels;
 }

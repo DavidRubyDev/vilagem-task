@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace ParcelMap\Tests\Integration\Infrastructure\Import;
 
+use ParcelMap\Application\Import\AreaParcelCount;
 use ParcelMap\Application\Import\ConvertedParcels;
 use ParcelMap\Application\Import\TileBuildFailed;
 use ParcelMap\Domain\Cadastre\CadastralAreaCode;
+use ParcelMap\Domain\Cadastre\MunicipalityCode;
 use ParcelMap\Infrastructure\Import\TilesetBuilderUsingTippecanoe;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
 use ParcelMap\Tests\Support\TemporaryDirectory;
@@ -54,6 +56,7 @@ final class TilesetBuilderUsingTippecanoeTest extends TestCase
 
         self::assertStringContainsString('"id": 1753295604', $decoded);
         self::assertStringContainsString('landType', $decoded);
+        self::assertStringNotContainsString('areaCode', $decoded);
     }
 
     #[Test]
@@ -64,7 +67,7 @@ final class TilesetBuilderUsingTippecanoeTest extends TestCase
 
         $this->expectException(TileBuildFailed::class);
 
-        $this->builder()->build([new ConvertedParcels(new CadastralAreaCode(659541), $path, 1)]);
+        $this->builder()->build([new ConvertedParcels(new MunicipalityCode(572659), $path, [new AreaParcelCount(new CadastralAreaCode(659541), 1)])]);
     }
 
     private function builder(): TilesetBuilderUsingTippecanoe
@@ -75,12 +78,11 @@ final class TilesetBuilderUsingTippecanoeTest extends TestCase
     private function fixtureParcels(): ConvertedParcels
     {
         return new ConvertedParcels(
-            new CadastralAreaCode(659541),
-            dirname(__DIR__, 3) . '/Fixtures/geojson/659541.geojsonl',
-            22,
+            new MunicipalityCode(572659),
+            dirname(__DIR__, 3) . '/Fixtures/geojson/572659.geojsonl',
+            [new AreaParcelCount(new CadastralAreaCode(659541), 22), new AreaParcelCount(new CadastralAreaCode(740225), 3)],
         );
     }
-
 
     /**
      * @param non-empty-list<string> $command

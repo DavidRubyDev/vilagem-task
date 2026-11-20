@@ -43,6 +43,23 @@ final readonly class Coverage
     }
 
     /**
+     * @return non-empty-list<CadastralArea> the covered areas of the municipality, in coverage order
+     * @throws MunicipalityNotCovered
+     */
+    public function areasOf(MunicipalityCode $municipality): array
+    {
+        $areas = array_values(array_filter(
+            $this->areas,
+            static fn(CadastralArea $area): bool => $area->municipality->equals($municipality),
+        ));
+        if ($areas === []) {
+            throw MunicipalityNotCovered::code($municipality->value);
+        }
+
+        return $areas;
+    }
+
+    /**
      * @return non-empty-list<MunicipalityCode>
      */
     public function municipalities(): array

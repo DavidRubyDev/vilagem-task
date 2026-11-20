@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ParcelMap\Application\Import;
 
+use LogicException;
 use ParcelMap\Application\Clock\Clock;
 use ParcelMap\Domain\Cadastre\CadastralArea;
 use ParcelMap\Domain\Cadastre\Coverage;
@@ -35,17 +36,19 @@ final readonly class ImportParcelsUseCase
         $exports = $this->download($coverage, $this->exportDate($input), allowFallback: $input->exportDate === null);
 
         $converted = array_map(
-            fn(CadastralArea $area): ConvertedParcels => $this->converter->convert($exports[$area->municipality->value], $area),
-            $coverage->areas(),
+            fn(MunicipalityCode $municipality): ConvertedParcels => $this->converter->convert(
+                $exports[$municipality->value],
+                $coverage->areasOf($municipality),
+            ),
+            $coverage->municipalities(),
         );
         $areas = array_map(
-            static fn(CadastralArea $area, ConvertedParcels $parcels): ImportedAreaOutput => new ImportedAreaOutput(
+            fn(CadastralArea $area): ImportedAreaOutput => new ImportedAreaOutput(
                 $area->code->value,
                 $area->name,
-                $parcels->parcelCount,
+                $this->parcelCount($converted, $area),
             ),
             $coverage->areas(),
-            $converted,
         );
 
         $exportDate = array_first($exports)->date;
@@ -57,8 +60,22 @@ final readonly class ImportParcelsUseCase
             $exportDate->toString(),
             $version->value,
             $areas,
-            array_sum(array_map(static fn(ImportedAreaOutput $area): int => $area->parcelCount, $areas)),
+            array_sum(array_map(static fn(ConvertedParcels $parcels): int => $parcels->totalParcelCount(), $converted)),
         );
+    }
+
+    /**
+     * @param non-empty-list<ConvertedParcels> $converted one per municipality
+     */
+    private function parcelCount(array $converted, CadastralArea $area): int
+    {
+        foreach ($converted as $parcels) {
+            if ($parcels->municipality->equals($area->municipality)) {
+                return $parcels->parcelCountOf($area->code);
+            }
+        }
+
+        throw new LogicException(sprintf('The municipality %d was not converted.', $area->municipality->value));
     }
 
     private function exportDate(ImportParcelsInput $input): ExportDate
