@@ -226,7 +226,7 @@ make qa             # cs phpstan deptrac lint-ci typecheck lint-frontend
 make test           # test-unit test-integration test-api test-frontend test-e2e (run make assets first)
 make test-unit      # PHP vendor/bin/phpunit --testsuite unit
 make test-integration  # PHP vendor/bin/phpunit --testsuite integration (real GDAL/tippecanoe/SQLite, local HTTP server)
-make test-api       # starts the app, then PHP vendor/bin/phpunit --testsuite api
+make test-api       # starts the test app (project parcel-map-test, fixture data), then PHP vendor/bin/phpunit --testsuite api in it
 make cs             # PHP vendor/bin/php-cs-fixer check --diff   (make cs-fix fixes)
 make phpstan        # PHP vendor/bin/phpstan analyse --no-progress
 make deptrac        # PHP vendor/bin/deptrac analyse --no-progress --fail-on-uncovered --report-uncovered
@@ -234,11 +234,12 @@ make typecheck      # NODE npm run typecheck (tsc -b)
 make lint-frontend  # NODE npm run lint (ESLint) and npm run format:check (Prettier)
 make format         # cs-fix + NODE npm run format
 make test-frontend  # NODE npm test (Vitest)
-make test-e2e       # starts the app, then NODE npm run e2e (Playwright; needs make assets first)
+make test-e2e       # starts the test app, then NODE npm run e2e in the test project (Playwright; needs make assets first)
+make up-app         # starts the test app: docker compose -p parcel-map-test -f compose.yaml -f compose.test.yaml up -d --wait --no-deps app
 make data           # PHP bin/console parcels:import: download the RÚIAN export (cached) and build data/tiles/parcels.mbtiles
 make assets         # NODE npm ci && npm run build -> public/build/   (make watch rebuilds on change)
 make lint-ci        # actionlint on .github/workflows/ci.yml
-make up / make down # docker compose up / down (app at http://localhost:8000)
+make up / make down # docker compose up / down (app at http://localhost:8000); down also stops the test project
 docker compose build                 # build the image
 docker compose run --rm app <cmd>    # run any command in the app container
 docker compose run --rm app bin/console   # list the CLI commands
@@ -281,4 +282,8 @@ Source-data term (Czech) → name used in code.
 | datum souboru VFR                     | `ExportDate`         | Last day of a month; the file is published the next day.       |
 | —                                     | `Coverage`           | The cadastral areas the map covers (`config/coverage.csv`).    |
 | —                                     | `TilesetVersion`     | Identifies one published parcel tileset; part of the tile URLs. |
+| —                                     | `TileCoordinate`     | Tile `zoom/x/y` in the XYZ scheme (y from the top).            |
+| —                                     | `VectorTile`         | One gzip-compressed vector tile, or none (empty).              |
+| —                                     | `Bounds`             | South-west and north-east `Coordinates` of a rectangle.        |
+| —                                     | `ParcelTileset`      | The published parcel tileset: version, export date, bounds, zoom range; `attribution()` gives the ČÚZK credit. |
 | —                                     | Map configuration    | What the frontend needs to start the map: initial `MapView` + `BaseMap` (`GET /api/map-config`). |

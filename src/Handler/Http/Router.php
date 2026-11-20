@@ -19,11 +19,11 @@ final readonly class Router
         $allowedMethods = [];
 
         foreach ($this->routes as $route) {
-            if ($route->path !== $request->path) {
+            if (!$route->matches($request->path)) {
                 continue;
             }
             if ($route->method === $request->method) {
-                return $route->handler->handle($request);
+                return $route->handler->handle($request->withPathParameters($route->parametersOf($request->path)));
             }
             $allowedMethods[] = $route->method;
         }

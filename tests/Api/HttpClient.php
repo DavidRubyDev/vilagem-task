@@ -23,8 +23,9 @@ final readonly class HttpClient
 
     /**
      * @param non-empty-string $method
+     * @param array<string, string> $requestHeaders
      */
-    public function request(string $method, string $path): HttpResult
+    public function request(string $method, string $path, array $requestHeaders = []): HttpResult
     {
         $handle = curl_init($this->baseUrl . $path);
         if ($handle === false) {
@@ -34,6 +35,12 @@ final readonly class HttpClient
         $headers = [];
         curl_setopt_array($handle, [
             CURLOPT_CUSTOMREQUEST => $method,
+            // Without CURLOPT_ENCODING curl neither asks for nor decodes compressed bodies, so tests see the raw bytes.
+            CURLOPT_HTTPHEADER => array_map(
+                static fn(string $name, string $value): string => $name . ': ' . $value,
+                array_keys($requestHeaders),
+                $requestHeaders,
+            ),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT => 10,

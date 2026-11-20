@@ -1034,3 +1034,18 @@ Filled in by the implement agent, one entry per step.
   `tests/Api/ConsoleRunner`, `tests/Integration/Infrastructure/Process/ProcessRunnerTest` and
   `Clock/ClockUsingSystemTimeTest`.
 - `composer update --lock` refreshed `composer.lock` for the new `require` entries.
+
+### Step 4: tile endpoint
+
+- Fixture tileset produced exactly as the task describes (version `20261120111929`, bounds and tiles as predicted,
+  `14/8891/5525` empty); constants in `tests/Support/FixtureTileset.php`.
+- Red runs: `make test-api` in the new test project failed 4 of 21 (`ParcelTileTest`: 404 instead of 200 / 200 / 204 /
+  405); the unit tests (domain, use case, Router/Request/Response) failed with class-not-found and missing
+  members; the integration `ParcelTilesetRepositoryUsingMbtilesTest` failed with class-not-found. The
+  `ParcelTileRouteTest` was added after the handler (it exercises plumbing already covered by the red API run).
+- `Route` compiles its path to a regex (`matches()` and `parametersOf()`, instead of one method returning `null`).
+- `ParcelTilesetRepositoryUsingMbtiles` opens a connection per call (read-only via `Pdo\Sqlite`); a missing file
+  raises `ParcelDataNotImported` and does not create the file.
+- The test project works: `make test-api` starts `parcel-map-test` (no published port) and the developer's app
+  is not touched. Running `docker compose down` (without `-p`) is what stopped the dev app during this work.
+- `make down` stops both projects; `compose.yaml` names the app image `parcel-map-app` so the test project reuses it.

@@ -28,6 +28,18 @@ Two areas of the fixture export: 659541 Jičín and 740225 Robousy (municipality
 The output of `ParcelConverterUsingOgr2ogr` for area 659541 on the fixture zip (22 lines, WGS84), input
 for the tileset builder test.
 
+## `data/tiles/parcels.mbtiles`
+
+The fixture tileset (about 40 KB), used as the data dir of the test app (`PARCEL_MAP_DATA_DIR=tests/Fixtures/data`
+in `compose.test.yaml`). Produced by `bin/console parcels:import --export-date=2026-10-31` with
+`PARCEL_MAP_COVERAGE_FILE=tests/Fixtures/coverage/fixture.csv`, a temporary `PARCEL_MAP_DATA_DIR` whose
+`cache/ruian/` holds a copy of the fixture zip, and `RUIAN_EXPORT_BASE_URL=http://127.0.0.1:9/`.
+The tests use these facts as constants in `tests/Support/FixtureTileset.php`:
+
+- version `20261120111929`, export date 2026-10-31, zooms 9 to 16;
+- bounds `15.350516,50.432327,15.403251,50.437799`;
+- tiles `12/2222/1381`, `13/4445/2762`, `14/8890/5525` exist; `14/8891/5525` is inside the bounds but empty.
+
 ## `tests/Integration/Support/ruian-router.php`
 
 Not data: a router script for `php -S` that stands in for the ČÚZK download server and serves the

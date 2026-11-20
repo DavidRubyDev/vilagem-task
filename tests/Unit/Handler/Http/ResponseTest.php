@@ -48,4 +48,27 @@ final class ResponseTest extends TestCase
         self::assertSame(500, Response::internalError()->status);
         self::assertSame('{"error":"internal_error"}', Response::internalError()->body);
     }
+
+    #[Test]
+    public function it_adds_a_header_to_a_copy(): void
+    {
+        $response = Response::html('x');
+
+        $copy = $response->withHeader('Cache-Control', 'no-cache');
+
+        self::assertArrayNotHasKey('Cache-Control', $response->headers);
+        self::assertSame('no-cache', $copy->headers['Cache-Control']);
+        self::assertSame('text/html; charset=utf-8', $copy->headers['Content-Type']);
+        self::assertSame('x', $copy->body);
+    }
+
+    #[Test]
+    public function it_builds_a_204_response_without_a_body(): void
+    {
+        $response = Response::noContent(['Cache-Control' => 'public']);
+
+        self::assertSame(204, $response->status);
+        self::assertSame('', $response->body);
+        self::assertSame(['Cache-Control' => 'public'], $response->headers);
+    }
 }
