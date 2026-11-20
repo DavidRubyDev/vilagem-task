@@ -12,10 +12,10 @@ use ParcelMap\Domain\Map\TileSizeBudget;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
 
 /**
- * Builds the vector tileset with tippecanoe. The options keep the map smooth:
- * - a tile never exceeds the budget (--maximum-tile-bytes); when one would, the densest areas are coalesced
- *   (--coalesce-densest-as-needed), which in practice only happens below zoom 14, so parcels stay separate
- *   where outlines are drawn;
+ * Builds the vector tileset with tippecanoe. The options keep the map smooth and honest:
+ * - a tile never exceeds the budget (--maximum-tile-bytes); when one would, the smallest parcels are left out
+ *   (--drop-smallest-as-needed), which in practice only happens below zoom 14. Parcels are never merged, so every
+ *   drawn parcel keeps its own land type and, from zoom 14, its own outline;
  * - shared borders are detected so simplification does not open gaps between neighbours;
  * - the parcel id becomes the feature id (--use-attribute-for-id) for the later click-to-detail task;
  * - only landType is kept as a property.
@@ -48,7 +48,7 @@ final readonly class TilesetBuilderUsingTippecanoe implements TilesetBuilder
             '--include=landType',
             '--detect-shared-borders',
             '--maximum-tile-bytes=' . $budget->maxBytes,
-            '--coalesce-densest-as-needed',
+            '--drop-smallest-as-needed',
             '--simplification=4',
             '--simplify-only-low-zooms',
             '--extend-zooms-if-still-dropping',

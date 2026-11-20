@@ -1156,3 +1156,34 @@ Filled in by the implement agent, one entry per step.
   the tippecanoe option.
 - Below the plan's level: kB are printed with `%.1F` (locale independent); the inspector reads the tileset with
   one grouped query and one prepared lookup per zoom level.
+
+### Step 5: honest overview
+
+- Test first: `TilesetBuilderUsingTippecanoeTest::it_drops_parcels_instead_of_merging_them_when_a_tile_is_over_budget`
+  (1,000-byte budget on `geojson/572659.geojsonl`, decodes the whole tileset with `tippecanoe-decode`, compares
+  every feature at zoom 14 or more with the bounding box of its own input parcel). Red: "0.0003086000000003253 is
+  less than 1.0E-5", the same value that was measured during planning. Green after
+  `--coalesce-densest-as-needed` became `--drop-smallest-as-needed`.
+- The builder class comment and the comment above `parcelLayers` in `frontend/src/mapOptions.ts` were rewritten as
+  specified; README Decisions / With more time and the fixture README are updated.
+- Whole district (`make data`, tippecanoe 16 threads), measured after this step:
+  - clean data dir (111 downloads, 54 MB): 66 s wall; rerun from the cache: 44 s (22 s conversion + 18 s tile
+    build + a few seconds of reading and publishing); tippecanoe peak memory 1.63 GB (VmHWM);
+  - 272,011 parcels from 240 cadastral areas; tileset 55.9 MB (53.4 MiB); `build/municipalities` 131 MB;
+    `cache/ruian` 54 MB (59 MB with the structure file);
+  - the gate passed (200.0 kB budget). Tiles per zoom level (gzip, kB = 1000 bytes):
+
+    | zoom | tiles | largest |
+    |---|---|---|
+    | 9 | 4 | 149.8 kB |
+    | 10 | 8 | 151.6 kB |
+    | 11 | 15 | 159.9 kB |
+    | 12 | 41 | 159.0 kB |
+    | 13 | 127 | 186.1 kB |
+    | 14 | 438 | 155.5 kB |
+    | 15 | 1618 | 55.1 kB |
+    | 16 | 6168 | 23.9 kB |
+
+    (8,419 tiles; the figures match the planning measurement of 181.7 KiB at zoom 13, which is 186.1 kB.)
+- The browser check of the land-type colours at zoom 9 to 11 is part of step 6, where the browser tooling runs
+  against this data.

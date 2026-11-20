@@ -68,7 +68,8 @@ The fixture tileset (about 40 KB), used as the data dir of the test app (`PARCEL
 in `compose.test.yaml`). Produced by `bin/console parcels:import --export-date=2026-10-31` with
 `PARCEL_MAP_COVERAGE_FILE=tests/Fixtures/coverage/fixture.csv`, a temporary `PARCEL_MAP_DATA_DIR` whose
 `cache/ruian/` holds a copy of the fixture zip, and `RUIAN_EXPORT_BASE_URL=http://127.0.0.1:9/`.
-The tests use these facts as constants in `tests/Support/FixtureTileset.php`:
+It was built with the options of task 002 (`--coalesce-densest-as-needed`) and is not rebuilt: its tiles are far
+below the budget, so the dropping option would change nothing in it. The tests use these facts as constants in `tests/Support/FixtureTileset.php`:
 
 - version `20261120111929`, export date 2026-10-31, zooms 9 to 16;
 - bounds `15.350516,50.432327,15.403251,50.437799`;

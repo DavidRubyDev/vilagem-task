@@ -73,6 +73,49 @@ final class TilesetBuilderUsingTippecanoeTest extends TestCase
     }
 
     #[Test]
+    public function it_drops_parcels_instead_of_merging_them_when_a_tile_is_over_budget(): void
+    {
+        $built = $this->builder()->build([$this->fixtureParcels()], new TileSizeBudget(1000));
+
+        $originalBoxes = $this->boundingBoxesOfInputParcels();
+        $decoded = json_decode($this->runTool(['tippecanoe-decode', $built->path]), true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertIsArray($decoded['features']);
+
+        $checked = 0;
+        $worstExtension = 0.0;
+        foreach ($decoded['features'] as $tile) {
+            self::assertIsArray($tile);
+            self::assertIsArray($tile['properties']);
+            if ($tile['properties']['zoom'] < 14) {
+                continue;
+            }
+            foreach (self::featuresOf($tile) as $feature) {
+                self::assertIsArray($feature);
+                $id = $feature['id'] ?? null;
+                self::assertIsInt($id, 'Every parcel in a tile at zoom 14 or more keeps its id.');
+                self::assertArrayHasKey($id, $originalBoxes);
+                self::assertIsArray($feature['geometry']);
+                $box = self::boundingBox($feature['geometry']['coordinates']);
+                $original = $originalBoxes[$id];
+                $worstExtension = max(
+                    $worstExtension,
+                    $original[0] - $box[0],
+                    $original[1] - $box[1],
+                    $box[2] - $original[2],
+                    $box[3] - $original[3],
+                );
+                ++$checked;
+            }
+        }
+
+        self::assertGreaterThan(0, $checked);
+        // Merging parcels (coalescing) extends a feature up to 0.0003 degrees beyond its own parcel; dropping only
+        // leaves a rounding error of the tile grid.
+        self::assertLessThan(0.00001, $worstExtension);
+    }
+
+    #[Test]
     public function it_reports_an_unreadable_input(): void
     {
         $path = $this->work->path . '/broken.geojsonl';
@@ -106,5 +149,71 @@ final class TilesetBuilderUsingTippecanoeTest extends TestCase
         self::assertSame(0, $result->exitCode, $result->stderr);
 
         return $result->stdout . $result->stderr;
+    }
+
+    /**
+     * @return array<int, array{float, float, float, float}> west, south, east, north by parcel id
+     */
+    private function boundingBoxesOfInputParcels(): array
+    {
+        $boxes = [];
+        foreach (file($this->fixtureParcels()->path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+            $feature = json_decode($line, true, flags: JSON_THROW_ON_ERROR);
+            self::assertIsArray($feature);
+            self::assertIsArray($feature['properties']);
+            self::assertIsArray($feature['geometry']);
+            $id = $feature['properties']['id'];
+            self::assertIsInt($id);
+            $boxes[$id] = self::boundingBox($feature['geometry']['coordinates']);
+        }
+
+        return $boxes;
+    }
+
+    /**
+     * @param array<mixed> $tile a decoded tile: a collection of one layer collection
+     * @return list<mixed>
+     */
+    private static function featuresOf(array $tile): array
+    {
+        $layers = $tile['features'];
+        self::assertIsArray($layers);
+        $layer = $layers[0];
+        self::assertIsArray($layer);
+        $features = $layer['features'] ?? [];
+        self::assertIsArray($features);
+
+        return array_values($features);
+    }
+
+    /**
+     * @param mixed $coordinates nested GeoJSON coordinate arrays
+     * @return array{float, float, float, float} west, south, east, north
+     */
+    private static function boundingBox(mixed $coordinates): array
+    {
+        $points = self::points($coordinates);
+        if ($points === []) {
+            self::fail('A geometry without coordinates.');
+        }
+        $xs = array_column($points, 0);
+        $ys = array_column($points, 1);
+
+        return [min($xs), min($ys), max($xs), max($ys)];
+    }
+
+    /**
+     * @return list<array{float, float}>
+     */
+    private static function points(mixed $coordinates): array
+    {
+        self::assertIsArray($coordinates);
+        if (is_numeric($coordinates[0])) {
+            self::assertIsNumeric($coordinates[1]);
+
+            return [[(float) $coordinates[0], (float) $coordinates[1]]];
+        }
+
+        return array_merge(...array_map(self::points(...), array_values($coordinates)));
     }
 }

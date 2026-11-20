@@ -63,7 +63,7 @@ Data lives in `data/` (git-ignored): `cache/ruian/` holds the downloads (a cache
 downloaded again, so a rerun is offline), `build/` the intermediate files and `tiles/parcels.mbtiles`
 the published tileset. `config/coverage.csv` lists the whole district: 240 cadastral areas of 111
 municipalities, 272,011 parcels. The first `make data` downloads 111 municipality files (54 MB per monthly
-export) and takes about 2 minutes; a rerun from the cache about 1.5 minutes. The tileset is about 56 MB and
+export) and takes about 1 minute; a rerun from the cache about 45 seconds. The tileset is about 56 MB and
 the intermediate GeoJSON in `build/` about 130 MB. The tile build needs about 1 to 2 GB of memory (Docker Desktop
 users: allow at least 4 GB). Smoothness gate: a vector tile is limited to 200 kB (gzip; at most about 20 tiles are visible on a 1920x1080
 screen, so a view stays under 4 MB). The limit is passed to tippecanoe, and after the build the import reads the
@@ -201,6 +201,11 @@ A running log of decisions, surprises and what I would do with more time.
   the preferred design (lean runtime image, independent tool upgrades, isolation). One image is
   enough for now: the import is the only consumer and the process adapters need the binaries in
   the same container.
+- **Low zooms leave out the smallest parcels instead of merging them.** A tile over the 200 kB budget drops its
+  smallest parcels (tippecanoe `--drop-smallest-as-needed`, only below zoom 14). Merging them
+  (`--coalesce-densest-as-needed`) painted blocks of several square kilometres with one parcel's land type at zoom
+  9 to 11, so the map showed wrong land types; dropping keeps every drawn parcel true and lets the base map show
+  through the gaps. It is also faster (an 18 s tile build instead of 65 s).
 - **Immutable, versioned tile URLs.** The browser never asks the single-threaded PHP server for the
   same tile twice; empty tiles answer 204 (a 404 would be logged as a console error by the browser).
 - **Docker for everything.** Same PHP version and tools on every machine.
@@ -223,6 +228,8 @@ _To be filled in._
 
 ### With more time
 
+- A generalised land-cover overview layer (parcels dissolved by land type) for low zooms, instead of leaving out
+  small parcels there.
 - Docker layer cache in CI (BuildKit GitHub Actions cache), to avoid rebuilding the PHP image
   in several jobs and pulling the Playwright image on every run.
 - Activate the ruleset once the repository is public.
