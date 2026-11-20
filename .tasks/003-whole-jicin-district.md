@@ -1,6 +1,6 @@
 # 003: Whole Jičín district
 
-- **Status:** approved
+- **Status:** in-progress
 - **Created:** 2026-11-20
 - **Request:** "lets move to the next task". This is the roadmap item agreed during task 002 planning:
   "003 whole district (add rows to `config/coverage.csv`, progress output)". The main project
@@ -1071,3 +1071,28 @@ directories, no network except `127.0.0.1`.
 ## Implementation log
 
 Filled in by the implement agent, one entry per step.
+
+### Step 1a: coverage list from RÚIAN
+
+- Done as planned. Outer test first: `tests/Api/GenerateCoverageCommandTest.php` (9 tests). It failed with
+  `Unknown command "coverage:generate".` (red, expected). Then domain, application, infrastructure and command
+  layers, each driven by its tests.
+- Red runs seen: `DistrictCodeTest` and the three `Coverage::sortedByCode` tests (class / method not found);
+  `GenerateCoverageUseCaseTest` (all 10: `StructureReadFailed` class not found); the integration tests
+  `ZipFileDownloaderTest`, `RuianStructureDownloaderUsingHttpTest`, `DistrictAreaExtractorUsingOgr2ogrTest` and the
+  changed construction in `RuianExportDownloaderUsingHttpTest` (class not found, confirmed by moving the new
+  adapters away and running them); the `CoverageRepositoryUsingCsvTest` save tests (fatal: the adapter did not
+  implement `CoverageRepository::save`). The existing `CoverageRepositoryUsingMemory` fake was extended (records
+  `save()`, can fail) before the interface change made the existing import tests fatal.
+- The fixture `ruian/20261031_ST_UZSZ.xml.zip` (2,585 bytes) was trimmed from the research copy of the real file
+  with the planning script, as specified (4 municipalities, 13 areas).
+- `tests/Integration/Support/ruian-router.php` now also serves `{date}_ST_UZSZ.xml.zip` from the fixture dir.
+- Decisions below the plan's level:
+  - `GenerateCoverageCommand`: a repeated `--district=` or `--export-date=` is reported as
+    `Unknown option "<arg>".` with the usage (exit 2); a non-numeric `--district=abc` prints
+    `Invalid request: "abc" cannot be used as a district code: it is not a number.` and exits 2, since the use case
+    takes an `int`.
+  - `ZipFileDownloader` creates the directory of the cache path itself (`dirname($cachePath)`), so both adapters
+    pass only the cache path.
+  - The extractor's query helper checks the CSV header and the row width; those two error paths have no
+    integration test (GDAL cannot be made to emit a wrong header from the fixture).

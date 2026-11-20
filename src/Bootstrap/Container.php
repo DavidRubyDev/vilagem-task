@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace ParcelMap\Bootstrap;
 
+use ParcelMap\Application\Coverage\GenerateCoverageUseCase;
 use ParcelMap\Application\Import\ImportParcelsUseCase;
 use ParcelMap\Application\Map\GetMapConfigurationUseCase;
 use ParcelMap\Application\Map\GetParcelTileUseCase;
 use ParcelMap\Command\Console\ConsoleApplication;
+use ParcelMap\Command\GenerateCoverageCommand;
 use ParcelMap\Command\ImportParcelsCommand;
 use ParcelMap\Handler\GetMapConfigurationHandler;
 use ParcelMap\Handler\GetParcelTileHandler;
@@ -19,6 +21,9 @@ use ParcelMap\Handler\ParcelTileRoute;
 use ParcelMap\Handler\ShowMapPageHandler;
 use ParcelMap\Infrastructure\Cadastre\CoverageRepositoryUsingCsv;
 use ParcelMap\Infrastructure\Clock\ClockUsingSystemTime;
+use ParcelMap\Infrastructure\Coverage\DistrictAreaExtractorUsingOgr2ogr;
+use ParcelMap\Infrastructure\Coverage\RuianStructureDownloaderUsingHttp;
+use ParcelMap\Infrastructure\Http\ZipFileDownloader;
 use ParcelMap\Infrastructure\Import\ParcelConverterUsingOgr2ogr;
 use ParcelMap\Infrastructure\Import\RuianExportDownloaderUsingHttp;
 use ParcelMap\Infrastructure\Import\TilesetBuilderUsingTippecanoe;
@@ -45,18 +50,26 @@ final readonly class Container
     {
         $runner = new ProcessRunner();
         $dataDir = $this->path('PARCEL_MAP_DATA_DIR', self::DEFAULT_DATA_DIR);
+        $zipDownloader = new ZipFileDownloader();
+        $ruianBaseUrl = $this->environment['RUIAN_EXPORT_BASE_URL'] ?? self::DEFAULT_RUIAN_BASE_URL;
+        $coverage = new CoverageRepositoryUsingCsv($this->path('PARCEL_MAP_COVERAGE_FILE', self::DEFAULT_COVERAGE_FILE));
 
         return new ConsoleApplication(
             new ImportParcelsCommand(
                 new ImportParcelsUseCase(
-                    new CoverageRepositoryUsingCsv($this->path('PARCEL_MAP_COVERAGE_FILE', self::DEFAULT_COVERAGE_FILE)),
-                    new RuianExportDownloaderUsingHttp(
-                        $this->environment['RUIAN_EXPORT_BASE_URL'] ?? self::DEFAULT_RUIAN_BASE_URL,
-                        $dataDir . '/cache/ruian',
-                    ),
+                    $coverage,
+                    new RuianExportDownloaderUsingHttp($zipDownloader, $ruianBaseUrl, $dataDir . '/cache/ruian'),
                     new ParcelConverterUsingOgr2ogr($runner, $dataDir . '/build'),
                     new TilesetBuilderUsingTippecanoe($runner, $dataDir . '/build'),
                     new TilesetPublisherUsingMbtiles($this->tilesetFile()),
+                    new ClockUsingSystemTime(),
+                ),
+            ),
+            new GenerateCoverageCommand(
+                new GenerateCoverageUseCase(
+                    new RuianStructureDownloaderUsingHttp($zipDownloader, $ruianBaseUrl, $dataDir . '/cache/ruian'),
+                    new DistrictAreaExtractorUsingOgr2ogr($runner),
+                    $coverage,
                     new ClockUsingSystemTime(),
                 ),
             ),

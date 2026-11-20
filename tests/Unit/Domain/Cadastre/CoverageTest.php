@@ -54,6 +54,33 @@ final class CoverageTest extends TestCase
         self::assertSame([572659, 222222], $codes);
     }
 
+    #[Test]
+    public function it_sorts_the_areas_by_code_when_created_sorted_by_code(): void
+    {
+        $coverage = Coverage::sortedByCode(self::area(740225, 572659), self::area(601462, 572675), self::area(659541, 572659));
+
+        self::assertSame(
+            [601462, 659541, 740225],
+            array_map(static fn(CadastralArea $area): int => $area->code->value, $coverage->areas()),
+        );
+    }
+
+    #[Test]
+    public function it_rejects_a_duplicate_code_when_created_sorted_by_code(): void
+    {
+        $this->expectException(InvalidCoverage::class);
+
+        Coverage::sortedByCode(self::area(659541, 572659), self::area(659541, 572659));
+    }
+
+    #[Test]
+    public function it_rejects_having_no_areas_when_created_sorted_by_code(): void
+    {
+        $this->expectException(InvalidCoverage::class);
+
+        Coverage::sortedByCode();
+    }
+
     private static function area(int $code, int $municipality): CadastralArea
     {
         return new CadastralArea(new CadastralAreaCode($code), 'Area ' . $code, new MunicipalityCode($municipality));

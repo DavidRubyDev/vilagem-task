@@ -27,6 +27,13 @@ final readonly class Coverage
         $this->areas = array_values($areas);
     }
 
+    public static function sortedByCode(CadastralArea ...$areas): self
+    {
+        usort($areas, static fn(CadastralArea $a, CadastralArea $b): int => $a->code->value <=> $b->code->value);
+
+        return new self(...$areas);
+    }
+
     /**
      * @return non-empty-list<CadastralArea>
      */

@@ -51,6 +51,12 @@ Run `make data` once (and again whenever you want a newer export). It runs
 2. converts the parcels of each listed cadastral area to WGS84 with GDAL (`ogr2ogr`);
 3. builds one vector tileset with tippecanoe and publishes it atomically.
 
+The list of cadastral areas, `config/coverage.csv`, is generated from the RÚIAN state structure file
+(`{YYYYMMDD}_ST_UZSZ.xml.zip`, same directory as the municipality files) by `make coverage`, which runs
+`bin/console coverage:generate --district=3604 [--export-date=YYYY-MM-DD]`. Only cadastral areas with a digital
+map are listed (areas without one have no parcel polygons). `make data` never rewrites the list: run
+`make coverage` deliberately, review the diff and commit it.
+
 Data lives in `data/` (git-ignored): `cache/ruian/` holds the downloads (a cached file is never
 downloaded again, so a rerun is offline), `build/` the intermediate files and `tiles/parcels.mbtiles`
 the published tileset. Today `config/coverage.csv` lists the 5 cadastral areas of the municipality

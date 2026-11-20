@@ -8,6 +8,7 @@ use ParcelMap\Application\Import\ExportNotPublished;
 use ParcelMap\Application\Import\SourceDownloadFailed;
 use ParcelMap\Domain\Cadastre\ExportDate;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
+use ParcelMap\Infrastructure\Http\ZipFileDownloader;
 use ParcelMap\Infrastructure\Import\RuianExportDownloaderUsingHttp;
 use ParcelMap\Tests\Support\LocalHttpServer;
 use ParcelMap\Tests\Support\TemporaryDirectory;
@@ -98,6 +99,6 @@ final class RuianExportDownloaderUsingHttpTest extends TestCase
 
     private function downloader(): RuianExportDownloaderUsingHttp
     {
-        return new RuianExportDownloaderUsingHttp($this->server->baseUrl(), $this->cache->path . '/cache');
+        return new RuianExportDownloaderUsingHttp(new ZipFileDownloader(), $this->server->baseUrl(), $this->cache->path . '/cache');
     }
 }

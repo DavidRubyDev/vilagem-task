@@ -8,11 +8,16 @@ use InvalidArgumentException;
 use ParcelMap\Domain\Cadastre\CadastralArea;
 use ParcelMap\Domain\Cadastre\CadastralAreaCode;
 use ParcelMap\Domain\Cadastre\Coverage;
+use ParcelMap\Domain\Cadastre\CoverageNotSaved;
 use ParcelMap\Domain\Cadastre\CoverageRepository;
 use ParcelMap\Domain\Cadastre\CoverageUnavailable;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
 
-/** Reads the covered cadastral areas from a UTF-8 CSV file with the header `code,name,municipality_code`. */
+/**
+ * Reads and writes the covered cadastral areas as a UTF-8 CSV file with the header `code,name,municipality_code`.
+ * A field is quoted only when it has to be (a comma, a double quote or a line break), unlike fputcsv, which also
+ * quotes spaces, so the committed file stays readable and its diffs small.
+ */
 final readonly class CoverageRepositoryUsingCsv implements CoverageRepository
 {
     private const array HEADER = ['code', 'name', 'municipality_code'];
@@ -37,6 +42,39 @@ final readonly class CoverageRepositoryUsingCsv implements CoverageRepository
         } catch (InvalidArgumentException $exception) {
             throw CoverageUnavailable::because(sprintf('%s: %s', $this->file, $exception->getMessage()));
         }
+    }
+
+    public function save(Coverage $coverage): void
+    {
+        $lines = [implode(',', self::HEADER)];
+        foreach ($coverage->areas() as $area) {
+            $lines[] = implode(',', [
+                (string) $area->code->value,
+                self::field($area->name),
+                (string) $area->municipality->value,
+            ]);
+        }
+
+        $temporaryFile = $this->file . '.tmp';
+        if (@file_put_contents($temporaryFile, implode("\n", $lines) . "\n") === false) {
+            @unlink($temporaryFile);
+
+            throw CoverageNotSaved::because(sprintf('cannot write %s.', $temporaryFile));
+        }
+        if (!@rename($temporaryFile, $this->file)) {
+            @unlink($temporaryFile);
+
+            throw CoverageNotSaved::because(sprintf('cannot move %s to %s.', $temporaryFile, $this->file));
+        }
+    }
+
+    private static function field(string $value): string
+    {
+        if (strpbrk($value, ",\"\r\n") === false) {
+            return $value;
+        }
+
+        return '"' . str_replace('"', '""', $value) . '"';
     }
 
     /**
