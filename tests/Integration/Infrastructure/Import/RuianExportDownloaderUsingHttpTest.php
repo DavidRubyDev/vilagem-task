@@ -46,13 +46,15 @@ final class RuianExportDownloaderUsingHttpTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_the_cached_file_without_a_request(): void
+    public function it_returns_the_cached_file_without_a_request_and_says_so(): void
     {
-        $this->downloader()->download(new MunicipalityCode(572659), ExportDate::fromString('2026-10-31'));
+        $first = $this->downloader()->download(new MunicipalityCode(572659), ExportDate::fromString('2026-10-31'));
         $this->server->stop();
 
         $export = $this->downloader()->download(new MunicipalityCode(572659), ExportDate::fromString('2026-10-31'));
 
+        self::assertFalse($first->fromCache);
+        self::assertTrue($export->fromCache);
         self::assertFileExists($export->path);
     }
 

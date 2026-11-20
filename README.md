@@ -64,7 +64,11 @@ the published tileset. `config/coverage.csv` lists the whole district: 240 cadas
 municipalities, 272,011 parcels. The first `make data` downloads 111 municipality files (54 MB per monthly
 export) and takes about 2 minutes; a rerun from the cache about 1.5 minutes. The tileset is about 56 MB and
 the intermediate GeoJSON in `build/` about 130 MB. The tile build needs about 1 to 2 GB of memory (Docker Desktop
-users: allow at least 4 GB). Old cached months and build files are kept; delete them by hand when needed.
+users: allow at least 4 GB). The import prints its progress (one line per municipality download and conversion,
+then the tile build). A failed run keeps the completed downloads in the cache, so a rerun resumes. ČÚZK publishes
+the monthly files over about an hour on the 1st; if a later municipality is not published yet the import stops
+with "The RÚIAN export of … for municipality … is not published": rerun it later or pass `--export-date` of the
+month before. Old cached months and build files are kept; delete them by hand when needed.
 
 The data is licensed CC BY 4.0; the required credit is "ČÚZK, {year of the export}". Conditions:
 https://cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-prostorovych-dat-CUZK.aspx
@@ -217,5 +221,5 @@ _To be filled in._
 - Docker layer cache in CI (BuildKit GitHub Actions cache), to avoid rebuilding the PHP image
   in several jobs and pulling the Playwright image on every run.
 - Activate the ruleset once the repository is public.
-- Separate tool containers for GDAL and tippecanoe, import progress output, and a pinned
+- Separate tool containers for GDAL and tippecanoe, and a pinned
   S-JTSK to WGS84 coordinate transformation (GDAL's default is used today).

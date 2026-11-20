@@ -43,7 +43,7 @@ final readonly class ImportParcelsCommand implements Command
         }
 
         try {
-            $result = $this->useCase->execute(new ImportParcelsInput($exportDate));
+            $result = $this->useCase->execute(new ImportParcelsInput($exportDate), new ImportProgressUsingConsole($output));
         } catch (InvalidImportRequest $exception) {
             $output->writeError('Invalid --export-date: ' . $exception->getMessage());
 

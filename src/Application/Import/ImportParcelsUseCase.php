@@ -30,18 +30,32 @@ final readonly class ImportParcelsUseCase
      * @throws InvalidImportRequest
      * @throws ImportFailed
      */
-    public function execute(ImportParcelsInput $input): ImportParcelsOutput
+    public function execute(ImportParcelsInput $input, ImportProgress $progress): ImportParcelsOutput
     {
         $coverage = $this->coverage();
-        $exports = $this->download($coverage, $this->exportDate($input), allowFallback: $input->exportDate === null);
-
-        $converted = array_map(
-            fn(MunicipalityCode $municipality): ConvertedParcels => $this->converter->convert(
-                $exports[$municipality->value],
-                $coverage->areasOf($municipality),
-            ),
-            $coverage->municipalities(),
+        $municipalities = $coverage->municipalities();
+        $progress->importStarted(count($coverage->areas()), count($municipalities));
+        $exports = $this->download(
+            $municipalities,
+            $this->exportDate($input),
+            allowFallback: $input->exportDate === null,
+            progress: $progress,
         );
+
+        $converted = [];
+        foreach ($municipalities as $index => $municipality) {
+            $areas = $coverage->areasOf($municipality);
+            $parcels = $this->converter->convert($exports[$municipality->value], $areas);
+            $converted[] = $parcels;
+            $progress->municipalityConverted(
+                $municipality->value,
+                $index + 1,
+                count($municipalities),
+                count($areas),
+                $parcels->totalParcelCount(),
+            );
+        }
+
         $areas = array_map(
             fn(CadastralArea $area): ImportedAreaOutput => new ImportedAreaOutput(
                 $area->code->value,
@@ -52,6 +66,8 @@ final readonly class ImportParcelsUseCase
         );
 
         $exportDate = array_first($exports)->date;
+        $totalParcels = array_sum(array_map(static fn(ConvertedParcels $parcels): int => $parcels->totalParcelCount(), $converted));
+        $progress->tilesetBuildStarted($totalParcels);
         $tileset = $this->builder->build($converted);
         $version = TilesetVersion::fromTime($this->clock->now());
         $this->publisher->publish($tileset, $version, $exportDate);
@@ -60,7 +76,7 @@ final readonly class ImportParcelsUseCase
             $exportDate->toString(),
             $version->value,
             $areas,
-            array_sum(array_map(static fn(ConvertedParcels $parcels): int => $parcels->totalParcelCount(), $converted)),
+            $totalParcels,
         );
     }
 
@@ -104,22 +120,25 @@ final readonly class ImportParcelsUseCase
      * Files appear on the first day of the month, so only the first download may fall back, once, to the month
      * before; every later municipality then uses the same date.
      *
+     * @param non-empty-list<MunicipalityCode> $municipalities
      * @return non-empty-array<int, DownloadedExport> by municipality code
      */
-    private function download(Coverage $coverage, ExportDate $date, bool $allowFallback): array
+    private function download(array $municipalities, ExportDate $date, bool $allowFallback, ImportProgress $progress): array
     {
-        $municipalities = $coverage->municipalities();
-        $first = $this->downloadFirst($municipalities[0], $date, $allowFallback);
+        $total = count($municipalities);
+        $first = $this->downloadFirst($municipalities[0], $date, $allowFallback, $progress);
+        $progress->exportDownloaded($first->municipality->value, 1, $total, $first->fromCache);
         $exports = [$first->municipality->value => $first];
 
-        foreach (array_slice($municipalities, 1) as $municipality) {
+        foreach (array_slice($municipalities, 1, preserve_keys: true) as $index => $municipality) {
             $exports[$municipality->value] = $this->downloader->download($municipality, $first->date);
+            $progress->exportDownloaded($municipality->value, $index + 1, $total, $exports[$municipality->value]->fromCache);
         }
 
         return $exports;
     }
 
-    private function downloadFirst(MunicipalityCode $municipality, ExportDate $date, bool $allowFallback): DownloadedExport
+    private function downloadFirst(MunicipalityCode $municipality, ExportDate $date, bool $allowFallback, ImportProgress $progress): DownloadedExport
     {
         try {
             return $this->downloader->download($municipality, $date);
@@ -128,7 +147,11 @@ final readonly class ImportParcelsUseCase
                 throw $exception;
             }
 
-            return $this->downloader->download($municipality, $date->previous());
+            $previous = $date->previous();
+            $export = $this->downloader->download($municipality, $previous);
+            $progress->exportDateFellBack($date->toString(), $previous->toString());
+
+            return $export;
         }
     }
 }

@@ -35,6 +35,6 @@ final readonly class RuianExportDownloaderUsingHttp implements RuianExportDownlo
             throw SourceDownloadFailed::because($exception->getMessage());
         }
 
-        return new DownloadedExport($municipality, $date, $file->path);
+        return new DownloadedExport($municipality, $date, $file->path, $file->fromCache);
     }
 }

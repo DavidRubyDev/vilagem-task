@@ -17,8 +17,12 @@ final class RuianExportDownloaderUsingMemory implements RuianExportDownloader
 
     /**
      * @param list<string> $publishedDates dates (Y-m-d) that are published
+     * @param list<int> $cachedMunicipalities municipalities whose file is already cached
      */
-    public function __construct(private readonly array $publishedDates) {}
+    public function __construct(
+        private readonly array $publishedDates,
+        private readonly array $cachedMunicipalities = [],
+    ) {}
 
     public function download(MunicipalityCode $municipality, ExportDate $date): DownloadedExport
     {
@@ -27,6 +31,6 @@ final class RuianExportDownloaderUsingMemory implements RuianExportDownloader
             throw ExportNotPublished::for($municipality->value, $date->toString());
         }
 
-        return new DownloadedExport($municipality, $date, 'memory://' . $municipality->value . '/' . $date->toString());
+        return new DownloadedExport($municipality, $date, 'memory://' . $municipality->value . '/' . $date->toString(), in_array($municipality->value, $this->cachedMunicipalities, true));
     }
 }

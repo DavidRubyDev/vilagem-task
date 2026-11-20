@@ -105,7 +105,7 @@ final class ParcelConverterUsingOgr2ogrTest extends TestCase
     {
         $path = $this->work->path . '/20261031_OB_572659_UKSH.xml.zip';
         file_put_contents($path, 'this is not a zip file');
-        $export = new DownloadedExport(new MunicipalityCode(572659), ExportDate::fromString('2026-10-31'), $path);
+        $export = new DownloadedExport(new MunicipalityCode(572659), ExportDate::fromString('2026-10-31'), $path, false);
 
         try {
             $this->converter()->convert($export, [self::area(659541, 'Jičín')]);
@@ -126,6 +126,7 @@ final class ParcelConverterUsingOgr2ogrTest extends TestCase
             new MunicipalityCode(572659),
             ExportDate::fromString('2026-10-31'),
             dirname(__DIR__, 3) . '/Fixtures/ruian/20261031_OB_572659_UKSH.xml.zip',
+            true,
         );
     }
 

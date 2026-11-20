@@ -1130,3 +1130,17 @@ Filled in by the implement agent, one entry per step.
 - Whole district, from the cache, `make data`: 87 s (22 s conversion + 65 s tile build), down from 119 s;
   272,011 parcels as before; tippecanoe peak 1.78 GB. `data/build/municipalities` is 131 MB. The task 002 files in
   `data/build/parcels` (127 MB) stay, as Decision 12 says.
+
+### Step 3: progress output
+
+- Fixtures: `ruian/20261031_OB_572675_UKSH.xml.zip` (1.9 KB, trimmed from the research copy with a script that
+  keeps the three listed parcels), `coverage/two-municipalities.csv`, `coverage/unpublished-municipality.csv`.
+- Red runs seen: `ImportParcelsUseCaseTest` and `ImportProgressUsingConsoleTest` (20 errors: missing
+  `ImportProgress` / `ImportProgressUsingConsole`); the two new API tests (stdout had no `Importing 3 cadastral
+  areas ...` line; the resume test had empty stdout); `RuianExportDownloaderUsingHttpTest` (the cached call
+  returned `fromCache` false, seen by temporarily passing `false`).
+- Below the plan's level: `exportDateFellBack` is reported after the fallback download succeeded (so a run where
+  neither month is published reports nothing, and the failure message stands alone); `DownloadedExport::$fromCache`
+  is the last constructor parameter, as specified, so `ParcelConverterUsingOgr2ogrTest` passes `true`/`false`.
+- The "resume" API test stops the download server and reruns with the default fixture coverage, which needs only
+  municipality 572659 that the failed run had cached.

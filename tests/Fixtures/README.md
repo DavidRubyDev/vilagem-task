@@ -19,6 +19,14 @@ the whole `vf:Hlavicka`, then `<vf:Data><vf:Parcely>` with only:
 Every other collection (Obce, KatastralniUzemi, Ulice, StavebniObjekty, ...) is dropped. The zip entry is
 `20261031_OB_572659_UKSH.xml`. Data: ČÚZK, 2026, CC BY 4.0.
 
+## `ruian/20261031_OB_572675_UKSH.xml.zip`
+
+The real RÚIAN VFR export of the municipality Běchary (572675) dated 2026-10-31, downloaded from
+`https://vdp.cuzk.gov.cz/vymenny_format/soucasna/20261031_OB_572675_UKSH.xml.zip` and trimmed by the same rule
+as the Jičín file: the XML prolog, the root element, the whole `vf:Hlavicka`, then `<vf:Data><vf:Parcely>` with only
+the parcels 97329743010, 97329744010 and 95834891010 (the first 3 of cadastral area 601462 in file order). The zip
+entry is `20261031_OB_572675_UKSH.xml`. Data: ČÚZK, 2026, CC BY 4.0.
+
 ## `ruian/20261031_ST_UZSZ.xml.zip`
 
 The real RÚIAN VFR state structure file dated 2026-10-31, downloaded from
@@ -38,6 +46,16 @@ Horní Hradiště (municipality Plasy) has no digital map; district 3605 has no 
 ## `coverage/fixture.csv`
 
 Two areas of the fixture export: 659541 Jičín and 740225 Robousy (municipality 572659).
+
+## `coverage/two-municipalities.csv`
+
+Three areas of two fixture municipalities: 601462 Běchary (572675), 659541 Jičín and 740225 Robousy (572659).
+Used to test the progress output of the import.
+
+## `coverage/unpublished-municipality.csv`
+
+659541 Jičín (572659) and `699999,Missing,599999`. Municipality 599999 is not served by the test download server
+(404), so the import fails after the first download; used to test that the completed downloads stay cached.
 
 ## `geojson/572659.geojsonl`
 
