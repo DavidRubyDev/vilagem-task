@@ -12,4 +12,4 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 $argv = $_SERVER['argv'];
 $arguments = array_slice($argv, 1);
 
-exit(new Container(dirname(__DIR__))->console()->run($arguments, new StreamConsoleOutput()));
+exit(new Container(dirname(__DIR__), getenv())->console()->run($arguments, new StreamConsoleOutput()));

@@ -5,8 +5,10 @@ FROM composer:2 AS composer
 
 FROM ${PHP_IMAGE}
 
+# gdal-bin and tippecanoe live in this image because the import use case drives them through process
+# adapters in the same container. Separate tool containers would be cleaner; see the README.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git unzip libonig-dev \
+    && apt-get install -y --no-install-recommends git unzip libonig-dev gdal-bin tippecanoe \
     && docker-php-ext-install -j"$(nproc)" mbstring \
     && rm -rf /var/lib/apt/lists/*
 

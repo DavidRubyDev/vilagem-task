@@ -1013,3 +1013,24 @@ Filled in by the implement agent, one entry per step.
 - Unknown command: the `Unknown command` line and the command list both go to stderr.
 - phpstan and php-cs-fixer both analyse the extensionless `bin/console` fine. phpstan does not know
   `$argv` in a script, so `bin/console` reads `$_SERVER['argv']` with a `@var list<string>` annotation.
+
+### Step 3: import
+
+- Fixture zip built from the research download with a one-off script (25 parcels, 5.7 KB, as predicted). The
+  geojsonl fixture was produced by `ParcelConverterUsingOgr2ogr` itself (22 lines, 20,696 bytes).
+- Red runs, in order: API `ImportParcelsCommandTest` (6 tests) failed with `Unknown command "parcels:import"`
+  / exit 2 instead of the expected codes; unit domain tests failed with class-not-found; unit
+  `ImportParcelsUseCaseTest` failed with `Interface ...RuianExportDownloader not found`; integration
+  tests failed with `Class ... not found`; after the infrastructure existed the two builder tests failed
+  with `tippecanoe failed: .../659541.geojsonl: No such file or directory` until the fixture was generated.
+- `ogr2ogr` ran fine as uid 1000 without a `HOME`; no extra environment is passed to it.
+- Deviation (small): `ImportParcelsUseCase` catches only `CoverageUnavailable`, not also `InvalidCoverage` as the
+  task text says. The repository port only throws `CoverageUnavailable` (the CSV adapter wraps domain
+  exceptions), and PHPStan rejects the dead catch.
+- `Coverage::areas()` and `municipalities()` are documented `non-empty-list` so the use case can pass them
+  to `TilesetBuilder::build(non-empty-list)` without a runtime check. The use case downloads the first
+  municipality separately (the only one that may fall back) and the rest with the resolved date.
+- Test helpers beyond the plan: `tests/Support/{LocalHttpServer,TemporaryDirectory,MbtilesMetadata}`,
+  `tests/Api/ConsoleRunner`, `tests/Integration/Infrastructure/Process/ProcessRunnerTest` and
+  `Clock/ClockUsingSystemTimeTest`.
+- `composer update --lock` refreshed `composer.lock` for the new `require` entries.
