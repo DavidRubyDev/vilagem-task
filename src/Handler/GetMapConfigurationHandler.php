@@ -19,6 +19,8 @@ final readonly class GetMapConfigurationHandler implements RequestHandler
         $view = $configuration->initialView;
         $baseMap = $configuration->baseMap;
 
+        $parcels = $configuration->parcels;
+
         return Response::json([
             'initialView' => [
                 'center' => ['longitude' => $view->centerLongitude, 'latitude' => $view->centerLatitude],
@@ -30,6 +32,18 @@ final readonly class GetMapConfigurationHandler implements RequestHandler
                 'maxZoom' => $baseMap->maxZoom,
                 'attribution' => ['text' => $baseMap->attributionText, 'url' => $baseMap->attributionUrl],
             ],
-        ]);
+            'parcels' => $parcels === null ? null : [
+                'tileUrlTemplate' => ParcelTileRoute::urlTemplate($parcels->tilesetVersion),
+                'minZoom' => $parcels->minZoom,
+                'maxZoom' => $parcels->maxZoom,
+                'bounds' => [
+                    'west' => $parcels->west,
+                    'south' => $parcels->south,
+                    'east' => $parcels->east,
+                    'north' => $parcels->north,
+                ],
+                'attribution' => ['text' => $parcels->attributionText, 'url' => $parcels->attributionUrl],
+            ],
+        ])->withHeader('Cache-Control', 'no-cache');
     }
 }

@@ -1049,3 +1049,17 @@ Filled in by the implement agent, one entry per step.
 - The test project works: `make test-api` starts `parcel-map-test` (no published port) and the developer's app
   is not touched. Running `docker compose down` (without `-p`) is what stopped the dev app during this work.
 - `make down` stops both projects; `compose.yaml` names the app image `parcel-map-app` so the test project reuses it.
+
+### Step 5: map layer
+
+- Red runs: API `MapConfigurationTest` failed with `null is identical to 'no-cache'` (header missing); unit
+  `GetMapConfigurationUseCaseTest` failed with `Undefined property ...MapConfigurationOutput::$parcels`; Vitest
+  failed with `Cannot find module '../src/landTypes'` and "promise resolved instead of rejecting" for the missing
+  `parcels` key; E2E `parcels.spec.ts` failed 3 of 4 with `waitForResponse` timeouts (and the credit link not found).
+  The fourth E2E test (`parcels: null` shows only the base map) passes before the change by nature.
+- Test bug found at green: the first version of the zoom-in E2E clicked "Zoom in" twice quickly; a click during the
+  running animation does not add a full level, so tile `14/8890/5525` was never requested. The test now waits for
+  the zoom-13 tile before the second click.
+- `landTypeFillColour()` builds the `match` expression from `LAND_TYPE_COLOURS` and casts through `unknown`
+  because TypeScript cannot type a spread inside a `match` tuple.
+- The map-config Handler adds `Cache-Control: no-cache` and the `parcels` member as specified.

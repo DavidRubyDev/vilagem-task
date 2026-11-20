@@ -5,13 +5,18 @@ declare(strict_types=1);
 namespace ParcelMap\Tests\Unit\Application\Map;
 
 use ParcelMap\Application\Map\GetMapConfigurationUseCase;
+use ParcelMap\Domain\Cadastre\ExportDate;
 use ParcelMap\Domain\Map\Attribution;
 use ParcelMap\Domain\Map\BaseMap;
+use ParcelMap\Domain\Map\Bounds;
 use ParcelMap\Domain\Map\Coordinates;
 use ParcelMap\Domain\Map\MapView;
+use ParcelMap\Domain\Map\ParcelTileset;
+use ParcelMap\Domain\Map\TilesetVersion;
 use ParcelMap\Domain\Map\TileUrlTemplate;
 use ParcelMap\Domain\Map\ZoomLevel;
 use ParcelMap\Tests\Fake\MapSettingsRepositoryUsingMemory;
+use ParcelMap\Tests\Fake\ParcelTilesetRepositoryUsingMemory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -30,7 +35,7 @@ final class GetMapConfigurationUseCaseTest extends TestCase
             ),
         );
 
-        $output = new GetMapConfigurationUseCase($settings)->execute();
+        $output = new GetMapConfigurationUseCase($settings, new ParcelTilesetRepositoryUsingMemory(null))->execute();
 
         self::assertSame(15.5, $output->initialView->centerLongitude);
         self::assertSame(50.25, $output->initialView->centerLatitude);
@@ -40,5 +45,54 @@ final class GetMapConfigurationUseCaseTest extends TestCase
         self::assertSame(17, $output->baseMap->maxZoom);
         self::assertSame('Example credit', $output->baseMap->attributionText);
         self::assertSame('https://example.org/credit', $output->baseMap->attributionUrl);
+    }
+
+    #[Test]
+    public function it_has_no_parcel_layer_when_no_data_is_imported(): void
+    {
+        $output = $this->useCase(new ParcelTilesetRepositoryUsingMemory(null))->execute();
+
+        self::assertNull($output->parcels);
+    }
+
+    #[Test]
+    public function it_maps_the_parcel_tileset_into_the_parcel_layer(): void
+    {
+        $tileset = new ParcelTileset(
+            new TilesetVersion('20261120093000'),
+            ExportDate::fromString('2025-12-31'),
+            new Bounds(new Coordinates(15.1, 50.2), new Coordinates(15.3, 50.4)),
+            9,
+            16,
+        );
+
+        $parcels = $this->useCase(new ParcelTilesetRepositoryUsingMemory($tileset))->execute()->parcels;
+
+        self::assertNotNull($parcels);
+        self::assertSame('20261120093000', $parcels->tilesetVersion);
+        self::assertSame(9, $parcels->minZoom);
+        self::assertSame(16, $parcels->maxZoom);
+        self::assertSame(15.1, $parcels->west);
+        self::assertSame(50.2, $parcels->south);
+        self::assertSame(15.3, $parcels->east);
+        self::assertSame(50.4, $parcels->north);
+        self::assertSame('ČÚZK, 2025', $parcels->attributionText);
+        self::assertStringStartsWith('https://cuzk.gov.cz/', $parcels->attributionUrl);
+    }
+
+    private function useCase(ParcelTilesetRepositoryUsingMemory $tilesets): GetMapConfigurationUseCase
+    {
+        return new GetMapConfigurationUseCase(
+            new MapSettingsRepositoryUsingMemory(
+                new MapView(new Coordinates(longitude: 15.5, latitude: 50.25), new ZoomLevel(11.5)),
+                new BaseMap(
+                    new TileUrlTemplate('https://tiles.example.org/{z}/{x}/{y}.png'),
+                    512,
+                    17,
+                    new Attribution('Example credit', 'https://example.org/credit'),
+                ),
+            ),
+            $tilesets,
+        );
     }
 }

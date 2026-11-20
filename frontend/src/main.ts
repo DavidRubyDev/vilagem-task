@@ -22,7 +22,7 @@ async function start(): Promise<void> {
   try {
     setWorkerUrl(workerUrl);
     const configuration = await loadMapConfiguration(window.fetch.bind(window), '/api/map-config');
-    const map = new Map(createMapOptions(configuration, container));
+    const map = new Map(createMapOptions(configuration, container, window.location.origin));
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
   } catch (error) {
     console.warn('The map could not be loaded.', error);

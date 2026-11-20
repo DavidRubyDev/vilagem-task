@@ -1,3 +1,16 @@
+export interface ParcelLayerConfiguration {
+  readonly tileUrlTemplate: string;
+  readonly minZoom: number;
+  readonly maxZoom: number;
+  readonly bounds: {
+    readonly west: number;
+    readonly south: number;
+    readonly east: number;
+    readonly north: number;
+  };
+  readonly attribution: { readonly text: string; readonly url: string };
+}
+
 export interface MapConfiguration {
   readonly initialView: {
     readonly center: { readonly longitude: number; readonly latitude: number };
@@ -9,6 +22,7 @@ export interface MapConfiguration {
     readonly maxZoom: number;
     readonly attribution: { readonly text: string; readonly url: string };
   };
+  readonly parcels: ParcelLayerConfiguration | null;
 }
 
 export class MapConfigurationError extends Error {}
@@ -21,9 +35,29 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+function isParcelLayerConfiguration(value: unknown): value is ParcelLayerConfiguration {
+  if (!isRecord(value)) return false;
+  const { tileUrlTemplate, minZoom, maxZoom, bounds, attribution } = value;
+  return (
+    typeof tileUrlTemplate === 'string' &&
+    tileUrlTemplate.startsWith('/') &&
+    ['{z}', '{x}', '{y}'].every((placeholder) => tileUrlTemplate.includes(placeholder)) &&
+    isFiniteNumber(minZoom) &&
+    isFiniteNumber(maxZoom) &&
+    isRecord(bounds) &&
+    isFiniteNumber(bounds['west']) &&
+    isFiniteNumber(bounds['south']) &&
+    isFiniteNumber(bounds['east']) &&
+    isFiniteNumber(bounds['north']) &&
+    isRecord(attribution) &&
+    typeof attribution['text'] === 'string' &&
+    typeof attribution['url'] === 'string'
+  );
+}
+
 function isMapConfiguration(value: unknown): value is MapConfiguration {
   if (!isRecord(value)) return false;
-  const { initialView, baseMap } = value;
+  const { initialView, baseMap, parcels } = value;
   if (!isRecord(initialView) || !isRecord(baseMap)) return false;
   const { center, zoom } = initialView;
   const { tileUrlTemplate, tileSize, maxZoom, attribution } = baseMap;
@@ -37,7 +71,8 @@ function isMapConfiguration(value: unknown): value is MapConfiguration {
     isFiniteNumber(maxZoom) &&
     isRecord(attribution) &&
     typeof attribution['text'] === 'string' &&
-    typeof attribution['url'] === 'string'
+    typeof attribution['url'] === 'string' &&
+    (parcels === null || isParcelLayerConfiguration(parcels))
   );
 }
 

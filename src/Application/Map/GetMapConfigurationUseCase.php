@@ -5,10 +5,16 @@ declare(strict_types=1);
 namespace ParcelMap\Application\Map;
 
 use ParcelMap\Domain\Map\MapSettingsRepository;
+use ParcelMap\Domain\Map\ParcelDataNotImported;
+use ParcelMap\Domain\Map\ParcelTileset;
+use ParcelMap\Domain\Map\ParcelTilesetRepository;
 
 final readonly class GetMapConfigurationUseCase
 {
-    public function __construct(private MapSettingsRepository $settings) {}
+    public function __construct(
+        private MapSettingsRepository $settings,
+        private ParcelTilesetRepository $tilesets,
+    ) {}
 
     public function execute(): MapConfigurationOutput
     {
@@ -24,6 +30,35 @@ final readonly class GetMapConfigurationUseCase
                 $baseMap->attribution->text,
                 $baseMap->attribution->url,
             ),
+            $this->parcelLayer(),
+        );
+    }
+
+    private function parcelLayer(): ?ParcelLayerOutput
+    {
+        try {
+            $tileset = $this->tilesets->current();
+        } catch (ParcelDataNotImported) {
+            return null;
+        }
+
+        return $this->layerOf($tileset);
+    }
+
+    private function layerOf(ParcelTileset $tileset): ParcelLayerOutput
+    {
+        $attribution = $tileset->attribution();
+
+        return new ParcelLayerOutput(
+            $tileset->version->value,
+            $tileset->minZoom,
+            $tileset->maxZoom,
+            $tileset->bounds->southWest->longitude,
+            $tileset->bounds->southWest->latitude,
+            $tileset->bounds->northEast->longitude,
+            $tileset->bounds->northEast->latitude,
+            $attribution->text,
+            $attribution->url,
         );
     }
 }

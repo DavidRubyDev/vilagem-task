@@ -9,7 +9,8 @@ Built as an interview task for Viagem a.s.
 > **Status:** the map page works: http://localhost:8000 shows an OpenStreetMap base map centred
 > on Jičín (zoom 12) with the OSM attribution. `GET /api/map-config` serves the map
 > configuration. `make data` downloads the ČÚZK parcels of the municipality Jičín and builds a
-> vector tileset from them; showing the tiles on the map is in progress (task 002). The application is built in the tasks in
+> vector tileset from them; the map then shows the parcels over OSM, filled by land type (outlines
+> from zoom 14) with the credit "ČÚZK, 2026". Clicking a parcel is not implemented yet. The application is built in the tasks in
 > [`.tasks/`](.tasks/). This README is updated as features land.
 
 ## Prerequisites
@@ -29,7 +30,8 @@ docker compose up        # installs dependencies, builds the frontend, serves ht
 
 `docker compose up` runs a one-shot `node` service (`npm ci && npm run build`), then starts the
 PHP server. The first run pulls the Playwright image (about 2 GB), which is also used for all
-Node tooling. `GET /` is the map page, `GET /api/map-config` the map configuration, and every
+Node tooling. `GET /` is the map page, `GET /api/map-config` the map configuration (initial view, base
+map and, once data is imported, the `parcels` tile layer; `parcels` is `null` before), and every
 other path answers `404 {"error":"not_found"}`.
 
 ### Data

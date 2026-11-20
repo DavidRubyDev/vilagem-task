@@ -70,7 +70,10 @@ final readonly class Container
                 new Route(
                     'GET',
                     '/api/map-config',
-                    new GetMapConfigurationHandler(new GetMapConfigurationUseCase(new MapSettingsRepositoryUsingConstants())),
+                    new GetMapConfigurationHandler(new GetMapConfigurationUseCase(
+                        new MapSettingsRepositoryUsingConstants(),
+                        new ParcelTilesetRepositoryUsingMbtiles($this->tilesetFile()),
+                    )),
                 ),
                 new Route(
                     'GET',
