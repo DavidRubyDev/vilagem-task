@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace ParcelMap\Handler;
 
-use ParcelMap\Application\Map\GetMapConfiguration;
+use ParcelMap\Application\Map\GetMapConfigurationUseCase;
 use ParcelMap\Handler\Http\Request;
 use ParcelMap\Handler\Http\RequestHandler;
 use ParcelMap\Handler\Http\Response;
 
 final readonly class GetMapConfigurationHandler implements RequestHandler
 {
-    public function __construct(private GetMapConfiguration $getMapConfiguration) {}
+    public function __construct(private GetMapConfigurationUseCase $getMapConfiguration) {}
 
     public function handle(Request $request): Response
     {

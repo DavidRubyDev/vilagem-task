@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 namespace ParcelMap\Tests\Unit\Application\Map;
 
-use ParcelMap\Application\Map\GetMapConfiguration;
+use ParcelMap\Application\Map\GetMapConfigurationUseCase;
 use ParcelMap\Domain\Map\Attribution;
 use ParcelMap\Domain\Map\BaseMap;
 use ParcelMap\Domain\Map\Coordinates;
 use ParcelMap\Domain\Map\MapView;
 use ParcelMap\Domain\Map\TileUrlTemplate;
 use ParcelMap\Domain\Map\ZoomLevel;
-use ParcelMap\Tests\Fake\InMemoryMapSettings;
+use ParcelMap\Tests\Fake\MapSettingsRepositoryUsingMemory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-final class GetMapConfigurationTest extends TestCase
+final class GetMapConfigurationUseCaseTest extends TestCase
 {
     #[Test]
     public function it_maps_the_settings_to_the_output_field_by_field(): void
     {
-        $settings = new InMemoryMapSettings(
+        $settings = new MapSettingsRepositoryUsingMemory(
             new MapView(new Coordinates(longitude: 15.5, latitude: 50.25), new ZoomLevel(11.5)),
             new BaseMap(
                 new TileUrlTemplate('https://tiles.example.org/{z}/{x}/{y}.png'),
@@ -30,7 +30,7 @@ final class GetMapConfigurationTest extends TestCase
             ),
         );
 
-        $output = new GetMapConfiguration($settings)->execute();
+        $output = new GetMapConfigurationUseCase($settings)->execute();
 
         self::assertSame(15.5, $output->initialView->centerLongitude);
         self::assertSame(50.25, $output->initialView->centerLatitude);

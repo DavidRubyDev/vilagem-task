@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace ParcelMap\Infrastructure\Map;
 
-use ParcelMap\Application\Map\MapSettings;
+use ParcelMap\Domain\Map\MapSettingsRepository;
 use ParcelMap\Domain\Map\Attribution;
 use ParcelMap\Domain\Map\BaseMap;
 use ParcelMap\Domain\Map\Coordinates;
@@ -16,7 +16,7 @@ use ParcelMap\Domain\Map\ZoomLevel;
  * The configuration adapter. The values live here as constants because nothing else supplies
  * them yet; later tasks may replace parts with values from data (e.g. MBTiles metadata).
  */
-final readonly class StaticMapSettings implements MapSettings
+final readonly class MapSettingsRepositoryUsingConstants implements MapSettingsRepository
 {
     private const float CENTER_LONGITUDE = 15.351653;
     private const float CENTER_LATITUDE = 50.437045;

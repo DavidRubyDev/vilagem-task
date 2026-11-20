@@ -1,6 +1,6 @@
 # 002: Jičín parcels from ČÚZK
 
-- **Status:** approved
+- **Status:** in-progress
 - **Created:** 2026-11-20
 - **Request:** "Show the real land parcels of the cadastral area Jičín … on the existing map. The data
   comes from ČÚZK, downloaded ahead of time and served by our backend as vector tiles. A data
@@ -996,3 +996,11 @@ the fixture tileset):
 ## Implementation log
 
 Filled in by the implement agent, one entry per step.
+
+### Step 1: naming rules
+
+- Test first: renamed `GetMapConfigurationUseCaseTest` and the fake `MapSettingsRepositoryUsingMemory`
+  to the new names; the unit suite failed with `Interface "ParcelMap\Domain\Map\MapSettingsRepository"
+  not found` (red). Then renamed the production classes per the Rename list; green.
+- CLAUDE.md "Code rules" gained the Naming sub-list. README names none of the renamed classes.
+- Existing API and E2E tests are unchanged.

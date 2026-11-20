@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace ParcelMap\Application\Map;
 
-final readonly class GetMapConfiguration
+use ParcelMap\Domain\Map\MapSettingsRepository;
+
+final readonly class GetMapConfigurationUseCase
 {
-    public function __construct(private MapSettings $settings) {}
+    public function __construct(private MapSettingsRepository $settings) {}
 
     public function execute(): MapConfigurationOutput
     {

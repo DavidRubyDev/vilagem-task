@@ -86,6 +86,22 @@ A violation fails the build.
 - Runtime Composer dependencies are allowed when the task file justifies them. Prefer the
   standard library for small things.
 
+Naming:
+
+- Use cases are named `<Verb><Subject>UseCase` and have one public method `execute()`.
+- Other Application classes are named after their role: ports (`…Converter`, `…Builder`,
+  `…Publisher`, `…Downloader`, `Clock`), DTOs (`…Input`, `…Output`), exceptions (what went wrong).
+- Infrastructure classes that load, save or update domain data are named
+  `<Subject>RepositoryUsing<Service>` and implement the Domain repository interface
+  `<Subject>Repository`.
+- Other Infrastructure adapters are named `<Port>Using<Service>`.
+- `<Service>` is the technology (Csv, Mbtiles, Http, Ogr2ogr, Tippecanoe, Constants, SystemTime),
+  not the data provider.
+- Test fakes follow the same rule with `Memory` (`MapSettingsRepositoryUsingMemory`); a fixed
+  clock is `ClockUsingFixedTime`.
+- Infrastructure helpers that implement no port keep a role name (`ProcessRunner`).
+- Handlers and commands are named `<Action>Handler` / `<Action>Command`.
+
 ## Testing: TDD, always
 
 **Tests come first. Every code change starts with a failing test.** No production code is

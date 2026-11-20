@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace ParcelMap\Bootstrap;
 
-use ParcelMap\Application\Map\GetMapConfiguration;
+use ParcelMap\Application\Map\GetMapConfigurationUseCase;
 use ParcelMap\Handler\GetMapConfigurationHandler;
 use ParcelMap\Handler\Http\HttpKernel;
 use ParcelMap\Handler\Http\Route;
 use ParcelMap\Handler\Http\Router;
 use ParcelMap\Handler\Http\StderrErrorReporter;
 use ParcelMap\Handler\ShowMapPageHandler;
-use ParcelMap\Infrastructure\Map\StaticMapSettings;
+use ParcelMap\Infrastructure\Map\MapSettingsRepositoryUsingConstants;
 
 final readonly class Container
 {
@@ -24,7 +24,7 @@ final readonly class Container
                 new Route(
                     'GET',
                     '/api/map-config',
-                    new GetMapConfigurationHandler(new GetMapConfiguration(new StaticMapSettings())),
+                    new GetMapConfigurationHandler(new GetMapConfigurationUseCase(new MapSettingsRepositoryUsingConstants())),
                 ),
                 new Route('GET', '/', new ShowMapPageHandler($this->projectDir . '/frontend/index.html')),
             ),
