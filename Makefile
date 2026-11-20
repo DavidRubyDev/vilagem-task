@@ -6,6 +6,8 @@ export GID := $(shell id -g)
 COMPOSE := docker compose
 PHP := $(COMPOSE) run --rm --no-deps app
 NODE := $(COMPOSE) run --rm --no-deps node
+# API and E2E tests run against their own app (fixture data, no published port), so they never touch the app of `make up`.
+TEST_COMPOSE := $(COMPOSE) -p parcel-map-test -f compose.yaml -f compose.test.yaml
 ACTIONLINT_IMAGE := rhysd/actionlint:1.7.12
 
 # The only list of check groups. CI builds its job matrix from it (make ci-targets).
@@ -15,12 +17,15 @@ comma := ,
 empty :=
 space := $(empty) $(empty)
 
-.PHONY: build install-php install-node assets watch up-app up down cs cs-fix phpstan deptrac format \
-	test-unit test-api test-frontend test-e2e typecheck lint-frontend lint-ci \
+.PHONY: build data install-php install-node assets watch up-app up down cs cs-fix phpstan deptrac format \
+	test-unit test-integration test-api test-frontend test-e2e typecheck lint-frontend lint-ci \
 	php-qa php-tests check qa test ci-targets $(CHECK_TARGETS)
 
 build:
 	$(COMPOSE) build app
+
+data: build
+	$(PHP) bin/console parcels:import
 
 install-php: build
 	$(PHP) composer install --no-interaction --no-progress
@@ -35,13 +40,14 @@ watch:
 	$(NODE) npm run watch
 
 up-app:
-	$(COMPOSE) up -d --wait --no-deps app
+	$(TEST_COMPOSE) up -d --wait --no-deps app
 
 up:
 	$(COMPOSE) up
 
 down:
 	$(COMPOSE) down
+	$(TEST_COMPOSE) down
 
 cs:
 	$(PHP) vendor/bin/php-cs-fixer check --diff
@@ -58,8 +64,11 @@ deptrac:
 test-unit:
 	$(PHP) vendor/bin/phpunit --testsuite unit
 
+test-integration:
+	$(PHP) vendor/bin/phpunit --testsuite integration
+
 test-api: up-app
-	$(PHP) vendor/bin/phpunit --testsuite api
+	$(TEST_COMPOSE) run --rm --no-deps app vendor/bin/phpunit --testsuite api
 
 typecheck:
 	$(NODE) npm run typecheck
@@ -75,14 +84,14 @@ test-frontend:
 	$(NODE) npm test
 
 test-e2e: up-app
-	$(NODE) npm run e2e
+	$(TEST_COMPOSE) run --rm --no-deps node npm run e2e
 
 lint-ci:
 	docker run --rm -u "$(UID):$(GID)" -v "$(CURDIR)":/repo -w /repo $(ACTIONLINT_IMAGE) -no-color .github/workflows/ci.yml
 
 php-qa: install-php cs phpstan deptrac
 
-php-tests: install-php test-unit test-api
+php-tests: install-php test-unit test-integration test-api
 
 frontend-checks: install-node typecheck lint-frontend test-frontend
 
@@ -92,7 +101,7 @@ check: $(CHECK_TARGETS)
 
 qa: cs phpstan deptrac lint-ci typecheck lint-frontend
 
-test: test-unit test-api test-frontend test-e2e
+test: test-unit test-integration test-api test-frontend test-e2e
 
 ci-targets:
 	@echo '[$(subst $(space),$(comma),$(foreach t,$(CHECK_TARGETS),"$(t)"))]'

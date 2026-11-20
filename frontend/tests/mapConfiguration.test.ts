@@ -9,10 +9,21 @@ const validBody = {
     maxZoom: 19,
     attribution: { text: '© OpenStreetMap contributors', url: 'https://www.openstreetmap.org/copyright' },
   },
+  parcels: {
+    tileUrlTemplate: '/tiles/parcels/20261120093000/{z}/{x}/{y}.pbf',
+    minZoom: 9,
+    maxZoom: 16,
+    bounds: { west: 15.328422, south: 50.395744, east: 15.427924, north: 50.459793 },
+    attribution: { text: 'ČÚZK, 2026', url: 'https://cuzk.gov.cz/conditions' },
+  },
 };
 
 function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+}
+
+function withParcels(overrides: Record<string, unknown>): unknown {
+  return { ...validBody, parcels: { ...validBody.parcels, ...overrides } };
 }
 
 describe('loadMapConfiguration', () => {
@@ -32,6 +43,14 @@ describe('loadMapConfiguration', () => {
     const configuration = await loadMapConfiguration(() => Promise.resolve(jsonResponse(validBody)), '/api/map-config');
 
     expect(configuration).toEqual(validBody);
+  });
+
+  it('accepts a configuration without parcel data', async () => {
+    const body = { ...validBody, parcels: null };
+
+    const configuration = await loadMapConfiguration(() => Promise.resolve(jsonResponse(body)), '/api/map-config');
+
+    expect(configuration.parcels).toBeNull();
   });
 
   describe('rejects with MapConfigurationError when', () => {
@@ -74,6 +93,36 @@ describe('loadMapConfiguration', () => {
       body.baseMap.attribution['url'] = 42;
 
       await rejectsWith(() => Promise.resolve(jsonResponse(body)));
+    });
+
+    it('the parcels key is missing', async () => {
+      const body = { initialView: validBody.initialView, baseMap: validBody.baseMap };
+
+      await rejectsWith(() => Promise.resolve(jsonResponse(body)));
+    });
+
+    it('the parcel tile template is relative without a leading slash', async () => {
+      await rejectsWith(() => Promise.resolve(jsonResponse(withParcels({ tileUrlTemplate: 'tiles/{z}/{x}/{y}.pbf' }))));
+    });
+
+    it('the parcel tile template has no {z}', async () => {
+      await rejectsWith(() => Promise.resolve(jsonResponse(withParcels({ tileUrlTemplate: '/tiles/{x}/{y}.pbf' }))));
+    });
+
+    it('the parcel minZoom is not finite', async () => {
+      await rejectsWith(() => Promise.resolve(jsonResponse(withParcels({ minZoom: Number.NaN }))));
+    });
+
+    it('a parcel bounds value is a string', async () => {
+      await rejectsWith(() =>
+        Promise.resolve(jsonResponse(withParcels({ bounds: { ...validBody.parcels.bounds, west: '15.3' } }))),
+      );
+    });
+
+    it('the parcel attribution url is not a string', async () => {
+      await rejectsWith(() =>
+        Promise.resolve(jsonResponse(withParcels({ attribution: { text: 'ČÚZK, 2026', url: 42 } }))),
+      );
     });
   });
 });

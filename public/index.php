@@ -8,6 +8,6 @@ use ParcelMap\Handler\Http\ResponseEmitter;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-$response = new Container(dirname(__DIR__))->httpKernel()->handle(Request::fromServer($_SERVER));
+$response = new Container(dirname(__DIR__), getenv())->httpKernel()->handle(Request::fromServer($_SERVER));
 
 new ResponseEmitter()->emit($response);

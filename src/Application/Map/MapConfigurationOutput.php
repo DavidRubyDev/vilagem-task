@@ -9,5 +9,6 @@ final readonly class MapConfigurationOutput
     public function __construct(
         public MapViewOutput $initialView,
         public BaseMapOutput $baseMap,
+        public ?ParcelLayerOutput $parcels,
     ) {}
 }

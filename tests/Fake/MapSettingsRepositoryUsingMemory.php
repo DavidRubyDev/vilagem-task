@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace ParcelMap\Tests\Fake;
 
-use ParcelMap\Application\Map\MapSettings;
+use ParcelMap\Domain\Map\MapSettingsRepository;
 use ParcelMap\Domain\Map\BaseMap;
 use ParcelMap\Domain\Map\MapView;
 
-final readonly class InMemoryMapSettings implements MapSettings
+final readonly class MapSettingsRepositoryUsingMemory implements MapSettingsRepository
 {
     public function __construct(
         private MapView $initialView,

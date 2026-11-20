@@ -14,6 +14,14 @@ function showError(container: HTMLElement): void {
   document.body.append(message);
 }
 
+function showNoParcelDataNotice(): void {
+  const notice = document.createElement('p');
+  notice.className = 'map-notice';
+  notice.setAttribute('role', 'status');
+  notice.textContent = 'Parcel data has not been imported yet. Run make data, then reload this page.';
+  document.body.append(notice);
+}
+
 async function start(): Promise<void> {
   const container = document.getElementById('map');
   if (container === null) {
@@ -22,8 +30,11 @@ async function start(): Promise<void> {
   try {
     setWorkerUrl(workerUrl);
     const configuration = await loadMapConfiguration(window.fetch.bind(window), '/api/map-config');
-    const map = new Map(createMapOptions(configuration, container));
+    const map = new Map(createMapOptions(configuration, container, window.location.origin));
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
+    if (configuration.parcels === null) {
+      showNoParcelDataNotice();
+    }
   } catch (error) {
     console.warn('The map could not be loaded.', error);
     showError(container);

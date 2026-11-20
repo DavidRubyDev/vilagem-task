@@ -8,7 +8,9 @@ Built as an interview task for Viagem a.s.
 
 > **Status:** the map page works: http://localhost:8000 shows an OpenStreetMap base map centred
 > on Jičín (zoom 12) with the OSM attribution. `GET /api/map-config` serves the map
-> configuration. Parcels are not shown yet. The application is built in the tasks in
+> configuration. `make data` downloads the ČÚZK parcels of the municipality Jičín and builds a
+> vector tileset from them; the map then shows the parcels over OSM, filled by land type (outlines
+> from zoom 14) with the credit "ČÚZK, 2026". Clicking a parcel is not implemented yet. The application is built in the tasks in
 > [`.tasks/`](.tasks/). This README is updated as features land.
 
 ## Prerequisites
@@ -24,12 +26,49 @@ container.
 ```bash
 docker compose build
 docker compose up        # installs dependencies, builds the frontend, serves http://localhost:8000
+make data                # once: download the ČÚZK parcels and build the tileset (see Data)
 ```
+
+Before `make data` the page shows only the OpenStreetMap base map and a notice, "Parcel data has not
+been imported yet. Run make data, then reload this page." After `make data`, reload the page: the parcels
+appear over Jičín.
 
 `docker compose up` runs a one-shot `node` service (`npm ci && npm run build`), then starts the
 PHP server. The first run pulls the Playwright image (about 2 GB), which is also used for all
-Node tooling. `GET /` is the map page, `GET /api/map-config` the map configuration, and every
+Node tooling. `GET /` is the map page, `GET /api/map-config` the map configuration (initial view, base
+map and, once data is imported, the `parcels` tile layer; `parcels` is `null` before), and every
 other path answers `404 {"error":"not_found"}`.
+
+### Data
+
+Run `make data` once (and again whenever you want a newer export). It runs
+`bin/console parcels:import [--export-date=YYYY-MM-DD]`, which
+
+1. downloads the monthly RÚIAN VFR file of every municipality in `config/coverage.csv`
+   (`https://vdp.cuzk.gov.cz/vymenny_format/soucasna/{YYYYMMDD}_OB_{municipality}_UKSH.xml.zip`;
+   files are dated on the last day of a month and appear the next day, so without
+   `--export-date` the import takes the latest one and falls back once to the month before);
+2. converts the parcels of each listed cadastral area to WGS84 with GDAL (`ogr2ogr`);
+3. builds one vector tileset with tippecanoe and publishes it atomically.
+
+Data lives in `data/` (git-ignored): `cache/ruian/` holds the downloads (a cached file is never
+downloaded again, so a rerun is offline), `build/` the intermediate files and `tiles/parcels.mbtiles`
+the published tileset. Today `config/coverage.csv` lists the 5 cadastral areas of the municipality
+Jičín (16,972 parcels, a 3.7 MB download, a 3.5 MB tileset); covering the whole district means
+adding its areas to that file.
+
+The data is licensed CC BY 4.0; the required credit is "ČÚZK, {year of the export}". Conditions:
+https://cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-prostorovych-dat-CUZK.aspx
+
+### Parcel tiles
+
+`GET /tiles/parcels/{version}/{z}/{x}/{y}.pbf` serves the vector tiles from `data/tiles/parcels.mbtiles`.
+The tileset version is part of the URL, so a tile is immutable: `Cache-Control: public, max-age=31536000,
+immutable`, and after a re-import the URLs change. Tiles are stored gzip-compressed and sent as they are
+when the client accepts gzip (MapLibre does not decompress them itself); otherwise they are decompressed
+first. A tile without data answers `204`; an unknown version, a bad coordinate or no imported data answers
+`404`. The compose file starts the built-in PHP server with `PHP_CLI_SERVER_WORKERS=8` so one slow request
+does not block the others.
 
 ### Frontend
 
@@ -45,9 +84,11 @@ TypeScript, built with Vite, MapLibre GL JS from npm (bundled, no CDN). Edit `fr
 |-------------------|-------------------------------------------------------------------------------|-----------------------------------------------|
 | `make check`      | (runs every check group, see below)                                           | Full local check, same groups as CI           |
 | `make qa`         | `cs`, `phpstan`, `deptrac`, `lint-ci`, `typecheck`, `lint-frontend`           | All static checks                             |
-| `make test`       | `test-unit`, `test-api`, `test-frontend`, `test-e2e`                          | All tests                                     |
+| `make test`       | `test-unit`, `test-integration`, `test-api`, `test-frontend`, `test-e2e`      | All tests                                     |
 | `make test-unit`  | `PHP vendor/bin/phpunit --testsuite unit`                                     | Unit tests                                    |
-| `make test-api`   | `docker compose up -d --wait --no-deps app`, then `PHP vendor/bin/phpunit --testsuite api` | API tests over real HTTP         |
+| `make test-integration` | `PHP vendor/bin/phpunit --testsuite integration`                        | Adapters against real GDAL, tippecanoe, SQLite and a local HTTP server |
+| `make data`       | `PHP bin/console parcels:import`                                              | Download the RÚIAN export and build the parcel tileset |
+| `make test-api`   | starts the test app (`docker compose -p parcel-map-test -f compose.yaml -f compose.test.yaml up -d --wait --no-deps app`), then `phpunit --testsuite api` in it | API tests over real HTTP and CLI |
 | `make cs`         | `PHP vendor/bin/php-cs-fixer check --diff`                                    | Code style (PER-CS)                           |
 | `make cs-fix`     | `PHP vendor/bin/php-cs-fixer fix`                                             | Fix code style                                |
 | `make phpstan`    | `PHP vendor/bin/phpstan analyse --no-progress`                                | Static analysis, level max                    |
@@ -56,12 +97,16 @@ TypeScript, built with Vite, MapLibre GL JS from npm (bundled, no CDN). Edit `fr
 | `make lint-frontend` | `NODE npm run lint`, `NODE npm run format:check`                           | ESLint (type-aware) and Prettier check        |
 | `make format`     | `PHP vendor/bin/php-cs-fixer fix`, `NODE npm run format`                      | Format PHP and frontend code                  |
 | `make test-frontend` | `NODE npm test`                                                            | Vitest unit tests                             |
-| `make test-e2e`   | `docker compose up -d --wait --no-deps app`, then `NODE npm run e2e`          | Playwright E2E (needs `make assets` first)    |
+| `make test-e2e`   | starts the test app, then `npm run e2e` in the test project                   | Playwright E2E (needs `make assets` first)    |
 | `make assets`     | `NODE npm ci`, `NODE npm run build`                                           | Build the frontend into `public/build/`       |
 | `make watch`      | `NODE npm run watch`                                                          | Rebuild the frontend on change                |
 | `make lint-ci`    | `docker run --rm -v "$PWD":/repo -w /repo rhysd/actionlint:1.7.12 .github/workflows/ci.yml` | Lint the GitHub workflow        |
 
 Run `composer install` first (`make install-php`); the `make` check groups do it for you.
+
+The API and E2E tests run against their own app: a separate compose project (`parcel-map-test`,
+`compose.test.yaml`) with no published port and the fixture data in `tests/Fixtures/data`, so
+`make check` never restarts or changes the app of `make up`. `make down` stops both projects.
 
 ## Continuous integration
 
@@ -129,6 +174,17 @@ A running log of decisions, surprises and what I would do with more time.
   costs about the same as covering four cadastral areas.
 - **Plain PHP, hexagonal architecture.** No framework; the domain stays independent of storage
   and delivery, so the storage can change (e.g. to PostGIS) without touching the domain.
+- **Source: the RÚIAN VFR monthly municipality export.** One feature carries the parcel
+  attributes and the polygon, and GDAL reads it straight from the zip. The cadastral-area SHP
+  splits attributes and polygons into two layers, INSPIRE lacks the land type, and the open VFK
+  has no parcel rows.
+- **GDAL and tippecanoe are installed in the app image** (+287 MB), because the import use case
+  drives them through process adapters in the same container. Separate tool containers would be
+  the preferred design (lean runtime image, independent tool upgrades, isolation). One image is
+  enough for now: the import is the only consumer and the process adapters need the binaries in
+  the same container.
+- **Immutable, versioned tile URLs.** The browser never asks the single-threaded PHP server for the
+  same tile twice; empty tiles answer 204 (a 404 would be logged as a console error by the browser).
 - **Docker for everything.** Same PHP version and tools on every machine.
 - **PHP 8.6.** It is still at the RC stage at the time of setup (`php:8.6-rc-cli` image). The
   Dockerfile switches to the GA image once it is released.
@@ -152,3 +208,5 @@ _To be filled in._
 - Docker layer cache in CI (BuildKit GitHub Actions cache), to avoid rebuilding the PHP image
   in several jobs and pulling the Playwright image on every run.
 - Activate the ruleset once the repository is public.
+- Separate tool containers for GDAL and tippecanoe, import progress output, and a pinned
+  S-JTSK to WGS84 coordinate transformation (GDAL's default is used today).

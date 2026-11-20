@@ -4,18 +4,20 @@ declare(strict_types=1);
 
 namespace ParcelMap\Tests\Api;
 
+use ParcelMap\Tests\Support\FixtureTileset;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 final class MapConfigurationTest extends TestCase
 {
     #[Test]
-    public function it_serves_the_initial_view_and_the_base_map(): void
+    public function it_serves_the_initial_view_the_base_map_and_the_parcel_layer(): void
     {
         $result = HttpClient::fromEnvironment()->request('GET', '/api/map-config');
 
         self::assertSame(200, $result->status);
         self::assertSame('application/json', $result->header('Content-Type'));
+        self::assertSame('no-cache', $result->header('Cache-Control'));
         self::assertEquals(
             [
                 'initialView' => [
@@ -29,6 +31,21 @@ final class MapConfigurationTest extends TestCase
                     'attribution' => [
                         'text' => '© OpenStreetMap contributors',
                         'url' => 'https://www.openstreetmap.org/copyright',
+                    ],
+                ],
+                'parcels' => [
+                    'tileUrlTemplate' => '/tiles/parcels/' . FixtureTileset::VERSION . '/{z}/{x}/{y}.pbf',
+                    'minZoom' => FixtureTileset::MIN_ZOOM,
+                    'maxZoom' => FixtureTileset::MAX_ZOOM,
+                    'bounds' => [
+                        'west' => FixtureTileset::WEST,
+                        'south' => FixtureTileset::SOUTH,
+                        'east' => FixtureTileset::EAST,
+                        'north' => FixtureTileset::NORTH,
+                    ],
+                    'attribution' => [
+                        'text' => 'ČÚZK, 2026',
+                        'url' => 'https://cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-prostorovych-dat-CUZK.aspx',
                     ],
                 ],
             ],

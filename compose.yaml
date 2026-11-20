@@ -16,6 +16,8 @@ services:
 
   app:
     build: .
+    # Named so the test project (compose.test.yaml) reuses the same image.
+    image: parcel-map-app
     user: '${UID:-1000}:${GID:-1000}'
     volumes:
       - .:/app
@@ -32,6 +34,8 @@ services:
         condition: service_completed_successfully
     environment:
       COMPOSER_CACHE_DIR: /app/var/cache/composer
+      # The built-in server forks workers, so one slow request does not block the others.
+      PHP_CLI_SERVER_WORKERS: '8'
     command:
       - sh
       - -c

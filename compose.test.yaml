@@ -1,0 +1,7 @@
+# Overrides for the test project (docker compose -p parcel-map-test): fixture data, no published port,
+# so running the tests never touches a developer's running app.
+services:
+  app:
+    ports: !reset []
+    environment:
+      PARCEL_MAP_DATA_DIR: tests/Fixtures/data

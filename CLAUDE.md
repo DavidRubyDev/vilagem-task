@@ -38,7 +38,8 @@ public/index.php   HTTP front controller (calls Bootstrap, dispatches to Handler
 bin/console        CLI entry point (calls Bootstrap, dispatches to Command).
 frontend/          Frontend source and its unit tests.
 tests/             Unit/, Integration/, Api/, E2E/ (see Testing).
-data/              Downloaded and generated data. Git-ignored, except small test fixtures.
+config/            Committed configuration (e.g. coverage.csv, the cadastral areas to import).
+data/              Downloaded and generated data. Git-ignored. Test fixtures live in tests/Fixtures/.
 .tasks/            Task files (see Workflow).
 ```
 
@@ -85,6 +86,22 @@ A violation fails the build.
 - Coding style PER-CS (PHP-CS-Fixer), static analysis PHPStan at max level. Both must pass.
 - Runtime Composer dependencies are allowed when the task file justifies them. Prefer the
   standard library for small things.
+
+Naming:
+
+- Use cases are named `<Verb><Subject>UseCase` and have one public method `execute()`.
+- Other Application classes are named after their role: ports (`…Converter`, `…Builder`,
+  `…Publisher`, `…Downloader`, `Clock`), DTOs (`…Input`, `…Output`), exceptions (what went wrong).
+- Infrastructure classes that load, save or update domain data are named
+  `<Subject>RepositoryUsing<Service>` and implement the Domain repository interface
+  `<Subject>Repository`.
+- Other Infrastructure adapters are named `<Port>Using<Service>`.
+- `<Service>` is the technology (Csv, Mbtiles, Http, Ogr2ogr, Tippecanoe, Constants, SystemTime),
+  not the data provider.
+- Test fakes follow the same rule with `Memory` (`MapSettingsRepositoryUsingMemory`); a fixed
+  clock is `ClockUsingFixedTime`.
+- Infrastructure helpers that implement no port keep a role name (`ProcessRunner`).
+- Handlers and commands are named `<Action>Handler` / `<Action>Command`.
 
 ## Testing: TDD, always
 
@@ -206,9 +223,10 @@ form is shown where useful. `PHP` below means `docker compose run --rm --no-deps
 ```bash
 make check          # full test + QA (what CI runs, one after another); use for git rebase --exec
 make qa             # cs phpstan deptrac lint-ci typecheck lint-frontend
-make test           # test-unit test-api test-frontend test-e2e (run make assets first)
+make test           # test-unit test-integration test-api test-frontend test-e2e (run make assets first)
 make test-unit      # PHP vendor/bin/phpunit --testsuite unit
-make test-api       # starts the app, then PHP vendor/bin/phpunit --testsuite api
+make test-integration  # PHP vendor/bin/phpunit --testsuite integration (real GDAL/tippecanoe/SQLite, local HTTP server)
+make test-api       # starts the test app (project parcel-map-test, fixture data), then PHP vendor/bin/phpunit --testsuite api in it
 make cs             # PHP vendor/bin/php-cs-fixer check --diff   (make cs-fix fixes)
 make phpstan        # PHP vendor/bin/phpstan analyse --no-progress
 make deptrac        # PHP vendor/bin/deptrac analyse --no-progress --fail-on-uncovered --report-uncovered
@@ -216,12 +234,15 @@ make typecheck      # NODE npm run typecheck (tsc -b)
 make lint-frontend  # NODE npm run lint (ESLint) and npm run format:check (Prettier)
 make format         # cs-fix + NODE npm run format
 make test-frontend  # NODE npm test (Vitest)
-make test-e2e       # starts the app, then NODE npm run e2e (Playwright; needs make assets first)
+make test-e2e       # starts the test app, then NODE npm run e2e in the test project (Playwright; needs make assets first)
+make up-app         # starts the test app: docker compose -p parcel-map-test -f compose.yaml -f compose.test.yaml up -d --wait --no-deps app
+make data           # PHP bin/console parcels:import: download the RÚIAN export (cached) and build data/tiles/parcels.mbtiles
 make assets         # NODE npm ci && npm run build -> public/build/   (make watch rebuilds on change)
 make lint-ci        # actionlint on .github/workflows/ci.yml
-make up / make down # docker compose up / down (app at http://localhost:8000)
+make up / make down # docker compose up / down (app at http://localhost:8000); down also stops the test project
 docker compose build                 # build the image
 docker compose run --rm app <cmd>    # run any command in the app container
+docker compose run --rm app bin/console   # list the CLI commands
 ```
 
 `make check` runs the groups in `CHECK_TARGETS` (Makefile); CI runs the same groups as parallel
@@ -240,12 +261,12 @@ Source-data term (Czech) → name used in code.
 | obec                                  | `Municipality`       |                                                                |
 | okres                                 | `District`           | Jičín district.                                                |
 | parcelní číslo                        | `ParcelNumber`       | Base number (kmenové číslo) + optional subdivision (poddělení), e.g. `123/4`. |
-| stavební / pozemková parcela          | `ParcelKind::Building` / `ParcelKind::Land` | Building plots are displayed with the `st.` prefix. |
+| stavební / pozemková parcela          | `ParcelKind::Building` / `ParcelKind::Land` | Building plots are displayed with the `st.` prefix. `DruhCislovaniKod` 1 = building, 2 = land. |
 | druh pozemku                          | `LandType`           | Arable land, forest, permanent grassland, …                    |
 | způsob využití pozemku                | `LandUse`            |                                                                |
 | výměra                                | `Area`               | Square metres.                                                 |
-| list vlastnictví (LV)                 | `OwnershipSheet`     | Ownership data itself is not in open data.                     |
-| zjednodušená evidence (PK / EN)       | `SimplifiedRecordParcel` | Parcels without their own geometry in the cadastral map.   |
+| list vlastnictví (LV)                 | `OwnershipSheet`     | Neither the LV number nor ownership is in the open data (RÚIAN, SHP, INSPIRE, open VFK). |
+| zjednodušená evidence (PK / EN)       | `SimplifiedRecordParcel` | Not in RÚIAN or any open source; no own geometry.             |
 | katastr nemovitostí (KN)              | Cadastre             |                                                                |
 | RÚIAN, VFR                            | —                    | ČÚZK register and its exchange format (data source).           |
 | S-JTSK (EPSG:5514)                    | —                    | Source coordinate system; the map uses WGS84 / Web Mercator.   |
@@ -255,4 +276,14 @@ Source-data term (Czech) → name used in code.
 | —                                     | `BaseMap`            | Background raster tile layer under the data (OSM in task 001). |
 | —                                     | `TileUrlTemplate`    | `https` URL with `{z}`, `{x}`, `{y}` placeholders.             |
 | —                                     | `Attribution`        | Required data credit shown on the map: text + link.            |
+| kód obce                              | `MunicipalityCode`   | 6 digits.                                                      |
+| kód katastrálního území               | `CadastralAreaCode`  | 6 digits.                                                      |
+| měsíční stavový soubor obce VFR (`OB_UKSH`) | RÚIAN export (`RuianExportDownloader`, `DownloadedExport`) | Monthly per-municipality file with parcels and original boundaries. |
+| datum souboru VFR                     | `ExportDate`         | Last day of a month; the file is published the next day.       |
+| —                                     | `Coverage`           | The cadastral areas the map covers (`config/coverage.csv`).    |
+| —                                     | `TilesetVersion`     | Identifies one published parcel tileset; part of the tile URLs. |
+| —                                     | `TileCoordinate`     | Tile `zoom/x/y` in the XYZ scheme (y from the top).            |
+| —                                     | `VectorTile`         | One gzip-compressed vector tile, or none (empty).              |
+| —                                     | `Bounds`             | South-west and north-east `Coordinates` of a rectangle.        |
+| —                                     | `ParcelTileset`      | The published parcel tileset: version, export date, bounds, zoom range; `attribution()` gives the ČÚZK credit. |
 | —                                     | Map configuration    | What the frontend needs to start the map: initial `MapView` + `BaseMap` (`GET /api/map-config`). |

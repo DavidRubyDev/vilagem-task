@@ -32,6 +32,19 @@ final readonly class Response
         return new self(200, ['Content-Type' => 'text/html; charset=utf-8'], $html);
     }
 
+    /**
+     * @param array<string, string> $headers
+     */
+    public static function noContent(array $headers = []): self
+    {
+        return new self(204, $headers, '');
+    }
+
+    public function withHeader(string $name, string $value): self
+    {
+        return new self($this->status, [...$this->headers, $name => $value], $this->body);
+    }
+
     public static function notFound(): self
     {
         return self::json(['error' => 'not_found'], 404);
