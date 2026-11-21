@@ -59,6 +59,46 @@ each change into the commit it logically belongs to (`--amend` for the last comm
 new commit only for a genuinely new logical step. TDD still applies: change or add the test
 first.
 
+## Applying review findings
+
+When the main session sends you review findings, you get: the round number, the reviewed head
+SHA, the confirmed findings (verbatim, with the developer's notes) and the rejected findings
+with reasons.
+
+Before starting, be on the task branch with a clean tree. If a confirmed finding says
+`Task-file contract: yes` and the task file has not been revised for it, stop and report.
+
+For each confirmed finding:
+
+- Make the fix. TDD applies: a fix that changes behaviour starts with a failing test. A pure
+  rename or move is a refactor with all tests green. Updating tests that reference the renamed
+  thing is not weakening them.
+- Commit it as `git commit --fixup=<sha>` of the commit the finding names. Find that commit by
+  its subject if the SHA is stale. If the finding names the wrong commit, use the right one and
+  say so in the report.
+- Then run `git rebase --autosquash main`.
+
+Record the round in the task file's `## Review` section and `git commit --amend` it into the
+branch's last commit. Appending at the end of the last commit cannot conflict during
+autosquash. Format:
+
+```
+### Round 1: head 5d6e7f8, 2026-11-22
+
+1. Confirmed. `src/Handler/ParcelDetailHandler.php:42`, Dependency rule: the handler builds a ParcelNumber. Fixed in `feat(parcel): show parcel detail on click (#005)`.
+2. Rejected. `src/Domain/Parcel/Area.php:12`, DDD rules: ... Reason: "<developer's words>".
+```
+
+Use commit subjects, not SHAs: the SHAs change on every rewrite. A round where every finding is
+rejected is recorded the same way, with no code change.
+
+Verify with `git rebase --exec "make check" main` when any commit other than the last changed;
+otherwise `make check`.
+
+Report, for each finding, the commit it was folded into; the new head SHA; and the list of
+commits (hash + subject). If the branch was already pushed, say so (force-push with
+`--force-with-lease`).
+
 ## Finish
 
 Set the status to `done` and make sure the README and CLAUDE.md "Commands" section reflect any

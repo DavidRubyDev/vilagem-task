@@ -723,6 +723,13 @@ Filled in by the implement agent, one entry per step.
 - The CLAUDE.md `make test` line in the repository differed from the task file's "before" text
   (it already listed `test-integration`); only `test-hooks` was prepended.
 
+### Step 2: the review loop
+
+- Documentation only (no executable code, so no test-first step; verified by the Verification
+  steps): CLAUDE.md procedure steps 6 and 7, `.tasks/TEMPLATE.md` `## Review`, `implement.md`
+  "Applying review findings", `plan.md` revision line, README loop paragraph.
+- Status stays `in-progress`: awaiting verification (smoke test, task 003 dry run, review loop).
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.

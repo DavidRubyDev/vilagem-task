@@ -100,3 +100,7 @@ Observable, checkable outcomes, including performance where relevant.
 ## Implementation log
 
 Filled in by the implement agent, one entry per step.
+
+## Review
+
+Filled in during the review loop (implement agent), one entry per round with findings.

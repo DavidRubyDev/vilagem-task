@@ -169,8 +169,27 @@ Main session procedure for a new feature or bug:
 5. Report implement's result to the developer: what was done, commits, deviations, open
    issues. If implement reports a problem with the plan, go back to step 1/2 to fix the task
    file (amending the task-file commit on the branch); do not patch around it.
-6. Review feedback from the developer on an existing branch goes back to implement (or plan,
-   if the architecture changes), which folds it into the existing commits (see Git).
+6. **Review loop.** After implement reports a finished task:
+   - Spawn a **fresh** review agent with base `main`, the task branch checked out, and the round
+     number (1, 2, ...).
+   - Relay its report to the developer **verbatim**.
+   - The developer answers by number: confirm or reject, optionally with a reason or an adjusted
+     fix.
+   - Confirmed findings marked `Task-file contract: yes` go to **plan** first, which amends the
+     task-file commit.
+   - Then send to **implement**, verbatim: the confirmed findings with the developer's notes, the
+     rejected findings with their reasons, the round number and the reviewed head SHA.
+   - Implement folds the fixes into their commits, records the round in the task file's
+     `## Review` section, and verifies every commit.
+   - Repeat with a new review agent.
+   - The loop stops when a round reports `No findings.`, when the developer confirms none
+     (implement then only records that round), or when the developer says stop.
+   - If a finding comes back with `Repeats:`, point this out to the developer instead of looping
+     silently.
+7. Review feedback from the developer on an existing branch goes back to implement (or plan,
+   if the architecture changes), which folds it into the existing commits (see Git). After such
+   a change, run the review loop again before reporting back, unless the developer says to skip
+   it.
 
 The main session does not write production code itself; code changes go through a task file
 and the implement agent.
