@@ -182,14 +182,16 @@ Full rules are in [`CLAUDE.md`](CLAUDE.md).
 
 ## Development workflow
 
-Development uses Claude Code with two agents and strict TDD:
+Development uses Claude Code with three agents and strict TDD:
 
 1. **plan** (`.claude/agents/plan.md`, stronger model): analyses a feature request, iterates on
    it with the developer, and writes a task file in `.tasks/` describing the architecture of
    the change, its vertical-slice steps and test scenarios.
 2. **implement** (`.claude/agents/implement.md`, cheaper model): implements the task file
    test-first, step by step, and commits each step locally.
-3. The developer reviews the commits and pushes. Claude never pushes; this is enforced in
+3. **review** (`.claude/agents/review.md`, stronger model, read-only): reviews the commits of a
+   task branch against the architecture and language rules of `CLAUDE.md`.
+4. The developer reviews the commits and pushes. Claude never pushes; this is enforced in
    `.claude/settings.json`.
 
 Tests: unit, integration, API (real HTTP and CLI) and frontend (unit + browser E2E).

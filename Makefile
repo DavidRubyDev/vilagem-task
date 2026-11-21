@@ -9,18 +9,20 @@ NODE := $(COMPOSE) run --rm --no-deps node
 # API and E2E tests run against their own app (fixture data, no published port), so they never touch the app of `make up`.
 TEST_COMPOSE := $(COMPOSE) -p parcel-map-test -f compose.yaml -f compose.test.yaml
 ACTIONLINT_IMAGE := rhysd/actionlint:1.7.12
+# The Claude Code hooks run on host python3; their tests run in this image.
+PYTHON_IMAGE := python:3.14.10-slim
 # The district whose cadastral areas `make coverage` writes to config/coverage.csv (Jičín).
 DISTRICT := 3604
 
 # The only list of check groups. CI builds its job matrix from it (make ci-targets).
-CHECK_TARGETS := lint-ci php-qa php-tests frontend-checks e2e
+CHECK_TARGETS := lint-ci test-hooks php-qa php-tests frontend-checks e2e
 
 comma := ,
 empty :=
 space := $(empty) $(empty)
 
 .PHONY: build data coverage perf install-php install-node assets watch up-app up down cs cs-fix phpstan deptrac format \
-	test-unit test-integration test-api test-frontend test-e2e typecheck lint-frontend lint-ci \
+	test-unit test-integration test-api test-frontend test-e2e typecheck lint-frontend lint-ci test-hooks \
 	php-qa php-tests check qa test ci-targets $(CHECK_TARGETS)
 
 build:
@@ -98,6 +100,9 @@ perf:
 lint-ci:
 	docker run --rm -u "$(UID):$(GID)" -v "$(CURDIR)":/repo -w /repo $(ACTIONLINT_IMAGE) -no-color .github/workflows/ci.yml
 
+test-hooks:
+	docker run --rm -u "$(UID):$(GID)" -v "$(CURDIR)":/repo -w /repo $(PYTHON_IMAGE) python -I -B -m unittest discover -s .claude/hooks/tests -v
+
 php-qa: install-php cs phpstan deptrac
 
 php-tests: install-php test-unit test-integration test-api
@@ -110,7 +115,7 @@ check: $(CHECK_TARGETS)
 
 qa: cs phpstan deptrac lint-ci typecheck lint-frontend
 
-test: test-unit test-integration test-api test-frontend test-e2e
+test: test-hooks test-unit test-integration test-api test-frontend test-e2e
 
 ci-targets:
 	@echo '[$(subst $(space),$(comma),$(foreach t,$(CHECK_TARGETS),"$(t)"))]'

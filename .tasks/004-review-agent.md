@@ -1,6 +1,6 @@
 # 004: Review agent
 
-- **Status:** approved
+- **Status:** in-progress
 - **Created:** 2026-11-21
 - **Request:** "@plan another agent. Think about how capable it shold be (what model should be used).
   The agent will look at the current branch and using only the architecture and language rules
@@ -707,6 +707,21 @@ None. The agent prompt and the documentation are verified by the Verification st
 ## Implementation log
 
 Filled in by the implement agent, one entry per step.
+
+### Step 1: the read-only review agent
+
+- Hook tests first (`.claude/hooks/tests/test_review_read_only.py`, 11 test methods covering every
+  allowed and denied scenario of the task file, with sub-tests per command). Red run with
+  `make test-hooks` before `review-read-only.py` existed: `Ran 11 tests ... FAILED (failures=63,
+  errors=1)`, every case failing with `can't open file '/repo/.claude/hooks/review-read-only.py':
+  [Errno 2] No such file or directory` (hook exit code 2 instead of 0). Then the hook was written;
+  green: `Ran 11 tests ... OK`.
+- Decision below the plan's level: the hook's `main()` has two separate `try` blocks. Reading the
+  input fails with the "Malformed hook input; denied." prefix, and any error in the policy check
+  is a plain deny. Both fail closed.
+- Makefile, CLAUDE.md (Agents, Git, Commands) and README updated as specified.
+- The CLAUDE.md `make test` line in the repository differed from the task file's "before" text
+  (it already listed `test-integration`); only `test-hooks` was prepended.
 
 ## Review
 

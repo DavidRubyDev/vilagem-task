@@ -154,6 +154,9 @@ Status lifecycle (in the file header): `approved` → `in-progress` → `done` (
   It defines the architecture of the change; it writes no production code or tests.
 - **implement** (`.claude/agents/implement.md`, cheaper model): takes an approved task file
   and turns it into tested code, following these rules.
+- **review** (`.claude/agents/review.md`, strong model, read-only): reviews the commits of a task
+  branch against the architecture and language rules in this file and reports numbered
+  findings. It changes nothing; its Bash use is limited to read-only git commands by a hook.
 
 Main session procedure for a new feature or bug:
 
@@ -181,7 +184,8 @@ and the implement agent.
 - **Never commit to `main`.** This is enforced by a hook in `.claude/settings.json` that denies
   commit, merge, cherry-pick, revert, am and rebase while `main` is checked out. Switch to the
   task branch in a separate command before committing; the hook checks the branch that is
-  current *before* the command runs.
+  current *before* the command runs. The review agent is additionally limited to read-only git
+  commands by `.claude/hooks/review-read-only.py`, a hook in its frontmatter.
 - Claude commits locally only. Claude **never pushes** (denied in `.claude/settings.json`),
   never opens pull requests, never pulls or fetches, and never merges into `main`. The
   developer reviews, pushes, pulls and merges. If a branch needs changes from `main`, ask the
@@ -223,7 +227,7 @@ form is shown where useful. `PHP` below means `docker compose run --rm --no-deps
 ```bash
 make check          # full test + QA (what CI runs, one after another); use for git rebase --exec
 make qa             # cs phpstan deptrac lint-ci typecheck lint-frontend
-make test           # test-unit test-integration test-api test-frontend test-e2e (run make assets first)
+make test           # test-hooks test-unit test-integration test-api test-frontend test-e2e (run make assets first)
 make test-unit      # PHP vendor/bin/phpunit --testsuite unit
 make test-integration  # PHP vendor/bin/phpunit --testsuite integration (real GDAL/tippecanoe/SQLite, local HTTP server)
 make test-api       # starts the test app (project parcel-map-test, fixture data), then PHP vendor/bin/phpunit --testsuite api in it
@@ -241,6 +245,7 @@ make perf           # NODE npm run perf; Playwright measurement of the running a
 make coverage       # PHP bin/console coverage:generate --district=3604; regenerates config/coverage.csv (review the diff, commit it)
 make assets         # NODE npm ci && npm run build -> public/build/   (make watch rebuilds on change)
 make lint-ci        # actionlint on .github/workflows/ci.yml
+make test-hooks     # Python unittest of the Claude Code hooks in .claude/hooks/ (python:3.14.10-slim image)
 make up / make down # docker compose up / down (app at http://localhost:8000); down also stops the test project
 docker compose build                 # build the image
 docker compose run --rm app <cmd>    # run any command in the app container
