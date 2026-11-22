@@ -154,6 +154,9 @@ Status lifecycle (in the file header): `approved` → `in-progress` → `done` (
   It defines the architecture of the change; it writes no production code or tests.
 - **implement** (`.claude/agents/implement.md`, cheaper model): takes an approved task file
   and turns it into tested code, following these rules.
+- **review** (`.claude/agents/review.md`, strong model, read-only): reviews the commits of a task
+  branch against the architecture and language rules in this file and reports numbered
+  findings. It changes nothing; its Bash use is limited to read-only git commands by a hook.
 
 Main session procedure for a new feature or bug:
 
@@ -166,8 +169,27 @@ Main session procedure for a new feature or bug:
 5. Report implement's result to the developer: what was done, commits, deviations, open
    issues. If implement reports a problem with the plan, go back to step 1/2 to fix the task
    file (amending the task-file commit on the branch); do not patch around it.
-6. Review feedback from the developer on an existing branch goes back to implement (or plan,
-   if the architecture changes), which folds it into the existing commits (see Git).
+6. **Review loop.** After implement reports a finished task:
+   - Spawn a **fresh** review agent with base `main`, the task branch checked out, and the round
+     number (1, 2, ...).
+   - Relay its report to the developer **verbatim**.
+   - The developer answers by number: confirm or reject, optionally with a reason or an adjusted
+     fix.
+   - Confirmed findings marked `Task-file contract: yes` go to **plan** first, which amends the
+     task-file commit.
+   - Then send to **implement**, verbatim: the confirmed findings with the developer's notes, the
+     rejected findings with their reasons, the round number and the reviewed head SHA.
+   - Implement folds the fixes into their commits, records the round in the task file's
+     `## Review` section, and verifies every commit.
+   - Repeat with a new review agent.
+   - The loop stops when a round reports `No findings.`, when the developer confirms none
+     (implement then only records that round), or when the developer says stop.
+   - If a finding comes back with `Repeats:`, point this out to the developer instead of looping
+     silently.
+7. Review feedback from the developer on an existing branch goes back to implement (or plan,
+   if the architecture changes), which folds it into the existing commits (see Git). After such
+   a change, run the review loop again before reporting back, unless the developer says to skip
+   it.
 
 The main session does not write production code itself; code changes go through a task file
 and the implement agent.
@@ -181,7 +203,8 @@ and the implement agent.
 - **Never commit to `main`.** This is enforced by a hook in `.claude/settings.json` that denies
   commit, merge, cherry-pick, revert, am and rebase while `main` is checked out. Switch to the
   task branch in a separate command before committing; the hook checks the branch that is
-  current *before* the command runs.
+  current *before* the command runs. The review agent is additionally limited to read-only git
+  commands by `.claude/hooks/review-read-only.py`, a hook in its frontmatter.
 - Claude commits locally only. Claude **never pushes** (denied in `.claude/settings.json`),
   never opens pull requests, never pulls or fetches, and never merges into `main`. The
   developer reviews, pushes, pulls and merges. If a branch needs changes from `main`, ask the
@@ -223,7 +246,7 @@ form is shown where useful. `PHP` below means `docker compose run --rm --no-deps
 ```bash
 make check          # full test + QA (what CI runs, one after another); use for git rebase --exec
 make qa             # cs phpstan deptrac lint-ci typecheck lint-frontend
-make test           # test-unit test-integration test-api test-frontend test-e2e (run make assets first)
+make test           # test-hooks test-unit test-integration test-api test-frontend test-e2e (run make assets first)
 make test-unit      # PHP vendor/bin/phpunit --testsuite unit
 make test-integration  # PHP vendor/bin/phpunit --testsuite integration (real GDAL/tippecanoe/SQLite, local HTTP server)
 make test-api       # starts the test app (project parcel-map-test, fixture data), then PHP vendor/bin/phpunit --testsuite api in it
@@ -241,6 +264,7 @@ make perf           # NODE npm run perf; Playwright measurement of the running a
 make coverage       # PHP bin/console coverage:generate --district=3604; regenerates config/coverage.csv (review the diff, commit it)
 make assets         # NODE npm ci && npm run build -> public/build/   (make watch rebuilds on change)
 make lint-ci        # actionlint on .github/workflows/ci.yml
+make test-hooks     # Python unittest of the Claude Code hooks in .claude/hooks/ (python:3.14.10-slim image)
 make up / make down # docker compose up / down (app at http://localhost:8000); down also stops the test project
 docker compose build                 # build the image
 docker compose run --rm app <cmd>    # run any command in the app container

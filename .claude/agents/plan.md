@@ -45,7 +45,8 @@ When approved:
    `approved`.
 3. Commit only that file: `docs(tasks): add NNN <title>`. Never commit to `main`, never push.
 
-When asked to revise an existing task file (e.g. implement reported a problem with the plan),
+When asked to revise an existing task file (e.g. implement reported a problem with the plan, or a confirmed review finding
+changes a contract the task file defines),
 change it on its task branch and fold the change into the task-file commit (see "Modifying an
 existing branch" in CLAUDE.md) rather than adding a new commit.
 
