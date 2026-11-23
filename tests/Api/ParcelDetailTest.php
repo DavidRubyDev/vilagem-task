@@ -35,6 +35,10 @@ final class ParcelDetailTest extends TestCase
             'https://nahlizenidokn.cuzk.gov.cz/ZobrazObjekt.aspx?typ=parcela&id=1753295604',
             $body['cadastreViewerUrl'],
         );
+        self::assertSame(
+            ['west' => 15.3509216, 'south' => 50.4372305, 'east' => 15.3511404, 'north' => 50.437745],
+            $body['bounds'],
+        );
         $boundary = $body['boundary'];
         self::assertIsArray($boundary);
         self::assertSame('Polygon', $boundary['type']);

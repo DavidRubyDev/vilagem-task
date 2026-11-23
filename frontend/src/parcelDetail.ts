@@ -9,6 +9,7 @@ export interface ParcelDetail {
   readonly areaSquareMetres: number;
   readonly boundary: { readonly type: 'Polygon'; readonly coordinates: number[][][] };
   readonly cadastreViewerUrl: string;
+  readonly bounds: { readonly west: number; readonly south: number; readonly east: number; readonly north: number };
 }
 
 export type ParcelDetailResult = { readonly found: true; readonly detail: ParcelDetail } | { readonly found: false };
@@ -41,6 +42,16 @@ function isPolygon(value: unknown): value is ParcelDetail['boundary'] {
   );
 }
 
+function isBounds(value: unknown): value is ParcelDetail['bounds'] {
+  return (
+    isRecord(value) &&
+    isFiniteNumber(value['west']) &&
+    isFiniteNumber(value['south']) &&
+    isFiniteNumber(value['east']) &&
+    isFiniteNumber(value['north'])
+  );
+}
+
 function isParcelDetail(value: unknown): value is ParcelDetail {
   if (!isRecord(value)) return false;
   const {
@@ -54,6 +65,7 @@ function isParcelDetail(value: unknown): value is ParcelDetail {
     areaSquareMetres,
     boundary,
     cadastreViewerUrl,
+    bounds,
   } = value;
   return (
     isFiniteNumber(id) &&
@@ -66,7 +78,8 @@ function isParcelDetail(value: unknown): value is ParcelDetail {
     isFiniteNumber(areaSquareMetres) &&
     isPolygon(boundary) &&
     typeof cadastreViewerUrl === 'string' &&
-    cadastreViewerUrl.startsWith('https://')
+    cadastreViewerUrl.startsWith('https://') &&
+    isBounds(bounds)
   );
 }
 

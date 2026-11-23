@@ -10,6 +10,7 @@ async function openAt(
   longitude: number | null,
   latitude: number | null,
   zoom: number | null,
+  path = '/',
 ): Promise<void> {
   await page.route('**/api/map-config', async (route) => {
     const response = await route.fetch();
@@ -22,7 +23,7 @@ async function openAt(
           : { ...body, initialView: { center: { longitude, latitude }, zoom } },
     });
   });
-  await page.goto('/');
+  await page.goto(path);
   await expect(page.locator('.maplibregl-canvas')).toBeVisible();
 }
 
@@ -174,4 +175,74 @@ test('shows an error when the details cannot be loaded', async ({ page, allowedC
   await clickUntilPanelOpens(page);
 
   await expect(panelOf(page)).toContainText('The parcel details could not be loaded. Please try again.');
+});
+
+test.describe('the selected parcel in the URL', () => {
+  const requested: string[] = [];
+
+  test.beforeEach(({ page }) => {
+    requested.length = 0;
+    page.on('request', (request) => {
+      const url = new URL(request.url());
+      if (url.pathname.startsWith('/tiles/parcels/') || url.pathname.startsWith('/api/parcels/')) {
+        requested.push(url.pathname);
+      }
+    });
+  });
+
+  test('opens a link to a parcel fitted to it, without loading the default view first', async ({ page }) => {
+    const detail = page.waitForRequest(`**/api/parcels/${FIXTURE_VERSION}/${String(ST_72.id)}`);
+    const tile = page.waitForResponse(`**/tiles/parcels/${FIXTURE_VERSION}/16/35562/22101.pbf`);
+
+    await openAt(page, null, null, null, `/#parcel=${String(ST_72.id)}`);
+
+    await detail;
+    await tile;
+    await expect(panelOf(page).getByRole('heading')).toHaveText('Parcel st. 72');
+    expect(requested).not.toContain(`/tiles/parcels/${FIXTURE_VERSION}/12/2222/1381.pbf`);
+    await expect.poll(() => countHighlightPixels(page)).toBeGreaterThan(100);
+  });
+
+  test('writes the clicked parcel into the URL and removes it when the panel is closed', async ({ page }) => {
+    await openAt(page, LAND_1171.longitude, LAND_1171.latitude, 18);
+
+    await clickUntilPanelOpens(page);
+
+    await expect.poll(() => page.url()).toMatch(new RegExp(`#parcel=${String(LAND_1171.id)}$`));
+    await page.getByRole('button', { name: 'Close parcel details' }).click();
+    await expect.poll(() => page.url()).not.toContain('#');
+  });
+
+  test('selects the parcel of a changed hash', async ({ page }) => {
+    await openAt(page, null, null, null);
+
+    await page.evaluate((id) => {
+      window.location.hash = `#parcel=${String(id)}`;
+    }, LAND_1171.id);
+
+    await expect(panelOf(page).getByRole('heading')).toHaveText('Parcel 1171');
+  });
+
+  test('says so when the linked parcel does not exist, and stays on the default view', async ({
+    page,
+    allowedConsoleErrors,
+  }) => {
+    allowedConsoleErrors.push(/status of 404/);
+    const tile = page.waitForResponse(`**/tiles/parcels/${FIXTURE_VERSION}/12/2222/1381.pbf`);
+
+    await openAt(page, null, null, null, '/#parcel=999');
+
+    await tile;
+    await expect(panelOf(page)).toContainText(
+      'This parcel was not found. If the data has been updated, reload the page.',
+    );
+  });
+
+  test('ignores a malformed parcel in the URL', async ({ page }) => {
+    await openAt(page, null, null, null, '/#parcel=abc');
+    await page.waitForTimeout(500);
+
+    expect(requested.filter((path) => path.startsWith('/api/parcels/'))).toEqual([]);
+    await expect(panelOf(page)).toBeHidden();
+  });
 });

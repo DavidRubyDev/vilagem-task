@@ -23,5 +23,9 @@ final readonly class ParcelDetailOutput
         public int $areaSquareMetres,
         public array $boundaryRings,
         public string $cadastreViewerUrl,
+        public float $west,
+        public float $south,
+        public float $east,
+        public float $north,
     ) {}
 }

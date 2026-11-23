@@ -1,4 +1,5 @@
 import type { LayerSpecification, MapOptions, SourceSpecification } from 'maplibre-gl';
+import type { Padding } from './fitPadding';
 import { landTypeFillColour } from './landTypes';
 import type { MapConfiguration, ParcelLayerConfiguration } from './mapConfiguration';
 import { SELECTED_PARCEL_SOURCE, selectedParcelData } from './selectedParcel';
@@ -75,13 +76,34 @@ const selectedParcelLayers: LayerSpecification[] = [
   },
 ];
 
-/** `origin` makes the vector tile URL absolute: MapLibre loads tiles in a worker that cannot resolve relative URLs. */
-export function createMapOptions(configuration: MapConfiguration, container: HTMLElement, origin: string): MapOptions {
+/** The map opens fitted to these bounds (west, south, east, north) instead of the initial view. */
+export interface InitialBounds {
+  readonly bounds: [number, number, number, number];
+  readonly padding: Padding;
+}
+
+// A single parcel must not be shown closer than this when the map is fitted to it.
+const FIT_MAX_ZOOM = 18;
+
+/**
+ * `origin` makes the vector tile URL absolute: MapLibre loads tiles in a worker that cannot resolve relative URLs.
+ * `initialBounds` overrides the initial view, so no tiles of the initial view are loaded first.
+ */
+export function createMapOptions(
+  configuration: MapConfiguration,
+  container: HTMLElement,
+  origin: string,
+  initialBounds?: InitialBounds,
+): MapOptions {
   const { initialView, baseMap, parcels } = configuration;
   return {
     container,
-    center: [initialView.center.longitude, initialView.center.latitude],
-    zoom: initialView.zoom,
+    ...(initialBounds === undefined
+      ? { center: [initialView.center.longitude, initialView.center.latitude], zoom: initialView.zoom }
+      : {
+          bounds: initialBounds.bounds,
+          fitBoundsOptions: { maxZoom: FIT_MAX_ZOOM, padding: initialBounds.padding },
+        }),
     attributionControl: { compact: false },
     style: {
       version: 8,

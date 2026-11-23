@@ -68,6 +68,7 @@ final readonly class GetParcelDetailUseCase
     private function output(Parcel $parcel): ParcelDetailOutput
     {
         $area = $parcel->cadastralArea;
+        $bounds = $parcel->boundary->bounds();
 
         return new ParcelDetailOutput(
             $parcel->id->value,
@@ -88,6 +89,10 @@ final readonly class GetParcelDetailUseCase
                 $parcel->boundary->rings(),
             ),
             $parcel->cadastreViewerUrl(),
+            $bounds->southWest->longitude,
+            $bounds->southWest->latitude,
+            $bounds->northEast->longitude,
+            $bounds->northEast->latitude,
         );
     }
 }

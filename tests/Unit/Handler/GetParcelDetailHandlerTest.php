@@ -80,6 +80,7 @@ final class GetParcelDetailHandlerTest extends TestCase
                     'coordinates' => [[[15.35, 50.43], [15.36, 50.43], [15.36, 50.44], [15.35, 50.43]]],
                 ],
                 'cadastreViewerUrl' => 'https://nahlizenidokn.cuzk.gov.cz/ZobrazObjekt.aspx?typ=parcela&id=1753295604',
+                'bounds' => ['west' => 15.35, 'south' => 50.43, 'east' => 15.36, 'north' => 50.44],
             ],
             json_decode($response->body, true, flags: JSON_THROW_ON_ERROR),
         );

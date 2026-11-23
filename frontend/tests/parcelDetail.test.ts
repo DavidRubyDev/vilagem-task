@@ -11,6 +11,7 @@ const validBody = {
   landUseCode: null,
   areaSquareMetres: 455,
   cadastreViewerUrl: 'https://nahlizenidokn.cuzk.gov.cz/ZobrazObjekt.aspx?typ=parcela&id=1753295604',
+  bounds: { west: 15.0, south: 50.0, east: 15.1, north: 50.1 },
   boundary: {
     type: 'Polygon',
     coordinates: [
@@ -120,6 +121,17 @@ describe('loadParcelDetail', () => {
       await rejects(() =>
         Promise.resolve(jsonResponse({ ...validBody, cadastreViewerUrl: 'http://nahlizenidokn.cuzk.gov.cz/' })),
       );
+    });
+
+    it('the bounds are missing', async () => {
+      const body: Record<string, unknown> = { ...validBody };
+      delete body['bounds'];
+
+      await rejects(() => Promise.resolve(jsonResponse(body)));
+    });
+
+    it('a bounds value is a string', async () => {
+      await rejects(() => Promise.resolve(jsonResponse({ ...validBody, bounds: { ...validBody.bounds, west: '15' } })));
     });
 
     it('the boundary is missing', async () => {

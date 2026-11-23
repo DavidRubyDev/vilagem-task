@@ -190,6 +190,35 @@ describe('createMapOptions', () => {
     });
   });
 
+  describe('with initial bounds', () => {
+    const initialBounds = {
+      bounds: [15.0, 50.0, 15.1, 50.1] as [number, number, number, number],
+      padding: { top: 40, right: 40, bottom: 40, left: 356 },
+    };
+
+    it('opens the map fitted to the bounds with the padding and a maximum zoom of 18', () => {
+      const options = createMapOptions(configuration({ parcels }), container, ORIGIN, initialBounds);
+
+      expect(options.bounds).toEqual([15.0, 50.0, 15.1, 50.1]);
+      expect(options.fitBoundsOptions).toEqual({ maxZoom: 18, padding: initialBounds.padding });
+    });
+
+    it('does not set the initial view, which the bounds override', () => {
+      const options = createMapOptions(configuration({ parcels }), container, ORIGIN, initialBounds);
+
+      expect(options.center).toBeUndefined();
+      expect(options.zoom).toBeUndefined();
+    });
+
+    it('keeps center and zoom without initial bounds', () => {
+      const options = createMapOptions(configuration({ parcels }), container, ORIGIN);
+
+      expect(options.bounds).toBeUndefined();
+      expect(options.center).toEqual([15.5, 50.25]);
+      expect(options.zoom).toBe(11.5);
+    });
+  });
+
   it('draws only the base map when there is no parcel data', () => {
     const style = styleOf(createMapOptions(configuration({ parcels: null }), container, ORIGIN));
 

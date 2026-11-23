@@ -49,6 +49,21 @@ final class ParcelBoundaryTest extends TestCase
         self::assertSame([$outer, $hole], $boundary->rings());
     }
 
+    #[Test]
+    public function it_has_the_bounds_of_its_outer_ring_and_ignores_holes(): void
+    {
+        $outer = [self::at(15.2, 50.1), self::at(15.9, 50.3), self::at(15.6, 50.8), self::at(15.4, 50.5), self::at(15.2, 50.1)];
+        // A hole outside the outer ring's extent must not widen the bounds.
+        $hole = [self::at(14.0, 49.0), self::at(14.5, 49.0), self::at(14.5, 49.5), self::at(14.0, 49.0)];
+
+        $bounds = ParcelBoundary::fromRings([$outer, $hole])->bounds();
+
+        self::assertSame(15.2, $bounds->southWest->longitude);
+        self::assertSame(50.1, $bounds->southWest->latitude);
+        self::assertSame(15.9, $bounds->northEast->longitude);
+        self::assertSame(50.8, $bounds->northEast->latitude);
+    }
+
     /**
      * @return list<Coordinates>
      */

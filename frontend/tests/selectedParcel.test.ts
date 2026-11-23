@@ -12,6 +12,7 @@ const detail: ParcelDetail = {
   landUseCode: null,
   areaSquareMetres: 455,
   cadastreViewerUrl: 'https://nahlizenidokn.cuzk.gov.cz/ZobrazObjekt.aspx?typ=parcela&id=1753295604',
+  bounds: { west: 15.0, south: 50.0, east: 15.1, north: 50.1 },
   boundary: {
     type: 'Polygon',
     coordinates: [

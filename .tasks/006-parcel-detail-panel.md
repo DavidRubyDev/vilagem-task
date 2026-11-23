@@ -1346,6 +1346,19 @@ Filled in by the implement agent, one entry per step.
   panel link (`target="_blank"`, `rel="noopener noreferrer"`). The frontend only accepts an `https://` URL, so a
   response can never put a `javascript:` URL into the link. No test opens the link or contacts ČÚZK.
 
+### Step 7: selected parcel in the URL
+
+- Backend: `ParcelBoundary::bounds()` (the outer ring), `ParcelDetailOutput` west/south/east/north and the API member
+  `bounds`.
+- Frontend: `parcelHash.ts`, `fitPadding.ts`, `ParcelDetail.bounds`, `createMapOptions(..., initialBounds?)` (the
+  initial view is not set when bounds are given, because the bounds override it), `ParcelSelection.select(id, {fit})`,
+  `adopt()`, the `hashchange` listener and the `replaceState` writes. `main.ts` loads a linked parcel before the map is
+  created and takes it over on the map `load` event.
+- `ParcelSelection` writes the hash when a selection starts (also for an id that turns out to be unknown, whose hash
+  therefore stays until the panel is closed) and removes it in `clear()`.
+- `ParcelBoundary::bounds()` throws `InvalidBounds` for a degenerate outer ring (zero width or height). Real RÚIAN
+  parcels have an area of at least 1 m², so this is not expected.
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.
