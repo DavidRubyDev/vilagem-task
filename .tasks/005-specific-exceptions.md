@@ -403,6 +403,10 @@ Documentation only, as planned: CLAUDE.md, TEMPLATE.md, plan.md, implement.md, r
 
 `StoredTileCorrupt::cannotDecompress()` is thrown by `GetParcelTileHandler`; `gzdecode` is called with `@`. New `tests/Unit/Handler/GetParcelTileHandlerTest.php`. Red first: the test failed with the generic `RuntimeException` plus the `gzdecode` warning (the class did not exist yet, so the expected type was only a class-string).
 
+### Step 4: InvalidConvertedParcels
+
+`InvalidConvertedParcels` (extends `\InvalidArgumentException`) with `noParcels`, `noAreas`, `duplicateArea`. The three existing tests now expect it (red first: they failed with the generic exception); `it_rejects_an_area_without_parcels` also asserts the area code in the message, as the plan specifies.
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.

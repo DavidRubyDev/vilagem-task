@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace ParcelMap\Tests\Unit\Application\Import;
 
-use InvalidArgumentException;
 use OutOfBoundsException;
+use ParcelMap\Application\Import\InvalidConvertedParcels;
 use ParcelMap\Application\Import\AreaParcelCount;
 use ParcelMap\Application\Import\ConvertedParcels;
 use ParcelMap\Domain\Cadastre\CadastralAreaCode;
@@ -30,7 +30,7 @@ final class ConvertedParcelsTest extends TestCase
     #[Test]
     public function it_rejects_having_no_area_counts(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(InvalidConvertedParcels::class);
 
         $this->converted();
     }
@@ -38,7 +38,7 @@ final class ConvertedParcelsTest extends TestCase
     #[Test]
     public function it_rejects_an_area_listed_twice(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(InvalidConvertedParcels::class);
         $this->expectExceptionMessage('659541');
 
         $this->converted(self::areaCount(659541, 22), self::areaCount(659541, 3));

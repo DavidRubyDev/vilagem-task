@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace ParcelMap\Tests\Unit\Application\Import;
 
-use InvalidArgumentException;
+use ParcelMap\Application\Import\InvalidConvertedParcels;
 use ParcelMap\Application\Import\AreaParcelCount;
 use ParcelMap\Domain\Cadastre\CadastralAreaCode;
 use PHPUnit\Framework\Attributes\Test;
@@ -24,7 +24,8 @@ final class AreaParcelCountTest extends TestCase
     #[Test]
     public function it_rejects_an_area_without_parcels(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(InvalidConvertedParcels::class);
+        $this->expectExceptionMessage('659541');
 
         new AreaParcelCount(new CadastralAreaCode(659541), 0);
     }

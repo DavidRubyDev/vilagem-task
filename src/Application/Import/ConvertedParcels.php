@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace ParcelMap\Application\Import;
 
-use InvalidArgumentException;
 use OutOfBoundsException;
 use ParcelMap\Domain\Cadastre\CadastralAreaCode;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
@@ -17,6 +16,7 @@ final readonly class ConvertedParcels
 
     /**
      * @param list<AreaParcelCount> $areaCounts
+     * @throws InvalidConvertedParcels when there are no areas or an area is listed twice
      */
     public function __construct(
         public MunicipalityCode $municipality,
@@ -24,13 +24,13 @@ final readonly class ConvertedParcels
         array $areaCounts,
     ) {
         if ($areaCounts === []) {
-            throw new InvalidArgumentException('Converted parcels must cover at least one cadastral area.');
+            throw InvalidConvertedParcels::noAreas();
         }
 
         $seen = [];
         foreach ($areaCounts as $count) {
             if (isset($seen[$count->area->value])) {
-                throw new InvalidArgumentException(sprintf('The cadastral area %d is counted more than once.', $count->area->value));
+                throw InvalidConvertedParcels::duplicateArea($count->area->value);
             }
             $seen[$count->area->value] = true;
         }
