@@ -399,6 +399,10 @@ Documentation only, as planned: CLAUDE.md, TEMPLATE.md, plan.md, implement.md, r
 
 `ProcessNotStarted::program()` is thrown by `ProcessRunner::run()`; the `proc_open` warning is suppressed with `@` and folded into the message. Red first: the new integration test failed on the missing class plus the leaked warning.
 
+### Step 3: StoredTileCorrupt
+
+`StoredTileCorrupt::cannotDecompress()` is thrown by `GetParcelTileHandler`; `gzdecode` is called with `@`. New `tests/Unit/Handler/GetParcelTileHandlerTest.php`. Red first: the test failed with the generic `RuntimeException` plus the `gzdecode` warning (the class did not exist yet, so the expected type was only a class-string).
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.
