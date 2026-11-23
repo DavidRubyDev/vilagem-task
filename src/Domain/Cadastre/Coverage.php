@@ -50,6 +50,20 @@ final readonly class Coverage
     }
 
     /**
+     * @throws CadastralAreaNotCovered
+     */
+    public function area(CadastralAreaCode $code): CadastralArea
+    {
+        foreach ($this->areas as $area) {
+            if ($area->code->equals($code)) {
+                return $area;
+            }
+        }
+
+        throw CadastralAreaNotCovered::code($code->value);
+    }
+
+    /**
      * @return non-empty-list<CadastralArea> the covered areas of the municipality, in coverage order
      * @throws MunicipalityNotCovered
      */

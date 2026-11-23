@@ -6,6 +6,7 @@ namespace ParcelMap\Tests\Unit\Domain\Cadastre;
 
 use ParcelMap\Domain\Cadastre\CadastralArea;
 use ParcelMap\Domain\Cadastre\CadastralAreaCode;
+use ParcelMap\Domain\Cadastre\CadastralAreaNotCovered;
 use ParcelMap\Domain\Cadastre\Coverage;
 use ParcelMap\Domain\Cadastre\InvalidCoverage;
 use ParcelMap\Domain\Cadastre\Municipality;
@@ -118,6 +119,26 @@ final class CoverageTest extends TestCase
         $this->expectExceptionMessage('222222');
 
         $coverage->areasOf(new MunicipalityCode(222222));
+    }
+
+    #[Test]
+    public function it_returns_the_area_with_a_code(): void
+    {
+        $area = self::area(659541, 572659);
+        $coverage = new Coverage(self::area(740225, 572659), $area);
+
+        self::assertSame($area, $coverage->area(new CadastralAreaCode(659541)));
+    }
+
+    #[Test]
+    public function it_rejects_an_area_it_does_not_cover(): void
+    {
+        $coverage = new Coverage(self::area(659541, 572659));
+
+        $this->expectException(CadastralAreaNotCovered::class);
+        $this->expectExceptionMessage('699999');
+
+        $coverage->area(new CadastralAreaCode(699999));
     }
 
     private static function area(int $code, int $municipality, ?string $municipalityName = null): CadastralArea

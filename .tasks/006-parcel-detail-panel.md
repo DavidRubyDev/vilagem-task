@@ -1279,6 +1279,29 @@ Filled in by the implement agent, one entry per step.
 - Regenerated `config/coverage.csv` from the cached `20261031_ST_UZSZ.xml.zip`: 241 lines, sha256
   `333b9272...bef98` as expected.
 
+### Step 2: the import publishes a parcel store
+
+- Domain: `ParcelId`, `ParcelKind`, `ParcelNumber`, `LandType`, `LandUse`, `Area`, `ParcelBoundary`, `Parcel`,
+  `Coverage::area()` with `CadastralAreaNotCovered`, and one `Invalid…` exception per value object.
+- Application: `ParcelStoreBuilder`, `BuiltParcelStore`, `CodeList`, `UnknownCode`, `ParcelStoreBuildFailed`;
+  `TilesetPublisher` renamed to `ParcelDataPublisher` (files moved with `git mv`); `ImportParcelsUseCase` builds the
+  store after the budget gate and exposes the unknown codes in `ImportParcelsOutput`.
+- Infrastructure: `ParcelStoreBuilderUsingSqlite`, `ParcelDataPublisherUsingSqlite`, the converter reads the extra
+  attributes. Decision below the plan's level: a line that is not a valid parcel (not JSON, a missing property, a
+  non-Polygon geometry) is reported by a small infrastructure exception `InvalidParcelLine`
+  (an `InvalidArgumentException`), which the builder turns into `ParcelStoreBuildFailed::invalidParcel`.
+- Command: `ImportProgressUsingConsole::parcelStoreBuildStarted`, the stderr warnings and the new published line.
+  A unit test `tests/Unit/Command/ImportParcelsCommandTest.php` covers the warnings with fakes (the API suite has no
+  way to feed an unknown code to the real import).
+- Test helper `tests/Support/SqliteFile.php` (PHPStan does not accept `?->` on `PDO::query()`).
+- Deliberate changes to existing tests: `ImportParcelsCommandTest` (API) expects the new
+  `Published tileset and parcel store …` line, the parcel store build line and the store file;
+  `ParcelConverterUsingOgr2ogrTest` no longer expects the property list `id, landType, areaCode` but the extended one;
+  the `TilesetPublisherUsingMbtiles` test became `ParcelDataPublisherUsingSqliteTest` with the store protocol;
+  `ImportParcelsUseCaseTest` follows the new constructor and fakes. `tests/Fixtures/geojson/572659.geojsonl` was
+  regenerated with the converter (25 lines).
+- README, Glossary and `tests/Fixtures/README.md` updated as listed.
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.

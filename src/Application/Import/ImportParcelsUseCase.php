@@ -26,7 +26,8 @@ final readonly class ImportParcelsUseCase
         private ParcelConverter $converter,
         private TilesetBuilder $builder,
         private TilesetInspector $inspector,
-        private TilesetPublisher $publisher,
+        private ParcelStoreBuilder $storeBuilder,
+        private ParcelDataPublisher $publisher,
         private Clock $clock,
         private TileSizeBudget $budget,
     ) {}
@@ -76,8 +77,10 @@ final readonly class ImportParcelsUseCase
         $tileset = $this->builder->build($converted, $this->budget);
         $statistics = $this->inspector->inspect($tileset);
         $this->requireWithinBudget($statistics);
+        $progress->parcelStoreBuildStarted($totalParcels);
+        $store = $this->storeBuilder->build($converted, $coverage);
         $version = TilesetVersion::fromTime($this->clock->now());
-        $this->publisher->publish($tileset, $version, $exportDate);
+        $this->publisher->publish($tileset, $store, $version, $exportDate);
 
         return new ImportParcelsOutput(
             $exportDate->toString(),
@@ -88,6 +91,10 @@ final readonly class ImportParcelsUseCase
             array_map(
                 static fn(ZoomTileStatistics $zoom): ZoomTilesOutput => new ZoomTilesOutput($zoom->zoom, $zoom->tileCount, $zoom->largestTileBytes),
                 $statistics->zooms(),
+            ),
+            array_map(
+                static fn(UnknownCode $code): UnknownCodeOutput => new UnknownCodeOutput($code->list->value, $code->code, $code->parcelCount),
+                $store->unknownCodes,
             ),
         );
     }

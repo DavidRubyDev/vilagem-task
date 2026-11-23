@@ -16,4 +16,6 @@ interface ImportProgress
     public function municipalityConverted(int $municipality, int $position, int $total, int $areaCount, int $parcelCount): void;
 
     public function tilesetBuildStarted(int $parcelCount): void;
+
+    public function parcelStoreBuildStarted(int $parcelCount): void;
 }

@@ -61,7 +61,8 @@ Used to test the progress output of the import.
 ## `geojson/572659.geojsonl`
 
 The output of `ParcelConverterUsingOgr2ogr` for municipality 572659 with the areas 659541 and 740225 on the
-fixture zip (25 lines, WGS84, properties `id`, `landType` and `areaCode`), input for the tileset builder test.
+fixture zip (25 lines, WGS84, properties `id`, `landType`, `areaCode`, `kind`, `baseNumber`, `subdivision` and `landUse` (the last
+two only where a parcel has them), `area`), input for the tileset and parcel store builder tests.
 
 ## `data/tiles/parcels.mbtiles`
 

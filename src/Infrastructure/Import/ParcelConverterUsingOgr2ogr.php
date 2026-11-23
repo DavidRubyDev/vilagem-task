@@ -17,8 +17,10 @@ use ParcelMap\Infrastructure\Process\ProcessRunner;
 /**
  * Reads the parcels of the covered cadastral areas of one municipality straight from the zipped VFR file with
  * GDAL (one run per municipality, because every run parses the whole file) and writes them as GeoJSON lines in
- * WGS84, keeping the id, the land type (DruhPozemkuKod) and the cadastral area code (to count the parcels per
- * area; the tile builder drops it). GDAL picks the S-JTSK to WGS84 transformation itself.
+ * WGS84. It keeps the attributes of the parcel store (id, land type DruhPozemkuKod, cadastral area, numbering kind,
+ * base number, subdivision, land use, area); the tile builder keeps only the land type, and the area code is also
+ * used to count the parcels per area. GDAL omits null properties (a missing subdivision or land use), and it picks
+ * the S-JTSK to WGS84 transformation itself.
  */
 final readonly class ParcelConverterUsingOgr2ogr implements ParcelConverter
 {
@@ -41,7 +43,9 @@ final readonly class ParcelConverterUsingOgr2ogr implements ParcelConverter
             $output,
             sprintf('/vsizip/%s/%s', $export->path, basename($export->path, '.zip')),
             '-sql', sprintf(
-                'SELECT Id AS id, DruhPozemkuKod AS landType, KatastralniUzemiKod AS areaCode, OriginalniHranice '
+                'SELECT Id AS id, DruhPozemkuKod AS landType, KatastralniUzemiKod AS areaCode, DruhCislovaniKod AS kind, '
+                . 'KmenoveCislo AS baseNumber, PododdeleniCisla AS subdivision, ZpusobyVyuzitiPozemku AS landUse, '
+                . 'VymeraParcely AS area, OriginalniHranice '
                 . 'FROM Parcely WHERE KatastralniUzemiKod IN (%s)',
                 implode(', ', array_map(static fn(CadastralArea $area): int => $area->code->value, $areas)),
             ),
