@@ -34,7 +34,7 @@ Before `make data` the page shows only the OpenStreetMap base map and a notice, 
 been imported yet. Run make data, then reload this page." After `make data`, reload the page: the parcels
 appear over Jičín. From zoom 14, clicking a parcel opens a panel on the left with its number, plot type, cadastral
 area, municipality, land type, land use (when it has one) and area; the close button, Escape or a click on no
-parcel close it. Below zoom 14 clicks select nothing.
+parcel close it. The selected parcel is outlined on the map. Below zoom 14 clicks select nothing.
 
 `docker compose up` runs a one-shot `node` service (`npm ci && npm run build`), then starts the
 PHP server. The first run pulls the Playwright image (about 2 GB), which is also used for all
@@ -266,6 +266,11 @@ A running log of decisions, surprises and what I would do with more time.
 - **English interface, ready for translations.** Every string of the panel lives in `frontend/src/text.ts`, and the
   land type and land use names in `landTypes.ts` and `landUses.ts`, keyed by the RÚIAN codes the API returns. A later
   language switch replaces these lookups, not the components.
+- **The selected parcel is outlined by a GeoJSON overlay, not by feature-state or a filter.** The overlay is a
+  one-feature source (`selected-parcel`) drawn from the boundary in the parcel details, as a white casing under a
+  magenta line. Feature-state expressions would make the paint data of every parcel feature depend on the selection,
+  and `setFilter` re-lays out every visible tile of the source; the overlay changes one small source, works at every
+  zoom and for a parcel that is not in view yet.
 - **Docker for everything.** Same PHP version and tools on every machine.
 - **PHP 8.6.** It is still at the RC stage at the time of setup (`php:8.6-rc-cli` image). The
   Dockerfile switches to the GA image once it is released.

@@ -10,6 +10,17 @@ const validBody = {
   landTypeCode: 13,
   landUseCode: null,
   areaSquareMetres: 455,
+  boundary: {
+    type: 'Polygon',
+    coordinates: [
+      [
+        [15.0, 50.0],
+        [15.1, 50.0],
+        [15.1, 50.1],
+        [15.0, 50.0],
+      ],
+    ],
+  },
 };
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -94,6 +105,25 @@ describe('loadParcelDetail', () => {
 
     it('the kind is neither building nor land', async () => {
       await rejects(() => Promise.resolve(jsonResponse({ ...validBody, kind: 'other' })));
+    });
+
+    it('the boundary is missing', async () => {
+      const body: Record<string, unknown> = { ...validBody };
+      delete body['boundary'];
+
+      await rejects(() => Promise.resolve(jsonResponse(body)));
+    });
+
+    it('the boundary is not a polygon', async () => {
+      await rejects(() =>
+        Promise.resolve(jsonResponse({ ...validBody, boundary: { type: 'Point', coordinates: [15, 50] } })),
+      );
+    });
+
+    it('a boundary position is not two numbers', async () => {
+      await rejects(() =>
+        Promise.resolve(jsonResponse({ ...validBody, boundary: { type: 'Polygon', coordinates: [[['15', 50]]] } })),
+      );
     });
 
     it('the cadastral area has no name', async () => {

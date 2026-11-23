@@ -39,6 +39,44 @@ async function clickUntilPanelOpens(page: Page, position?: { x: number; y: numbe
   }).toPass();
 }
 
+const HIGHLIGHT_COLOUR = { red: 230, green: 0, blue: 126 };
+
+/** Counts the highlight-coloured pixels of the page, as the outline of the selected parcel is the only magenta. */
+async function countHighlightPixels(page: Page): Promise<number> {
+  const screenshot = (await page.screenshot()).toString('base64');
+  return page.evaluate(
+    async ({ image, colour }) => {
+      const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${image}`)).blob());
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const context = canvas.getContext('2d');
+      if (context === null) throw new Error('No 2d context.');
+      context.drawImage(bitmap, 0, 0);
+      const { data } = context.getImageData(0, 0, bitmap.width, bitmap.height);
+      let count = 0;
+      for (let index = 0; index < data.length; index += 4) {
+        const close =
+          Math.abs((data[index] ?? 0) - colour.red) < 12 &&
+          Math.abs((data[index + 1] ?? 0) - colour.green) < 12 &&
+          Math.abs((data[index + 2] ?? 0) - colour.blue) < 12;
+        if (close) count += 1;
+      }
+      return count;
+    },
+    { image: screenshot, colour: HIGHLIGHT_COLOUR },
+  );
+}
+
+test('outlines the selected parcel and removes the outline when it is deselected', async ({ page }) => {
+  await openAt(page, ST_72.longitude, ST_72.latitude, 18);
+  expect(await countHighlightPixels(page)).toBe(0);
+
+  await clickUntilPanelOpens(page);
+
+  await expect.poll(() => countHighlightPixels(page)).toBeGreaterThan(100);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => countHighlightPixels(page)).toBe(0);
+});
+
 test('opens the panel of the clicked building parcel', async ({ page }) => {
   await openAt(page, ST_72.longitude, ST_72.latitude, 18);
   const request = page.waitForRequest(`**/api/parcels/${FIXTURE_VERSION}/${String(ST_72.id)}`);

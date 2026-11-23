@@ -1,7 +1,8 @@
-import type { Map as MapLibreMap, MapMouseEvent } from 'maplibre-gl';
+import { GeoJSONSource, type Map as MapLibreMap, type MapMouseEvent } from 'maplibre-gl';
 import { COMPLETE_PARCELS_MIN_ZOOM } from './mapOptions';
-import { loadParcelDetail, parcelDetailUrl } from './parcelDetail';
+import { loadParcelDetail, parcelDetailUrl, type ParcelDetail } from './parcelDetail';
 import type { ParcelPanel } from './parcelPanel';
+import { SELECTED_PARCEL_SOURCE, selectedParcelData } from './selectedParcel';
 
 const PARCEL_FILL_LAYER = 'parcels-fill';
 
@@ -33,6 +34,7 @@ export class ParcelSelection {
   select(id: number): void {
     this.abort();
     this.selectedId = id;
+    this.showHighlight(null);
     this.panel.showLoading();
     const request = new AbortController();
     this.request = request;
@@ -42,6 +44,7 @@ export class ParcelSelection {
   clear(): void {
     this.abort();
     this.selectedId = null;
+    this.showHighlight(null);
     this.panel.hide();
   }
 
@@ -50,6 +53,7 @@ export class ParcelSelection {
       const result = await loadParcelDetail(this.fetchFn, parcelDetailUrl(this.parcelUrlTemplate, id), request.signal);
       if (result.found) {
         this.panel.showDetail(result.detail);
+        this.showHighlight(result.detail);
       } else {
         this.panel.showNotFound();
       }
@@ -57,6 +61,15 @@ export class ParcelSelection {
       if (request.signal.aborted) return;
       console.warn('The parcel details could not be loaded.', error);
       this.panel.showError();
+    }
+  }
+
+  private showHighlight(detail: ParcelDetail | null): void {
+    const source = this.map.getSource(SELECTED_PARCEL_SOURCE);
+    if (source instanceof GeoJSONSource) {
+      source.setData(selectedParcelData(detail)).catch((error: unknown) => {
+        console.warn('The selected parcel could not be highlighted.', error);
+      });
     }
   }
 

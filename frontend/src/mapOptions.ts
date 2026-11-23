@@ -1,6 +1,7 @@
 import type { LayerSpecification, MapOptions, SourceSpecification } from 'maplibre-gl';
 import { landTypeFillColour } from './landTypes';
 import type { MapConfiguration, ParcelLayerConfiguration } from './mapConfiguration';
+import { SELECTED_PARCEL_SOURCE, selectedParcelData } from './selectedParcel';
 
 const HTML_ESCAPES: Record<string, string> = {
   '&': '&amp;',
@@ -56,6 +57,24 @@ const parcelLayers: LayerSpecification[] = [
   },
 ];
 
+// Above the parcel layers. The boundary comes from the parcel details, so this works at every zoom and for a parcel
+// that is not in view yet; feature-state or a filter on the tile layers would make every tile's paint data depend on
+// the selection.
+const selectedParcelLayers: LayerSpecification[] = [
+  {
+    id: 'selected-parcel-casing',
+    type: 'line',
+    source: SELECTED_PARCEL_SOURCE,
+    paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.9 },
+  },
+  {
+    id: 'selected-parcel-outline',
+    type: 'line',
+    source: SELECTED_PARCEL_SOURCE,
+    paint: { 'line-color': '#e6007e', 'line-width': 2.5 },
+  },
+];
+
 /** `origin` makes the vector tile URL absolute: MapLibre loads tiles in a worker that cannot resolve relative URLs. */
 export function createMapOptions(configuration: MapConfiguration, container: HTMLElement, origin: string): MapOptions {
   const { initialView, baseMap, parcels } = configuration;
@@ -74,9 +93,17 @@ export function createMapOptions(configuration: MapConfiguration, container: HTM
           maxzoom: baseMap.maxZoom,
           attribution: attributionLink(baseMap.attribution),
         },
-        ...(parcels === null ? {} : { parcels: parcelSource(parcels, origin) }),
+        ...(parcels === null
+          ? {}
+          : {
+              parcels: parcelSource(parcels, origin),
+              [SELECTED_PARCEL_SOURCE]: { type: 'geojson', data: selectedParcelData(null) },
+            }),
       },
-      layers: [{ id: 'base-map', type: 'raster', source: 'base-map' }, ...(parcels === null ? [] : parcelLayers)],
+      layers: [
+        { id: 'base-map', type: 'raster', source: 'base-map' },
+        ...(parcels === null ? [] : [...parcelLayers, ...selectedParcelLayers]),
+      ],
     },
   };
 }

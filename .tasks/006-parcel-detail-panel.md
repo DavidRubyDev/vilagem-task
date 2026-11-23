@@ -1329,6 +1329,17 @@ Filled in by the implement agent, one entry per step.
   hits parcel 1753303604 at the default 1280x720 viewport (540 px east of the centre at zoom 18; the parcel spans
   525 to 589 px). The test clicks 310 px further north, `(width - 100, height / 2 - 310)`, where no fixture parcel is.
 
+### Step 5: highlight
+
+- `selectedParcel.ts` (`selectedParcelData`, `SELECTED_PARCEL_SOURCE`), the `selected-parcel` source and its two layers
+  in `mapOptions.ts`, and `ParcelDetail.boundary` (validated as a Polygon). `ParcelSelection` sets the source data
+  when a detail is found and clears it on `select` and `clear`.
+- `GeoJSONSource.setData` returns a promise in MapLibre 6, so a rejection is logged with `console.warn`.
+- `FeatureCollection` is imported from `geojson` (`@types/geojson`, a dependency of maplibre-gl), because the
+  `GeoJSON` global is not available under the project's `types` setting.
+- E2E: the plan lists no E2E scenario for the highlight, so `parcel-detail.spec.ts` gets one: it counts magenta
+  (`#e6007e`) pixels in a page screenshot, which are 0 before selecting, many after, and 0 again after Escape.
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.

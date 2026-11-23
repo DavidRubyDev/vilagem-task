@@ -7,6 +7,7 @@ export interface ParcelDetail {
   readonly landTypeCode: number;
   readonly landUseCode: number | null;
   readonly areaSquareMetres: number;
+  readonly boundary: { readonly type: 'Polygon'; readonly coordinates: number[][][] };
 }
 
 export type ParcelDetailResult = { readonly found: true; readonly detail: ParcelDetail } | { readonly found: false };
@@ -25,9 +26,24 @@ function isNamedCode(value: unknown): value is { readonly code: number; readonly
   return isRecord(value) && isFiniteNumber(value['code']) && typeof value['name'] === 'string';
 }
 
+function isPosition(value: unknown): boolean {
+  return Array.isArray(value) && value.length >= 2 && value.every(isFiniteNumber);
+}
+
+function isPolygon(value: unknown): value is ParcelDetail['boundary'] {
+  return (
+    isRecord(value) &&
+    value['type'] === 'Polygon' &&
+    Array.isArray(value['coordinates']) &&
+    value['coordinates'].length > 0 &&
+    value['coordinates'].every((ring: unknown) => Array.isArray(ring) && ring.length > 0 && ring.every(isPosition))
+  );
+}
+
 function isParcelDetail(value: unknown): value is ParcelDetail {
   if (!isRecord(value)) return false;
-  const { id, parcelNumber, kind, cadastralArea, municipality, landTypeCode, landUseCode, areaSquareMetres } = value;
+  const { id, parcelNumber, kind, cadastralArea, municipality, landTypeCode, landUseCode, areaSquareMetres, boundary } =
+    value;
   return (
     isFiniteNumber(id) &&
     typeof parcelNumber === 'string' &&
@@ -36,7 +52,8 @@ function isParcelDetail(value: unknown): value is ParcelDetail {
     isNamedCode(municipality) &&
     isFiniteNumber(landTypeCode) &&
     (landUseCode === null || isFiniteNumber(landUseCode)) &&
-    isFiniteNumber(areaSquareMetres)
+    isFiniteNumber(areaSquareMetres) &&
+    isPolygon(boundary)
   );
 }
 

@@ -118,10 +118,52 @@ describe('createMapOptions', () => {
       });
     });
 
-    it('draws the base map, then the parcel fill, then the outline', () => {
+    it('draws the base map, the parcel fill and outline, then the selected parcel casing and outline', () => {
       const style = styleOf(options());
 
-      expect(style.layers.map((layer) => layer.id)).toEqual(['base-map', 'parcels-fill', 'parcels-outline']);
+      expect(style.layers.map((layer) => layer.id)).toEqual([
+        'base-map',
+        'parcels-fill',
+        'parcels-outline',
+        'selected-parcel-casing',
+        'selected-parcel-outline',
+      ]);
+    });
+
+    it('adds an empty GeoJSON source for the selected parcel', () => {
+      const style = styleOf(options());
+
+      expect(style.sources['selected-parcel']).toEqual({
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+    });
+
+    it('draws the selected parcel as a white casing under a magenta line', () => {
+      const [casing, outline] = styleOf(options()).layers.slice(3);
+
+      expect(casing).toMatchObject({
+        id: 'selected-parcel-casing',
+        type: 'line',
+        source: 'selected-parcel',
+        paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.9 },
+      });
+      expect(outline).toMatchObject({
+        id: 'selected-parcel-outline',
+        type: 'line',
+        source: 'selected-parcel',
+        paint: { 'line-color': '#e6007e', 'line-width': 2.5 },
+      });
+    });
+
+    it('keeps the parcel tile layers free of feature-state and filters', () => {
+      const layers = styleOf(options()).layers.filter((layer) => layer.id.startsWith('parcels-'));
+
+      expect(layers).toHaveLength(2);
+      for (const layer of layers) {
+        expect(JSON.stringify(layer)).not.toContain('feature-state');
+        expect(layer).not.toHaveProperty('filter');
+      }
     });
 
     it('fills parcels at 0.45 opacity, coloured by land type', () => {
