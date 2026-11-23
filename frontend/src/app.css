@@ -124,3 +124,13 @@ body {
     max-height: 50%;
   }
 }
+
+.parcel-panel-viewer {
+  display: inline-block;
+  margin-top: 1rem;
+  color: #0b5cad;
+}
+
+.parcel-panel-viewer[hidden] {
+  display: none;
+}

@@ -87,6 +87,7 @@ final readonly class GetParcelDetailUseCase
                 ),
                 $parcel->boundary->rings(),
             ),
+            $parcel->cadastreViewerUrl(),
         );
     }
 }

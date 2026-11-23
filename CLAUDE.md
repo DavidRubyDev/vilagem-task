@@ -296,7 +296,8 @@ Source-data term (Czech) → name used in code.
 | druh pozemku                          | `LandType`           | RÚIAN `DruhPozemkuKod`: arable land, forest, permanent grassland, … A positive code outside the published code list is kept and shown as unknown. |
 | způsob využití pozemku                | `LandUse`            | RÚIAN `ZpusobyVyuzitiPozemku`; optional. Unknown positive codes are kept and shown as unknown. |
 | výměra                                | `Area`               | Square metres.                                                 |
-| list vlastnictví (LV)                 | `OwnershipSheet`     | Neither the LV number nor ownership is in the open data (RÚIAN, SHP, INSPIRE, open VFK). |
+| list vlastnictví (LV)                 | `OwnershipSheet`     | Neither the LV number nor ownership is in the open data (RÚIAN, SHP, INSPIRE, open VFK); the panel links to the cadastre viewer instead. |
+| Nahlížení do katastru nemovitostí     | Cadastre viewer (`Parcel::cadastreViewerUrl()`) | ČÚZK's public web viewer; shows owners and the LV number after login or a CAPTCHA. |
 | zjednodušená evidence (PK / EN)       | `SimplifiedRecordParcel` | Not in RÚIAN or any open source; no own geometry.             |
 | katastr nemovitostí (KN)              | Cadastre             |                                                                |
 | RÚIAN, VFR                            | —                    | ČÚZK register and its exchange format (data source).           |

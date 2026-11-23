@@ -9,6 +9,7 @@ export class ParcelPanel {
   private readonly root: HTMLElement;
   private readonly title: HTMLElement;
   private readonly facts: HTMLElement;
+  private readonly viewerLink: HTMLAnchorElement;
   private readonly message: HTMLElement;
 
   constructor(onClose: () => void) {
@@ -28,11 +29,17 @@ export class ParcelPanel {
     this.title.className = 'parcel-panel-title';
     this.facts = document.createElement('dl');
     this.facts.className = 'parcel-panel-facts';
+    this.viewerLink = document.createElement('a');
+    this.viewerLink.className = 'parcel-panel-viewer';
+    this.viewerLink.target = '_blank';
+    this.viewerLink.rel = 'noopener noreferrer';
+    this.viewerLink.textContent = TEXT.viewerLink;
+    this.viewerLink.hidden = true;
     this.message = document.createElement('p');
     this.message.className = 'parcel-panel-message';
     this.message.setAttribute('role', 'status');
 
-    this.root.append(close, this.title, this.facts, this.message);
+    this.root.append(close, this.title, this.facts, this.viewerLink, this.message);
     document.body.append(this.root);
   }
 
@@ -69,6 +76,8 @@ export class ParcelPanel {
       this.addFact(TEXT.landUse, landUseName(detail.landUseCode));
     }
     this.addFact(TEXT.area, formatArea(detail.areaSquareMetres));
+    this.viewerLink.href = detail.cadastreViewerUrl;
+    this.viewerLink.hidden = false;
     this.root.hidden = false;
   }
 
@@ -80,6 +89,7 @@ export class ParcelPanel {
     this.title.textContent = '';
     this.title.hidden = true;
     this.facts.replaceChildren();
+    this.viewerLink.hidden = true;
     this.message.textContent = text;
     this.root.hidden = false;
   }

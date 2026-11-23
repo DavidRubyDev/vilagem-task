@@ -34,7 +34,9 @@ Before `make data` the page shows only the OpenStreetMap base map and a notice, 
 been imported yet. Run make data, then reload this page." After `make data`, reload the page: the parcels
 appear over Jičín. From zoom 14, clicking a parcel opens a panel on the left with its number, plot type, cadastral
 area, municipality, land type, land use (when it has one) and area; the close button, Escape or a click on no
-parcel close it. The selected parcel is outlined on the map. Below zoom 14 clicks select nothing.
+parcel close it. The selected parcel is outlined on the map. Ownership is not in the open data (neither the owners
+nor the ownership sheet number), so the panel links to the parcel in the ČÚZK cadastre viewer
+("Show owners in the ČÚZK cadastre viewer", opens in a new tab), which shows them after a login or CAPTCHA. Below zoom 14 clicks select nothing.
 
 `docker compose up` runs a one-shot `node` service (`npm ci && npm run build`), then starts the
 PHP server. The first run pulls the Playwright image (about 2 GB), which is also used for all
@@ -102,7 +104,7 @@ does not block the others.
 `GET /api/parcels/{version}/{id}` serves the details of one parcel from the parcel store of that tileset
 version, `id` being the RÚIAN parcel id (the feature id in the tiles): number, kind (`building` or `land`),
 cadastral area and municipality (code and name), land type and land use as RÚIAN codes (`landUseCode` is `null`
-when there is none), area in m² and the boundary as a GeoJSON Polygon. It is one primary-key lookup. Like tiles,
+when there is none), area in m², the boundary as a GeoJSON Polygon and `cadastreViewerUrl`. It is one primary-key lookup. Like tiles,
 the response is immutable for its version (`Cache-Control: public, max-age=31536000, immutable`). It answers `404`
 for an unknown id, an id that is not 1 to 15 digits, another version, a missing parcel store or no imported data.
 `GET /api/map-config` tells the frontend where to ask: `parcels.parcelUrlTemplate`, e.g.
@@ -271,6 +273,11 @@ A running log of decisions, surprises and what I would do with more time.
   magenta line. Feature-state expressions would make the paint data of every parcel feature depend on the selection,
   and `setFilter` re-lays out every visible tile of the source; the overlay changes one small source, works at every
   zoom and for a parcel that is not in view yet.
+- **The ownership gap is closed with a link, not data.** The owners and the LV number are not in any open data set,
+  so each parcel links to its page in ČÚZK's Nahlížení do katastru nemovitostí
+  (`https://nahlizenidokn.cuzk.gov.cz/ZobrazObjekt.aspx?typ=parcela&id={RÚIAN id}`). ČÚZK documents no such URL; it was
+  verified against the live service on 2026-11-23 and lives in one constant (`Parcel::CADASTRE_VIEWER_URL`). Its bot
+  protection blocks scripted access, so no test opens it.
 - **Docker for everything.** Same PHP version and tools on every machine.
 - **PHP 8.6.** It is still at the RC stage at the time of setup (`php:8.6-rc-cli` image). The
   Dockerfile switches to the GA image once it is released.

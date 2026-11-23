@@ -94,6 +94,20 @@ test('opens the panel of the clicked building parcel', async ({ page }) => {
   await expect(panel.getByText('Land use')).toHaveCount(0);
 });
 
+test('links the parcel to the ČÚZK cadastre viewer, where the owners are', async ({ page }) => {
+  await openAt(page, ST_72.longitude, ST_72.latitude, 18);
+
+  await clickUntilPanelOpens(page);
+
+  const link = panelOf(page).getByRole('link', { name: 'Show owners in the ČÚZK cadastre viewer' });
+  await expect(link).toHaveAttribute(
+    'href',
+    'https://nahlizenidokn.cuzk.gov.cz/ZobrazObjekt.aspx?typ=parcela&id=1753295604',
+  );
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+});
+
 test('shows the land use of a land parcel', async ({ page }) => {
   await openAt(page, LAND_1171.longitude, LAND_1171.latitude, 18);
 

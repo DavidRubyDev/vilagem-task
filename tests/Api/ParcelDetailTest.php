@@ -31,6 +31,10 @@ final class ParcelDetailTest extends TestCase
         self::assertSame(13, $body['landTypeCode']);
         self::assertNull($body['landUseCode']);
         self::assertSame(455, $body['areaSquareMetres']);
+        self::assertSame(
+            'https://nahlizenidokn.cuzk.gov.cz/ZobrazObjekt.aspx?typ=parcela&id=1753295604',
+            $body['cadastreViewerUrl'],
+        );
         $boundary = $body['boundary'];
         self::assertIsArray($boundary);
         self::assertSame('Polygon', $boundary['type']);

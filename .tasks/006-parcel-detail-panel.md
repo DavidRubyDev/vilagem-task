@@ -1340,6 +1340,12 @@ Filled in by the implement agent, one entry per step.
 - E2E: the plan lists no E2E scenario for the highlight, so `parcel-detail.spec.ts` gets one: it counts magenta
   (`#e6007e`) pixels in a page screenshot, which are 0 before selecting, many after, and 0 again after Escape.
 
+### Step 6: cadastre viewer link
+
+- `Parcel::cadastreViewerUrl()` feeds `ParcelDetailOutput::$cadastreViewerUrl`, the API field `cadastreViewerUrl` and the
+  panel link (`target="_blank"`, `rel="noopener noreferrer"`). The frontend only accepts an `https://` URL, so a
+  response can never put a `javascript:` URL into the link. No test opens the link or contacts ČÚZK.
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.

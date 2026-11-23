@@ -30,6 +30,15 @@ final class ParcelTest extends TestCase
         self::assertFalse($parcel->equals(self::parcel(1761441604, 72)));
     }
 
+    #[Test]
+    public function it_links_to_its_page_in_the_cadastre_viewer(): void
+    {
+        self::assertSame(
+            'https://nahlizenidokn.cuzk.gov.cz/ZobrazObjekt.aspx?typ=parcela&id=1753295604',
+            self::parcel(1753295604, 72)->cadastreViewerUrl(),
+        );
+    }
+
     private static function parcel(int $id, int $baseNumber): Parcel
     {
         $position = new Coordinates(15.35, 50.43);

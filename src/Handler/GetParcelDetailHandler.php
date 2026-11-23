@@ -44,6 +44,7 @@ final readonly class GetParcelDetailHandler implements RequestHandler
             'landUseCode' => $parcel->landUseCode,
             'areaSquareMetres' => $parcel->areaSquareMetres,
             'boundary' => ['type' => 'Polygon', 'coordinates' => $parcel->boundaryRings],
+            'cadastreViewerUrl' => $parcel->cadastreViewerUrl,
         ])->withHeader('Cache-Control', self::IMMUTABLE);
     }
 }

@@ -51,6 +51,10 @@ final class GetParcelDetailUseCaseTest extends TestCase
         self::assertNull($output->landUseCode);
         self::assertSame(455, $output->areaSquareMetres);
         self::assertSame(
+            'https://nahlizenidokn.cuzk.gov.cz/ZobrazObjekt.aspx?typ=parcela&id=1753295604',
+            $output->cadastreViewerUrl,
+        );
+        self::assertSame(
             [[[15.35, 50.43], [15.36, 50.43], [15.36, 50.44], [15.35, 50.43]]],
             $output->boundaryRings,
         );

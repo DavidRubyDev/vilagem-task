@@ -10,6 +10,7 @@ const validBody = {
   landTypeCode: 13,
   landUseCode: null,
   areaSquareMetres: 455,
+  cadastreViewerUrl: 'https://nahlizenidokn.cuzk.gov.cz/ZobrazObjekt.aspx?typ=parcela&id=1753295604',
   boundary: {
     type: 'Polygon',
     coordinates: [
@@ -105,6 +106,20 @@ describe('loadParcelDetail', () => {
 
     it('the kind is neither building nor land', async () => {
       await rejects(() => Promise.resolve(jsonResponse({ ...validBody, kind: 'other' })));
+    });
+
+    it('the cadastre viewer url is missing', async () => {
+      const body: Record<string, unknown> = { ...validBody };
+      delete body['cadastreViewerUrl'];
+
+      await rejects(() => Promise.resolve(jsonResponse(body)));
+    });
+
+    it('the cadastre viewer url is not https', async () => {
+      await rejects(() => Promise.resolve(jsonResponse({ ...validBody, cadastreViewerUrl: 'javascript:alert(1)' })));
+      await rejects(() =>
+        Promise.resolve(jsonResponse({ ...validBody, cadastreViewerUrl: 'http://nahlizenidokn.cuzk.gov.cz/' })),
+      );
     });
 
     it('the boundary is missing', async () => {

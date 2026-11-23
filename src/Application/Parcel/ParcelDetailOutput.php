@@ -22,5 +22,6 @@ final readonly class ParcelDetailOutput
         public ?int $landUseCode,
         public int $areaSquareMetres,
         public array $boundaryRings,
+        public string $cadastreViewerUrl,
     ) {}
 }

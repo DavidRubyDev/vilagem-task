@@ -79,6 +79,7 @@ final class GetParcelDetailHandlerTest extends TestCase
                     'type' => 'Polygon',
                     'coordinates' => [[[15.35, 50.43], [15.36, 50.43], [15.36, 50.44], [15.35, 50.43]]],
                 ],
+                'cadastreViewerUrl' => 'https://nahlizenidokn.cuzk.gov.cz/ZobrazObjekt.aspx?typ=parcela&id=1753295604',
             ],
             json_decode($response->body, true, flags: JSON_THROW_ON_ERROR),
         );

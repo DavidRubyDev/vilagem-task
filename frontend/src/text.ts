@@ -11,6 +11,7 @@ export const TEXT = {
   landType: 'Land type',
   landUse: 'Land use',
   area: 'Area',
+  viewerLink: 'Show owners in the ČÚZK cadastre viewer',
   buildingPlot: 'Building plot',
   landPlot: 'Land plot',
   loading: 'Loading parcel details…',
