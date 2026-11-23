@@ -395,6 +395,10 @@ Filled in by the implement agent, one entry per step.
 
 Documentation only, as planned: CLAUDE.md, TEMPLATE.md, plan.md, implement.md, review.md and README. Status set to `in-progress`.
 
+### Step 2: ProcessNotStarted
+
+`ProcessNotStarted::program()` is thrown by `ProcessRunner::run()`; the `proc_open` warning is suppressed with `@` and folded into the message. Red first: the new integration test failed on the missing class plus the leaked warning.
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ParcelMap\Tests\Integration\Infrastructure\Process;
 
+use ParcelMap\Infrastructure\Process\ProcessNotStarted;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -29,5 +30,17 @@ final class ProcessRunnerTest extends TestCase
 
         self::assertSame(300000, strlen($result->stdout));
         self::assertSame(300000, strlen($result->stderr));
+    }
+
+    #[Test]
+    public function it_reports_a_program_that_cannot_be_started(): void
+    {
+        try {
+            new ProcessRunner()->run(['parcel-map-no-such-program']);
+            self::fail('Expected ProcessNotStarted.');
+        } catch (ProcessNotStarted $e) {
+            self::assertStringContainsString('parcel-map-no-such-program', $e->getMessage());
+            self::assertStringContainsString('No such file or directory', $e->getMessage());
+        }
     }
 }

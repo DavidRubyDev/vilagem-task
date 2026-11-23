@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace ParcelMap\Infrastructure\Process;
 
-use RuntimeException;
-
 /** Runs an external program from an argument array (no shell) and collects its output. */
 final readonly class ProcessRunner
 {
     /**
      * @param non-empty-list<string> $command
-     * @throws RuntimeException when the program cannot be started
+     * @throws ProcessNotStarted when the program cannot be started
      */
     public function run(array $command): ProcessResult
     {
-        $process = proc_open($command, [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+        // PHP raises a warning before returning false; the failure is reported as an exception instead.
+        error_clear_last();
+        $process = @proc_open($command, [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
         if (!is_resource($process)) {
-            throw new RuntimeException('Cannot start ' . $command[0] . '.');
+            throw ProcessNotStarted::program($command[0], error_get_last()['message'] ?? 'unknown reason');
         }
 
         [$stdout, $stderr] = $this->readBoth($pipes[1], $pipes[2]);
