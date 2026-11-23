@@ -414,6 +414,13 @@ Filled in by the implement agent, one entry per step.
 - CSS: `.parcel-panel` gets `bottom: auto` and `max-height: calc(100% - 1.5rem)`; the 640 px block loses `bottom: auto` (now inherited) and the 50 % cap. Green after: 34 E2E tests pass.
 - Decision below the plan: the 1280 assertion uses `height < 388` (400 - the 12 px top offset) so the bottom edge is above 400 px.
 
+### Step 2: the hint hides while the panel is open
+
+- Tests first: `frontend/tests/zoomHint.test.ts` (3 tests) and the E2E `hides the hint while the not-found panel of a link is open, and shows it again after closing` in `parcel-detail.spec.ts`.
+- Red runs: Vitest, all 3 `zoomHintVisible` tests failed with `TypeError: zoomHintVisible is not a function`. E2E: the new test failed at `expect(getByText(HINT)).toBeHidden()` with `unexpected value "visible"` (the hint stayed visible beside the not-found panel).
+- Implemented `zoomHintVisible`, `showZoomHint(map, isPanelOpen)` returning `{ update }`, `ParcelPanel` `onVisibilityChange`, and the `main.ts` wiring (`let hint` assigned after the map exists, same closure pattern as `selection`). README sentence updated.
+- Below the plan's level: `ParcelPanel` calls `onVisibilityChange` only when `hidden` actually changes (a `setHidden` helper), so `showDetail` after `showLoading` does not trigger a redundant update.
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.

@@ -43,7 +43,7 @@ nor the ownership sheet number), so the panel links to the parcel in the ČÚZK 
 The selected parcel is kept in the URL as `#parcel=<RÚIAN id>` (updated with `history.replaceState`, so clicking does
 not fill the browser history; closing the panel removes it). Opening such a link fits the map to the parcel (at most
 zoom 18) and shows its panel, and changing the hash selects another parcel. The link has the id only, not the tileset
-version, so it survives re-imports; an id that no longer exists shows "This parcel was not found". Below zoom 14 clicks select nothing, and a hint at the bottom says "Zoom in to select a parcel." until zoom 14.
+version, so it survives re-imports; an id that no longer exists shows "This parcel was not found". Below zoom 14 clicks select nothing, and a hint at the bottom says "Zoom in to select a parcel." until zoom 14, while no parcel panel is open.
 
 `docker compose up` runs a one-shot `node` service (`npm ci && npm run build`), then starts the
 PHP server. The first run pulls the Playwright image (about 2 GB), which is also used for all

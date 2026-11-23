@@ -92,17 +92,24 @@ async function start(): Promise<void> {
       return;
     }
     const { parcelUrlTemplate } = parcels;
+    // The panel is created, and may already open for a link, before the map and its hint exist.
+    const hintRef: { current: { update(): void } | null } = { current: null };
 
-    const panel = new ParcelPanel(() => {
-      selection.clear();
-    });
+    const panel = new ParcelPanel(
+      () => {
+        selection.clear();
+      },
+      () => {
+        hintRef.current?.update();
+      },
+    );
     const linkedId = parcelIdFromHash(window.location.hash);
     const linked = linkedId === null ? null : await openLinkedParcel(linkedId, parcelUrlTemplate, panel, fetchFn);
 
     const map = new Map(createMapOptions(configuration, container, window.location.origin, linked?.initialBounds));
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
     const selection = new ParcelSelection(map, panel, fetchFn, parcelUrlTemplate, window);
-    showZoomHint(map);
+    hintRef.current = showZoomHint(map, () => panel.isOpen());
     if (linked !== null) {
       map.once('load', () => {
         selection.adopt(linked.detail);

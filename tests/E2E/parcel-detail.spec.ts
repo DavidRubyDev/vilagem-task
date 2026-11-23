@@ -290,6 +290,20 @@ test.describe('when selecting is not possible', () => {
     await expect(page.getByText(HINT)).toBeHidden();
   });
 
+  test('hides the hint while the not-found panel of a link is open, and shows it again after closing', async ({
+    page,
+    allowedConsoleErrors,
+  }) => {
+    allowedConsoleErrors.push(/status of 404/);
+    await openAt(page, ST_72.longitude, ST_72.latitude, 12, '/#parcel=999');
+    await expect(panelOf(page)).toBeVisible();
+
+    await expect(page.getByText(HINT)).toBeHidden();
+
+    await page.getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByText(HINT)).toBeVisible();
+  });
+
   test('explains that the details are not imported, and selects nothing', async ({ page }) => {
     const detailRequests: string[] = [];
     page.on('request', (request) => {
