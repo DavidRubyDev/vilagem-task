@@ -26,7 +26,7 @@ final readonly class ImportParcelsCommand implements Command
 
     public function description(): string
     {
-        return 'Download the RÚIAN export and build the parcel tileset.';
+        return 'Download the RÚIAN export and build the parcel tileset and parcel store.';
     }
 
     public function run(array $arguments, ConsoleOutput $output): int
@@ -68,7 +68,20 @@ final readonly class ImportParcelsCommand implements Command
                 $zoom->largestTileBytes / 1000,
             ));
         }
-        $output->writeLine(sprintf('Published tileset %s with %d parcels.', $result->tilesetVersion, $result->totalParcels));
+        foreach ($result->unknownCodes as $unknown) {
+            $output->writeError(sprintf(
+                'Warning: unknown %1$s code %2$d on %3$d %4$s; the map shows it as "Unknown %1$s (code %2$d)".',
+                $unknown->codeList,
+                $unknown->code,
+                $unknown->parcelCount,
+                $unknown->parcelCount === 1 ? 'parcel' : 'parcels',
+            ));
+        }
+        $output->writeLine(sprintf(
+            'Published tileset and parcel store %s with %d parcels.',
+            $result->tilesetVersion,
+            $result->totalParcels,
+        ));
 
         return ExitCode::SUCCESS;
     }

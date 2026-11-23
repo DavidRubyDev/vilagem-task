@@ -8,28 +8,33 @@ use ParcelMap\Application\Coverage\GenerateCoverageUseCase;
 use ParcelMap\Application\Import\ImportParcelsUseCase;
 use ParcelMap\Application\Map\GetMapConfigurationUseCase;
 use ParcelMap\Application\Map\GetParcelTileUseCase;
+use ParcelMap\Application\Parcel\GetParcelDetailUseCase;
 use ParcelMap\Command\Console\ConsoleApplication;
 use ParcelMap\Command\GenerateCoverageCommand;
 use ParcelMap\Command\ImportParcelsCommand;
 use ParcelMap\Domain\Map\TileSizeBudget;
 use ParcelMap\Handler\GetMapConfigurationHandler;
+use ParcelMap\Handler\GetParcelDetailHandler;
 use ParcelMap\Handler\GetParcelTileHandler;
 use ParcelMap\Handler\Http\HttpKernel;
 use ParcelMap\Handler\Http\Route;
 use ParcelMap\Handler\Http\Router;
 use ParcelMap\Handler\Http\StderrErrorReporter;
+use ParcelMap\Handler\ParcelDetailRoute;
 use ParcelMap\Handler\ParcelTileRoute;
 use ParcelMap\Handler\ShowMapPageHandler;
 use ParcelMap\Infrastructure\Cadastre\CoverageRepositoryUsingCsv;
+use ParcelMap\Infrastructure\Cadastre\ParcelRepositoryUsingSqlite;
 use ParcelMap\Infrastructure\Clock\ClockUsingSystemTime;
 use ParcelMap\Infrastructure\Coverage\DistrictAreaExtractorUsingOgr2ogr;
 use ParcelMap\Infrastructure\Coverage\RuianStructureDownloaderUsingHttp;
 use ParcelMap\Infrastructure\Http\ZipFileDownloader;
 use ParcelMap\Infrastructure\Import\ParcelConverterUsingOgr2ogr;
+use ParcelMap\Infrastructure\Import\ParcelDataPublisherUsingSqlite;
+use ParcelMap\Infrastructure\Import\ParcelStoreBuilderUsingSqlite;
 use ParcelMap\Infrastructure\Import\RuianExportDownloaderUsingHttp;
 use ParcelMap\Infrastructure\Import\TilesetBuilderUsingTippecanoe;
 use ParcelMap\Infrastructure\Import\TilesetInspectorUsingMbtiles;
-use ParcelMap\Infrastructure\Import\TilesetPublisherUsingMbtiles;
 use ParcelMap\Infrastructure\Map\MapSettingsRepositoryUsingConstants;
 use ParcelMap\Infrastructure\Map\ParcelTilesetRepositoryUsingMbtiles;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
@@ -64,7 +69,8 @@ final readonly class Container
                     new ParcelConverterUsingOgr2ogr($runner, $dataDir . '/build'),
                     new TilesetBuilderUsingTippecanoe($runner, $dataDir . '/build'),
                     new TilesetInspectorUsingMbtiles(),
-                    new TilesetPublisherUsingMbtiles($this->tilesetFile()),
+                    new ParcelStoreBuilderUsingSqlite($dataDir . '/build'),
+                    new ParcelDataPublisherUsingSqlite($this->tilesetFile(), $this->parcelStoreDirectory()),
                     new ClockUsingSystemTime(),
                     TileSizeBudget::smoothMap(),
                 ),
@@ -90,12 +96,21 @@ final readonly class Container
                     new GetMapConfigurationHandler(new GetMapConfigurationUseCase(
                         new MapSettingsRepositoryUsingConstants(),
                         new ParcelTilesetRepositoryUsingMbtiles($this->tilesetFile()),
+                        new ParcelRepositoryUsingSqlite($this->parcelStoreDirectory()),
                     )),
                 ),
                 new Route(
                     'GET',
                     ParcelTileRoute::PATTERN,
                     new GetParcelTileHandler(new GetParcelTileUseCase(new ParcelTilesetRepositoryUsingMbtiles($this->tilesetFile()))),
+                ),
+                new Route(
+                    'GET',
+                    ParcelDetailRoute::PATTERN,
+                    new GetParcelDetailHandler(new GetParcelDetailUseCase(
+                        new ParcelTilesetRepositoryUsingMbtiles($this->tilesetFile()),
+                        new ParcelRepositoryUsingSqlite($this->parcelStoreDirectory()),
+                    )),
                 ),
                 new Route('GET', '/', new ShowMapPageHandler($this->projectDir . '/frontend/index.html')),
             ),
@@ -106,6 +121,11 @@ final readonly class Container
     private function tilesetFile(): string
     {
         return $this->path('PARCEL_MAP_DATA_DIR', self::DEFAULT_DATA_DIR) . '/tiles/parcels.mbtiles';
+    }
+
+    private function parcelStoreDirectory(): string
+    {
+        return $this->path('PARCEL_MAP_DATA_DIR', self::DEFAULT_DATA_DIR) . '/parcels';
     }
 
     private function path(string $variable, string $default): string

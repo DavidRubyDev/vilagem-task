@@ -59,4 +59,9 @@ final readonly class ImportProgressUsingConsole implements ImportProgress
     {
         $this->output->writeLine(sprintf('Building the tileset from %d parcels.', $parcelCount));
     }
+
+    public function parcelStoreBuildStarted(int $parcelCount): void
+    {
+        $this->output->writeLine(sprintf('Building the parcel store from %d parcels.', $parcelCount));
+    }
 }

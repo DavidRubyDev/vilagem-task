@@ -63,6 +63,23 @@ final class TilesetBuilderUsingTippecanoeTest extends TestCase
     }
 
     #[Test]
+    public function it_keeps_only_the_land_type_of_the_parcel_attributes_in_the_tiles(): void
+    {
+        $built = $this->builder()->build([$this->fixtureParcels()], TileSizeBudget::smoothMap());
+
+        $tile = json_decode($this->runTool(['tippecanoe-decode', $built->path, '14', '8890', '5525']), true, flags: JSON_THROW_ON_ERROR);
+
+        self::assertIsArray($tile);
+        $features = self::featuresOf($tile);
+        self::assertNotSame([], $features);
+        foreach ($features as $feature) {
+            self::assertIsArray($feature);
+            self::assertIsArray($feature['properties']);
+            self::assertSame(['landType'], array_keys($feature['properties']));
+        }
+    }
+
+    #[Test]
     public function it_keeps_every_tile_within_a_small_budget(): void
     {
         $built = $this->builder()->build([$this->fixtureParcels()], new TileSizeBudget(1000));

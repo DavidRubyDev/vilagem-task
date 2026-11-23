@@ -5,9 +5,10 @@
 The cadastral areas the map covers: the whole Jičín district (okres 3604), 240 cadastral areas of 111
 municipalities. `make data` reads it to decide which municipality files to download and which areas to import.
 
-Format (UTF-8, LF line endings, trailing newline): the header `code,name,municipality_code`, then one row per
-cadastral area, sorted by area code, e.g. `659541,Jičín,572659`. A name is quoted only if it contains a comma,
-a double quote or a line break.
+Format (UTF-8, LF line endings, trailing newline): the header `code,name,municipality_code,municipality_name`,
+then one row per cadastral area, sorted by area code, e.g. `659541,Jičín,572659,Jičín`. A name is quoted only if
+it contains a comma, a double quote or a line break. The municipality name is repeated on every row of the
+municipality and must be the same on all of them.
 
 It is generated from the ČÚZK RÚIAN state structure file and committed, so the import stays reproducible and every
 change is a reviewable diff. Only cadastral areas with a digital map are listed (the others have no parcel
@@ -21,4 +22,4 @@ docker compose run --rm --no-deps app bin/console coverage:generate --district=3
 `make data` never rewrites the file. Review the diff after regenerating and commit it.
 
 The committed version comes from the RÚIAN export of 2026-10-31 for district 3604 (sha256
-`bf5b1a9219041e9d97dabb170d0062f1bbd5c72c1cb78ab3c54082d84146b55c`).
+`333b92724b79dd4749078928769198f812d1b1432ce2e56a1e535e35145bef98`).

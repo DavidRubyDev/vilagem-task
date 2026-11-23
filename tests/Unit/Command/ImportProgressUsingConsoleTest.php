@@ -86,4 +86,12 @@ final class ImportProgressUsingConsoleTest extends TestCase
 
         self::assertSame(['Building the tileset from 272011 parcels.'], $this->output->stdout);
     }
+
+    #[Test]
+    public function it_announces_the_parcel_store_build(): void
+    {
+        $this->progress->parcelStoreBuildStarted(25);
+
+        self::assertSame(['Building the parcel store from 25 parcels.'], $this->output->stdout);
+    }
 }

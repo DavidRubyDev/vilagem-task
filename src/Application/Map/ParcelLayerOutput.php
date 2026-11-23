@@ -16,5 +16,6 @@ final readonly class ParcelLayerOutput
         public float $north,
         public string $attributionText,
         public string $attributionUrl,
+        public bool $detailsAvailable,
     ) {}
 }

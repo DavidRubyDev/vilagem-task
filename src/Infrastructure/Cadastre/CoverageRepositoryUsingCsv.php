@@ -11,16 +11,18 @@ use ParcelMap\Domain\Cadastre\Coverage;
 use ParcelMap\Domain\Cadastre\CoverageNotSaved;
 use ParcelMap\Domain\Cadastre\CoverageRepository;
 use ParcelMap\Domain\Cadastre\CoverageUnavailable;
+use ParcelMap\Domain\Cadastre\Municipality;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
 
 /**
- * Reads and writes the covered cadastral areas as a UTF-8 CSV file with the header `code,name,municipality_code`.
+ * Reads and writes the covered cadastral areas as a UTF-8 CSV file with the header
+ * `code,name,municipality_code,municipality_name`.
  * A field is quoted only when it has to be (a comma, a double quote or a line break), unlike fputcsv, which also
  * quotes spaces, so the committed file stays readable and its diffs small.
  */
 final readonly class CoverageRepositoryUsingCsv implements CoverageRepository
 {
-    private const array HEADER = ['code', 'name', 'municipality_code'];
+    private const array HEADER = ['code', 'name', 'municipality_code', 'municipality_name'];
 
     public function __construct(private string $file) {}
 
@@ -51,7 +53,8 @@ final readonly class CoverageRepositoryUsingCsv implements CoverageRepository
             $lines[] = implode(',', [
                 (string) $area->code->value,
                 self::field($area->name),
-                (string) $area->municipality->value,
+                (string) $area->municipality->code->value,
+                self::field($area->municipality->name),
             ]);
         }
 
@@ -104,10 +107,10 @@ final readonly class CoverageRepositoryUsingCsv implements CoverageRepository
      */
     private function area(array $row, int $line): CadastralArea
     {
-        if (count($row) !== 3) {
-            throw CoverageUnavailable::because(sprintf('%s line %d: expected 3 fields, found %d.', $this->file, $line, count($row)));
+        if (count($row) !== 4) {
+            throw CoverageUnavailable::because(sprintf('%s line %d: expected 4 fields, found %d.', $this->file, $line, count($row)));
         }
-        [$code, $name, $municipality] = $row;
+        [$code, $name, $municipality, $municipalityName] = $row;
         if (!ctype_digit((string) $code) || !ctype_digit((string) $municipality)) {
             throw CoverageUnavailable::because(sprintf('%s line %d: the codes must be numbers.', $this->file, $line));
         }
@@ -116,7 +119,7 @@ final readonly class CoverageRepositoryUsingCsv implements CoverageRepository
             return new CadastralArea(
                 new CadastralAreaCode((int) $code),
                 (string) $name,
-                new MunicipalityCode((int) $municipality),
+                new Municipality(new MunicipalityCode((int) $municipality), (string) $municipalityName),
             );
         } catch (InvalidArgumentException $exception) {
             throw CoverageUnavailable::because(sprintf('%s line %d: %s', $this->file, $line, $exception->getMessage()));

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace ParcelMap\Application\Import;
 
-final class TilesetPublishFailed extends ImportFailed
+final class ParcelDataPublishFailed extends ImportFailed
 {
     public static function because(string $reason): self
     {

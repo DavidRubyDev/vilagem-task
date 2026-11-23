@@ -10,6 +10,7 @@ use ParcelMap\Application\Import\DownloadedExport;
 use ParcelMap\Domain\Cadastre\CadastralArea;
 use ParcelMap\Domain\Cadastre\CadastralAreaCode;
 use ParcelMap\Domain\Cadastre\ExportDate;
+use ParcelMap\Domain\Cadastre\Municipality;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
 use ParcelMap\Infrastructure\Import\ParcelConverterUsingOgr2ogr;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
@@ -61,7 +62,7 @@ final class ParcelConverterUsingOgr2ogrTest extends TestCase
             $feature = json_decode($line, true, flags: JSON_THROW_ON_ERROR);
             self::assertIsArray($feature);
             self::assertIsArray($feature['properties']);
-            self::assertSame(['id', 'landType', 'areaCode'], array_keys($feature['properties']));
+            self::assertContains('id', array_keys($feature['properties']));
             $areaCode = $feature['properties']['areaCode'];
             self::assertIsInt($areaCode);
             $areaCodes[] = $areaCode;
@@ -77,6 +78,27 @@ final class ParcelConverterUsingOgr2ogrTest extends TestCase
         sort($expected);
         self::assertSame($expected, $ids);
         self::assertSame([659541 => 22, 740225 => 3], array_count_values($areaCodes));
+    }
+
+    #[Test]
+    public function it_keeps_the_attributes_for_the_parcel_store_and_omits_the_ones_a_parcel_does_not_have(): void
+    {
+        $converted = $this->converter()->convert(
+            $this->fixtureExport(),
+            [self::area(659541, 'Jičín'), self::area(740225, 'Robousy')],
+        );
+
+        $properties = $this->propertiesById($converted->path);
+
+        self::assertSame(['id', 'landType', 'areaCode', 'kind', 'baseNumber', 'area'], array_keys($properties[1753295604]));
+        self::assertSame(
+            ['id' => 1753295604, 'landType' => 13, 'areaCode' => 659541, 'kind' => 1, 'baseNumber' => 72, 'area' => 455],
+            $properties[1753295604],
+        );
+        self::assertSame(
+            ['id' => 99225194010, 'landType' => 14, 'areaCode' => 740225, 'kind' => 2, 'baseNumber' => 867, 'subdivision' => 121, 'landUse' => 26, 'area' => 725],
+            $properties[99225194010],
+        );
     }
 
     #[Test]
@@ -130,9 +152,26 @@ final class ParcelConverterUsingOgr2ogrTest extends TestCase
         );
     }
 
+    /**
+     * @return array<int, array<mixed>> the properties of every parcel by its id
+     */
+    private function propertiesById(string $path): array
+    {
+        $properties = [];
+        foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+            $feature = json_decode($line, true, flags: JSON_THROW_ON_ERROR);
+            self::assertIsArray($feature);
+            self::assertIsArray($feature['properties']);
+            self::assertIsInt($feature['properties']['id']);
+            $properties[$feature['properties']['id']] = $feature['properties'];
+        }
+
+        return $properties;
+    }
+
     private static function area(int $code, string $name): CadastralArea
     {
-        return new CadastralArea(new CadastralAreaCode($code), $name, new MunicipalityCode(572659));
+        return new CadastralArea(new CadastralAreaCode($code), $name, new Municipality(new MunicipalityCode(572659), 'Jičín'));
     }
 
     /**

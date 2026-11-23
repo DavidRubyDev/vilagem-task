@@ -26,7 +26,8 @@ final readonly class ImportParcelsUseCase
         private ParcelConverter $converter,
         private TilesetBuilder $builder,
         private TilesetInspector $inspector,
-        private TilesetPublisher $publisher,
+        private ParcelStoreBuilder $storeBuilder,
+        private ParcelDataPublisher $publisher,
         private Clock $clock,
         private TileSizeBudget $budget,
     ) {}
@@ -76,8 +77,10 @@ final readonly class ImportParcelsUseCase
         $tileset = $this->builder->build($converted, $this->budget);
         $statistics = $this->inspector->inspect($tileset);
         $this->requireWithinBudget($statistics);
+        $progress->parcelStoreBuildStarted($totalParcels);
+        $store = $this->storeBuilder->build($converted, $coverage);
         $version = TilesetVersion::fromTime($this->clock->now());
-        $this->publisher->publish($tileset, $version, $exportDate);
+        $this->publisher->publish($tileset, $store, $version, $exportDate);
 
         return new ImportParcelsOutput(
             $exportDate->toString(),
@@ -88,6 +91,10 @@ final readonly class ImportParcelsUseCase
             array_map(
                 static fn(ZoomTileStatistics $zoom): ZoomTilesOutput => new ZoomTilesOutput($zoom->zoom, $zoom->tileCount, $zoom->largestTileBytes),
                 $statistics->zooms(),
+            ),
+            array_map(
+                static fn(UnknownCode $code): UnknownCodeOutput => new UnknownCodeOutput($code->list->value, $code->code, $code->parcelCount),
+                $store->unknownCodes,
             ),
         );
     }
@@ -115,12 +122,12 @@ final readonly class ImportParcelsUseCase
     private function parcelCount(array $converted, CadastralArea $area): int
     {
         foreach ($converted as $parcels) {
-            if ($parcels->municipality->equals($area->municipality)) {
+            if ($parcels->municipality->equals($area->municipality->code)) {
                 return $parcels->parcelCountOf($area->code);
             }
         }
 
-        throw new LogicException(sprintf('The municipality %d was not converted.', $area->municipality->value));
+        throw new LogicException(sprintf('The municipality %d was not converted.', $area->municipality->code->value));
     }
 
     private function exportDate(ImportParcelsInput $input): ExportDate

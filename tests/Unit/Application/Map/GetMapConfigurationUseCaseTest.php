@@ -16,6 +16,7 @@ use ParcelMap\Domain\Map\TilesetVersion;
 use ParcelMap\Domain\Map\TileUrlTemplate;
 use ParcelMap\Domain\Map\ZoomLevel;
 use ParcelMap\Tests\Fake\MapSettingsRepositoryUsingMemory;
+use ParcelMap\Tests\Fake\ParcelRepositoryUsingMemory;
 use ParcelMap\Tests\Fake\ParcelTilesetRepositoryUsingMemory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -35,7 +36,7 @@ final class GetMapConfigurationUseCaseTest extends TestCase
             ),
         );
 
-        $output = new GetMapConfigurationUseCase($settings, new ParcelTilesetRepositoryUsingMemory(null))->execute();
+        $output = new GetMapConfigurationUseCase($settings, new ParcelTilesetRepositoryUsingMemory(null), new ParcelRepositoryUsingMemory(null))->execute();
 
         self::assertSame(15.5, $output->initialView->centerLongitude);
         self::assertSame(50.25, $output->initialView->centerLatitude);
@@ -80,7 +81,42 @@ final class GetMapConfigurationUseCaseTest extends TestCase
         self::assertStringStartsWith('https://cuzk.gov.cz/', $parcels->attributionUrl);
     }
 
-    private function useCase(ParcelTilesetRepositoryUsingMemory $tilesets): GetMapConfigurationUseCase
+    #[Test]
+    public function it_offers_parcel_details_when_the_store_of_the_current_version_is_published(): void
+    {
+        $parcels = $this->useCase(
+            new ParcelTilesetRepositoryUsingMemory(self::tileset()),
+            new ParcelRepositoryUsingMemory(new TilesetVersion('20261120093000')),
+        )->execute()->parcels;
+
+        self::assertNotNull($parcels);
+        self::assertTrue($parcels->detailsAvailable);
+    }
+
+    #[Test]
+    public function it_does_not_offer_parcel_details_when_the_store_of_the_current_version_is_missing(): void
+    {
+        $parcels = $this->useCase(
+            new ParcelTilesetRepositoryUsingMemory(self::tileset()),
+            new ParcelRepositoryUsingMemory(new TilesetVersion('19990101000000')),
+        )->execute()->parcels;
+
+        self::assertNotNull($parcels);
+        self::assertFalse($parcels->detailsAvailable);
+    }
+
+    private static function tileset(): ParcelTileset
+    {
+        return new ParcelTileset(
+            new TilesetVersion('20261120093000'),
+            ExportDate::fromString('2025-12-31'),
+            new Bounds(new Coordinates(15.1, 50.2), new Coordinates(15.3, 50.4)),
+            9,
+            16,
+        );
+    }
+
+    private function useCase(ParcelTilesetRepositoryUsingMemory $tilesets, ?ParcelRepositoryUsingMemory $parcels = null): GetMapConfigurationUseCase
     {
         return new GetMapConfigurationUseCase(
             new MapSettingsRepositoryUsingMemory(
@@ -93,6 +129,7 @@ final class GetMapConfigurationUseCaseTest extends TestCase
                 ),
             ),
             $tilesets,
+            $parcels ?? new ParcelRepositoryUsingMemory(null),
         );
     }
 }

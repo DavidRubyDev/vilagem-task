@@ -9,6 +9,7 @@ use ParcelMap\Domain\Cadastre\CadastralAreaCode;
 use ParcelMap\Domain\Cadastre\Coverage;
 use ParcelMap\Domain\Cadastre\CoverageNotSaved;
 use ParcelMap\Domain\Cadastre\CoverageUnavailable;
+use ParcelMap\Domain\Cadastre\Municipality;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
 use ParcelMap\Infrastructure\Cadastre\CoverageRepositoryUsingCsv;
 use ParcelMap\Tests\Support\TemporaryDirectory;
@@ -45,13 +46,13 @@ final class CoverageRepositoryUsingCsvTest extends TestCase
 
         $names = [];
         foreach ($coverage->areas() as $area) {
-            $names[$area->code->value] = $area->name . ' ' . $area->municipality->value;
+            $names[$area->code->value] = $area->name . ' ' . $area->municipality->code->value . ' ' . $area->municipality->name;
         }
-        self::assertSame('Jičín 572659', $names[659541]);
-        self::assertSame('Robousy 572659', $names[740225]);
-        self::assertSame('Popovice u Jičína 572659', $names[725838]);
-        self::assertSame('Moravčice 572659', $names[740217]);
-        self::assertSame('Hubálov 572659', $names[771775]);
+        self::assertSame('Jičín 572659 Jičín', $names[659541]);
+        self::assertSame('Robousy 572659 Jičín', $names[740225]);
+        self::assertSame('Popovice u Jičína 572659 Jičín', $names[725838]);
+        self::assertSame('Moravčice 572659 Jičín', $names[740217]);
+        self::assertSame('Hubálov 572659 Jičín', $names[771775]);
     }
 
     #[Test]
@@ -61,7 +62,7 @@ final class CoverageRepositoryUsingCsvTest extends TestCase
 
         new CoverageRepositoryUsingCsv($file)->save(new Coverage(self::area(659541, 'Jičín'), self::area(725838, 'Popovice u Jičína')));
 
-        self::assertSame("code,name,municipality_code\n659541,Jičín,572659\n725838,Popovice u Jičína,572659\n", file_get_contents($file));
+        self::assertSame("code,name,municipality_code,municipality_name\n659541,Jičín,572659,Jičín\n725838,Popovice u Jičína,572659,Jičín\n", file_get_contents($file));
         self::assertSame([], glob($file . '.tmp'));
     }
 
@@ -69,7 +70,7 @@ final class CoverageRepositoryUsingCsvTest extends TestCase
     public function it_reads_back_what_it_saved_in_the_same_order(): void
     {
         $repository = new CoverageRepositoryUsingCsv($this->directory->path . '/coverage.csv');
-        $coverage = new Coverage(self::area(740225, 'Robousy'), self::area(601462, 'Běchary', 572675), self::area(659541, 'Jičín'));
+        $coverage = new Coverage(self::area(740225, 'Robousy'), self::area(601462, 'Běchary', 572675, 'Běchary'), self::area(659541, 'Jičín'));
 
         $repository->save($coverage);
 
@@ -85,7 +86,20 @@ final class CoverageRepositoryUsingCsvTest extends TestCase
 
         $repository->save($coverage);
 
-        self::assertSame("code,name,municipality_code\n659541,\"A, \"\"B\"\"\",572659\n", file_get_contents($file));
+        self::assertSame("code,name,municipality_code,municipality_name\n659541,\"A, \"\"B\"\"\",572659,Jičín\n", file_get_contents($file));
+        self::assertEquals($coverage, $repository->get());
+    }
+
+    #[Test]
+    public function it_quotes_a_municipality_name_with_a_comma_and_reads_it_back(): void
+    {
+        $file = $this->directory->path . '/coverage.csv';
+        $repository = new CoverageRepositoryUsingCsv($file);
+        $coverage = new Coverage(self::area(659541, 'Jičín', 572659, 'Town, Upper'));
+
+        $repository->save($coverage);
+
+        self::assertStringContainsString(",572659,\"Town, Upper\"\n", (string) file_get_contents($file));
         self::assertEquals($coverage, $repository->get());
     }
 
@@ -96,7 +110,7 @@ final class CoverageRepositoryUsingCsvTest extends TestCase
 
         new CoverageRepositoryUsingCsv($file)->save(new Coverage(self::area(659541, 'Bělá u Pecky')));
 
-        self::assertStringContainsString("\n659541,Bělá u Pecky,572659\n", (string) file_get_contents($file));
+        self::assertStringContainsString("\n659541,Bělá u Pecky,572659,Jičín\n", (string) file_get_contents($file));
     }
 
     #[Test]
@@ -107,7 +121,7 @@ final class CoverageRepositoryUsingCsvTest extends TestCase
 
         new CoverageRepositoryUsingCsv($file)->save(new Coverage(self::area(659541, 'Jičín')));
 
-        self::assertSame("code,name,municipality_code\n659541,Jičín,572659\n", file_get_contents($file));
+        self::assertSame("code,name,municipality_code,municipality_name\n659541,Jičín,572659,Jičín\n", file_get_contents($file));
     }
 
     #[Test]
@@ -153,21 +167,24 @@ final class CoverageRepositoryUsingCsvTest extends TestCase
      */
     public static function brokenFiles(): array
     {
-        $header = "code,name,municipality_code\n";
+        $header = "code,name,municipality_code,municipality_name\n";
 
         return [
-            'wrong header' => ["id,name,municipality\n659541,Jičín,572659\n", 'line 1'],
-            'two fields' => [$header . "659541,Jičín\n", 'line 2'],
-            'non-numeric code' => [$header . "abc,Jičín,572659\n", 'line 2'],
-            'code out of range' => [$header . "123,Jičín,572659\n", 'line 2'],
-            'empty name' => [$header . "659541,,572659\n", 'line 2'],
-            'duplicate code' => [$header . "659541,Jičín,572659\n659541,Jičín,572659\n", 'coverage'],
+            'wrong header' => ["id,name,municipality,municipality_name\n659541,Jičín,572659,Jičín\n", 'line 1'],
+            'old three-column header' => ["code,name,municipality_code\n659541,Jičín,572659\n", 'line 1'],
+            'three fields' => [$header . "659541,Jičín,572659\n", 'expected 4 fields, found 3'],
+            'non-numeric code' => [$header . "abc,Jičín,572659,Jičín\n", 'line 2'],
+            'code out of range' => [$header . "123,Jičín,572659,Jičín\n", 'line 2'],
+            'empty name' => [$header . "659541,,572659,Jičín\n", 'line 2'],
+            'empty municipality name' => [$header . "659541,Jičín,572659,\n", 'line 2'],
+            'inconsistent municipality names' => [$header . "659541,Jičín,572659,Jičín\n740225,Robousy,572659,Robousy\n", 'coverage'],
+            'duplicate code' => [$header . "659541,Jičín,572659,Jičín\n659541,Jičín,572659,Jičín\n", 'coverage'],
             'no rows' => [$header, 'coverage'],
         ];
     }
 
-    private static function area(int $code, string $name, int $municipality = 572659): CadastralArea
+    private static function area(int $code, string $name, int $municipality = 572659, string $municipalityName = 'Jičín'): CadastralArea
     {
-        return new CadastralArea(new CadastralAreaCode($code), $name, new MunicipalityCode($municipality));
+        return new CadastralArea(new CadastralAreaCode($code), $name, new Municipality(new MunicipalityCode($municipality), $municipalityName));
     }
 }

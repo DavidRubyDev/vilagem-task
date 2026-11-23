@@ -1,4 +1,4 @@
-code,name,municipality_code
-601462,Běchary,572675
-659541,Jičín,572659
-740225,Robousy,572659
+code,name,municipality_code,municipality_name
+601462,Běchary,572675,Běchary
+659541,Jičín,572659,Jičín
+740225,Robousy,572659,Jičín

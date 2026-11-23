@@ -10,7 +10,8 @@ Built as an interview task for Viagem a.s.
 > on Jičín (zoom 12) with the OSM attribution. `GET /api/map-config` serves the map
 > configuration. `make data` downloads the ČÚZK parcels of the whole Jičín district (240 cadastral areas,
 > 272,011 parcels) and builds a vector tileset from them; the map then shows the parcels over OSM, filled by
-> land type (outlines from zoom 14) with the credit "ČÚZK, 2026". Clicking a parcel is not implemented yet.
+> land type (outlines from zoom 14) with the credit "ČÚZK, 2026". From zoom 14, clicking a parcel opens a side panel
+> with its details.
 > The application is built in the tasks in [`.tasks/`](.tasks/). This README is updated as features land.
 
 ## Prerequisites
@@ -31,7 +32,18 @@ make data                # once: download the ČÚZK parcels and build the tiles
 
 Before `make data` the page shows only the OpenStreetMap base map and a notice, "Parcel data has not
 been imported yet. Run make data, then reload this page." After `make data`, reload the page: the parcels
-appear over Jičín.
+appear over Jičín. If the data was imported by a version from before the parcel details (task 006), the page shows
+"Parcel details have not been imported yet. Run make data, then reload this page." and clicks select nothing: rerun
+`make data` to build the parcel store. From zoom 14, clicking a parcel opens a panel on the left with its number, plot type, cadastral
+area, municipality, land type, land use (when it has one) and area; the close button, Escape or a click on no
+parcel close it. The selected parcel is outlined on the map. Ownership is not in the open data (neither the owners
+nor the ownership sheet number), so the panel links to the parcel in the ČÚZK cadastre viewer
+("Show owners in the ČÚZK cadastre viewer", opens in a new tab), which shows them after a login or CAPTCHA.
+
+The selected parcel is kept in the URL as `#parcel=<RÚIAN id>` (updated with `history.replaceState`, so clicking does
+not fill the browser history; closing the panel removes it). Opening such a link fits the map to the parcel (at most
+zoom 18) and shows its panel, and changing the hash selects another parcel. The link has the id only, not the tileset
+version, so it survives re-imports; an id that no longer exists shows "This parcel was not found". Below zoom 14 clicks select nothing, and a hint at the bottom says "Zoom in to select a parcel." until zoom 14.
 
 `docker compose up` runs a one-shot `node` service (`npm ci && npm run build`), then starts the
 PHP server. The first run pulls the Playwright image (about 2 GB), which is also used for all
@@ -50,8 +62,9 @@ Run `make data` once (and again whenever you want a newer export). It runs
    `--export-date` the import takes the latest one and falls back once to the month before);
 2. converts the parcels of the listed cadastral areas to WGS84 with GDAL (`ogr2ogr`), reading each
    municipality file once into `data/build/municipalities/{municipality}.geojsonl`;
-3. builds one vector tileset with tippecanoe, checks it against the tile size budget and publishes it
-   atomically.
+3. builds one vector tileset with tippecanoe and checks it against the tile size budget;
+4. builds the parcel store, a SQLite file of parcel details (number, area, land type, land use, boundary), and
+   publishes it together with the tileset under one version, atomically.
 
 The list of cadastral areas, `config/coverage.csv`, is generated from the RÚIAN state structure file
 (`{YYYYMMDD}_ST_UZSZ.xml.zip`, same directory as the municipality files) by `make coverage`, which runs
@@ -60,8 +73,9 @@ map are listed (areas without one have no parcel polygons). `make data` never re
 `make coverage` deliberately, review the diff and commit it.
 
 Data lives in `data/` (git-ignored): `cache/ruian/` holds the downloads (a cached file is never
-downloaded again, so a rerun is offline), `build/` the intermediate files and `tiles/parcels.mbtiles`
-the published tileset. `config/coverage.csv` lists the whole district: 240 cadastral areas of 111
+downloaded again, so a rerun is offline), `build/` the intermediate files, `tiles/parcels.mbtiles` the
+published tileset and `parcels/{version}.sqlite` the published parcel store (about 46 MB for the district,
+zlib-compressed boundaries). `config/coverage.csv` lists the whole district: 240 cadastral areas of 111
 municipalities, 272,011 parcels. The first `make data` downloads 111 municipality files (54 MB per monthly
 export) and takes about 1 minute; a rerun from the cache about 45 seconds. The tileset is about 56 MB and
 the intermediate GeoJSON in `build/` about 130 MB. The tile build needs about 1 to 2 GB of memory (Docker Desktop
@@ -70,10 +84,14 @@ screen, so a view stays under 4 MB). The limit is passed to tippecanoe, and afte
 tileset back: if any tile is larger it fails with "Tile z/x/y has N bytes, over the budget of 200000 bytes; the
 tileset was not published." and nothing is published. On success it prints the tile count and the largest tile
 per zoom level. The import prints its progress (one line per municipality download and conversion,
-then the tile build). A failed run keeps the completed downloads in the cache, so a rerun resumes. ČÚZK publishes
+then the tile build and the parcel store build). A failed run keeps the completed downloads in the cache, so a rerun resumes. ČÚZK publishes
 the monthly files over about an hour on the 1st; if a later municipality is not published yet the import stops
 with "The RÚIAN export of … for municipality … is not published": rerun it later or pass `--export-date` of the
 month before. Old cached months and build files are kept; delete them by hand when needed.
+
+The store of the previous tileset is kept next to the new one, because requests in flight may still read it; older
+stores are deleted. An unknown land type or land use code (one outside the published ČÚZK code list) does not fail
+the import: it is stored, and the import prints a warning per code on stderr.
 
 The data is licensed CC BY 4.0; the required credit is "ČÚZK, {year of the export}". Conditions:
 https://cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-prostorovych-dat-CUZK.aspx
@@ -87,6 +105,17 @@ when the client accepts gzip (MapLibre does not decompress them itself); otherwi
 first. A tile without data answers `204`; an unknown version, a bad coordinate or no imported data answers
 `404`. The compose file starts the built-in PHP server with `PHP_CLI_SERVER_WORKERS=8` so one slow request
 does not block the others.
+
+### Parcel details
+
+`GET /api/parcels/{version}/{id}` serves the details of one parcel from the parcel store of that tileset
+version, `id` being the RÚIAN parcel id (the feature id in the tiles): number, kind (`building` or `land`),
+cadastral area and municipality (code and name), land type and land use as RÚIAN codes (`landUseCode` is `null`
+when there is none), area in m², the boundary as a GeoJSON Polygon, `cadastreViewerUrl` and its `bounds` (west, south, east, north). It is one primary-key lookup. Like tiles,
+the response is immutable for its version (`Cache-Control: public, max-age=31536000, immutable`). It answers `404`
+for an unknown id, an id that is not 1 to 15 digits, another version, a missing parcel store or no imported data.
+`GET /api/map-config` tells the frontend where to ask: `parcels.parcelUrlTemplate`, e.g.
+`/api/parcels/20261123140206/{id}`, or `null` when the parcel store of the current tileset is missing.
 
 ### Frontend
 
@@ -233,6 +262,29 @@ A running log of decisions, surprises and what I would do with more time.
   through the gaps. It is also faster (an 18 s tile build instead of 65 s).
 - **Immutable, versioned tile URLs.** The browser never asks the single-threaded PHP server for the
   same tile twice; empty tiles answer 204 (a 404 would be logged as a console error by the browser).
+- **The parcel details are a separate SQLite file per version, not part of the tiles.** Putting the attributes into
+  the tiles would grow every tile, and smoothness is the main requirement. Selecting a parcel costs one small request
+  (a primary-key lookup). The tileset rename is the single commit point of a publication: the store is placed first
+  under its version, then the tileset is renamed onto the live path, so a reader never sees tiles without their store.
+- **No logging in this version.** Nothing is logged: the import prints warnings (such as unknown land type or land
+  use codes) to stderr, and the server reports uncaught errors to stderr. A production version would have a logger
+  that records every error and any other meaningful information.
+- **Parcels can be selected from zoom 14 only.** Below zoom 14 the tiles leave out the smallest parcels and parcels
+  are a pixel or two wide, so a click would hit the wrong parcel or nothing. It is the same constant as the outline
+  layer (`COMPLETE_PARCELS_MIN_ZOOM`).
+- **English interface, ready for translations.** Every string of the panel lives in `frontend/src/text.ts`, and the
+  land type and land use names in `landTypes.ts` and `landUses.ts`, keyed by the RÚIAN codes the API returns. A later
+  language switch replaces these lookups, not the components.
+- **The selected parcel is outlined by a GeoJSON overlay, not by feature-state or a filter.** The overlay is a
+  one-feature source (`selected-parcel`) drawn from the boundary in the parcel details, as a white casing under a
+  magenta line. Feature-state expressions would make the paint data of every parcel feature depend on the selection,
+  and `setFilter` re-lays out every visible tile of the source; the overlay changes one small source, works at every
+  zoom and for a parcel that is not in view yet.
+- **The ownership gap is closed with a link, not data.** The owners and the LV number are not in any open data set,
+  so each parcel links to its page in ČÚZK's Nahlížení do katastru nemovitostí
+  (`https://nahlizenidokn.cuzk.gov.cz/ZobrazObjekt.aspx?typ=parcela&id={RÚIAN id}`). ČÚZK documents no such URL; it was
+  verified against the live service on 2026-11-23 and lives in one constant (`Parcel::CADASTRE_VIEWER_URL`). Its bot
+  protection blocks scripted access, so no test opens it.
 - **Docker for everything.** Same PHP version and tools on every machine.
 - **PHP 8.6.** It is still at the RC stage at the time of setup (`php:8.6-rc-cli` image). The
   Dockerfile switches to the GA image once it is released.
@@ -253,6 +305,8 @@ _To be filled in._
 
 ### With more time
 
+- Generate the frontend code catalogues and the PHP known-code lists of land types and land uses from one source;
+  today they are pinned by separate tests and a code-list change must update both by hand.
 - A generalised land-cover overview layer (parcels dissolved by land type) for low zooms, instead of leaving out
   small parcels there.
 - Docker layer cache in CI (BuildKit GitHub Actions cache), to avoid rebuilding the PHP image

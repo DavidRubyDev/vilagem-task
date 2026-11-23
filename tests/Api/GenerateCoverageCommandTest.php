@@ -47,13 +47,13 @@ final class GenerateCoverageCommandTest extends TestCase
             $result->stdout,
         );
         self::assertSame(
-            "code,name,municipality_code\n"
-            . "601462,Běchary,572675\n"
-            . "659541,Jičín,572659\n"
-            . "725838,Popovice u Jičína,572659\n"
-            . "740217,Moravčice,572659\n"
-            . "740225,Robousy,572659\n"
-            . "771775,Hubálov,572659\n",
+            "code,name,municipality_code,municipality_name\n"
+            . "601462,Běchary,572675,Běchary\n"
+            . "659541,Jičín,572659,Jičín\n"
+            . "725838,Popovice u Jičína,572659,Jičín\n"
+            . "740217,Moravčice,572659,Jičín\n"
+            . "740225,Robousy,572659,Jičín\n"
+            . "771775,Hubálov,572659,Jičín\n",
             file_get_contents($this->coverageFile()),
         );
         self::assertFileExists($this->directory->path . '/cache/ruian/20261031_ST_UZSZ.xml.zip');

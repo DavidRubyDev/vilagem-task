@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { MapConfiguration, ParcelLayerConfiguration } from '../src/mapConfiguration';
 import { landTypeFillColour } from '../src/landTypes';
-import { createMapOptions } from '../src/mapOptions';
+import { COMPLETE_PARCELS_MIN_ZOOM, createMapOptions } from '../src/mapOptions';
 
 const parcels: ParcelLayerConfiguration = {
   tileUrlTemplate: '/tiles/parcels/v1/{z}/{x}/{y}.pbf',
+  parcelUrlTemplate: '/api/parcels/v1/{id}',
   minZoom: 9,
   maxZoom: 16,
   bounds: { west: 15.1, south: 50.2, east: 15.3, north: 50.4 },
@@ -117,10 +118,52 @@ describe('createMapOptions', () => {
       });
     });
 
-    it('draws the base map, then the parcel fill, then the outline', () => {
+    it('draws the base map, the parcel fill and outline, then the selected parcel casing and outline', () => {
       const style = styleOf(options());
 
-      expect(style.layers.map((layer) => layer.id)).toEqual(['base-map', 'parcels-fill', 'parcels-outline']);
+      expect(style.layers.map((layer) => layer.id)).toEqual([
+        'base-map',
+        'parcels-fill',
+        'parcels-outline',
+        'selected-parcel-casing',
+        'selected-parcel-outline',
+      ]);
+    });
+
+    it('adds an empty GeoJSON source for the selected parcel', () => {
+      const style = styleOf(options());
+
+      expect(style.sources['selected-parcel']).toEqual({
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+    });
+
+    it('draws the selected parcel as a white casing under a magenta line', () => {
+      const [casing, outline] = styleOf(options()).layers.slice(3);
+
+      expect(casing).toMatchObject({
+        id: 'selected-parcel-casing',
+        type: 'line',
+        source: 'selected-parcel',
+        paint: { 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.9 },
+      });
+      expect(outline).toMatchObject({
+        id: 'selected-parcel-outline',
+        type: 'line',
+        source: 'selected-parcel',
+        paint: { 'line-color': '#e6007e', 'line-width': 2.5 },
+      });
+    });
+
+    it('keeps the parcel tile layers free of feature-state and filters', () => {
+      const layers = styleOf(options()).layers.filter((layer) => layer.id.startsWith('parcels-'));
+
+      expect(layers).toHaveLength(2);
+      for (const layer of layers) {
+        expect(JSON.stringify(layer)).not.toContain('feature-state');
+        expect(layer).not.toHaveProperty('filter');
+      }
     });
 
     it('fills parcels at 0.45 opacity, coloured by land type', () => {
@@ -134,10 +177,45 @@ describe('createMapOptions', () => {
       });
     });
 
-    it('draws the outline from zoom 14', () => {
+    it('draws the outline from zoom 14, the zoom from which parcels can be selected', () => {
       const outline = styleOf(options()).layers[2];
 
-      expect(outline).toMatchObject({ type: 'line', source: 'parcels', 'source-layer': 'parcels', minzoom: 14 });
+      expect(COMPLETE_PARCELS_MIN_ZOOM).toBe(14);
+      expect(outline).toMatchObject({
+        type: 'line',
+        source: 'parcels',
+        'source-layer': 'parcels',
+        minzoom: COMPLETE_PARCELS_MIN_ZOOM,
+      });
+    });
+  });
+
+  describe('with initial bounds', () => {
+    const initialBounds = {
+      bounds: [15.0, 50.0, 15.1, 50.1] as [number, number, number, number],
+      padding: { top: 40, right: 40, bottom: 40, left: 356 },
+    };
+
+    it('opens the map fitted to the bounds with the padding and a maximum zoom of 18', () => {
+      const options = createMapOptions(configuration({ parcels }), container, ORIGIN, initialBounds);
+
+      expect(options.bounds).toEqual([15.0, 50.0, 15.1, 50.1]);
+      expect(options.fitBoundsOptions).toEqual({ maxZoom: 18, padding: initialBounds.padding });
+    });
+
+    it('does not set the initial view, which the bounds override', () => {
+      const options = createMapOptions(configuration({ parcels }), container, ORIGIN, initialBounds);
+
+      expect(options.center).toBeUndefined();
+      expect(options.zoom).toBeUndefined();
+    });
+
+    it('keeps center and zoom without initial bounds', () => {
+      const options = createMapOptions(configuration({ parcels }), container, ORIGIN);
+
+      expect(options.bounds).toBeUndefined();
+      expect(options.center).toEqual([15.5, 50.25]);
+      expect(options.zoom).toBe(11.5);
     });
   });
 

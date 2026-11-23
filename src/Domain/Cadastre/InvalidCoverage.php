@@ -17,4 +17,9 @@ final class InvalidCoverage extends InvalidArgumentException
     {
         return new self(sprintf('The cadastral area %d is listed more than once.', $code));
     }
+
+    public static function inconsistentMunicipality(int $code): self
+    {
+        return new self(sprintf('The areas of municipality %d do not agree on its name.', $code));
+    }
 }

@@ -19,6 +19,8 @@ test('tells the user to import the parcel data when there is none', async ({ pag
   await expect(page.locator('.maplibregl-canvas')).toBeVisible();
   await offlineTiles.waitFor('13/4445/2762');
   expect(parcelRequests).toEqual([]);
+  await expect(page.getByRole('complementary', { name: 'Parcel details' })).toHaveCount(0);
+  await expect(page.getByText('Zoom in to select a parcel.')).toHaveCount(0);
 });
 
 test('shows no notice when the parcel data is imported', async ({ page }) => {

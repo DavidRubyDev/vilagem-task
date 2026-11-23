@@ -17,11 +17,18 @@ final readonly class Coverage
         }
 
         $seen = [];
+        $municipalityNames = [];
         foreach ($areas as $area) {
             if (isset($seen[$area->code->value])) {
                 throw InvalidCoverage::duplicateArea($area->code->value);
             }
             $seen[$area->code->value] = true;
+
+            $municipality = $area->municipality;
+            $municipalityNames[$municipality->code->value] ??= $municipality->name;
+            if ($municipalityNames[$municipality->code->value] !== $municipality->name) {
+                throw InvalidCoverage::inconsistentMunicipality($municipality->code->value);
+            }
         }
 
         $this->areas = array_values($areas);
@@ -43,6 +50,20 @@ final readonly class Coverage
     }
 
     /**
+     * @throws CadastralAreaNotCovered
+     */
+    public function area(CadastralAreaCode $code): CadastralArea
+    {
+        foreach ($this->areas as $area) {
+            if ($area->code->equals($code)) {
+                return $area;
+            }
+        }
+
+        throw CadastralAreaNotCovered::code($code->value);
+    }
+
+    /**
      * @return non-empty-list<CadastralArea> the covered areas of the municipality, in coverage order
      * @throws MunicipalityNotCovered
      */
@@ -50,7 +71,7 @@ final readonly class Coverage
     {
         $areas = array_values(array_filter(
             $this->areas,
-            static fn(CadastralArea $area): bool => $area->municipality->equals($municipality),
+            static fn(CadastralArea $area): bool => $area->municipality->code->equals($municipality),
         ));
         if ($areas === []) {
             throw MunicipalityNotCovered::code($municipality->value);
@@ -66,7 +87,7 @@ final readonly class Coverage
     {
         $municipalities = [];
         foreach ($this->areas as $area) {
-            $municipalities[$area->municipality->value] ??= $area->municipality;
+            $municipalities[$area->municipality->code->value] ??= $area->municipality->code;
         }
 
         return array_values($municipalities);

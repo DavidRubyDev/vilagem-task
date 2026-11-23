@@ -14,12 +14,16 @@ use ParcelMap\Application\Import\InvalidImportRequest;
 use ParcelMap\Application\Import\TileBuildFailed;
 use ParcelMap\Application\Import\TilesetInspectionFailed;
 use ParcelMap\Application\Import\TilesetOverBudget;
-use ParcelMap\Application\Import\TilesetPublishFailed;
+use ParcelMap\Application\Import\CodeList;
+use ParcelMap\Application\Import\ParcelDataPublishFailed;
+use ParcelMap\Application\Import\ParcelStoreBuildFailed;
+use ParcelMap\Application\Import\UnknownCode;
 use ParcelMap\Application\Import\ConversionFailed;
 use ParcelMap\Domain\Cadastre\CadastralArea;
 use ParcelMap\Domain\Cadastre\CadastralAreaCode;
 use ParcelMap\Domain\Cadastre\Coverage;
 use ParcelMap\Domain\Cadastre\CoverageUnavailable;
+use ParcelMap\Domain\Cadastre\Municipality;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
 use ParcelMap\Domain\Map\TileCoordinate;
 use ParcelMap\Domain\Map\TilesetStatistics;
@@ -29,10 +33,11 @@ use ParcelMap\Tests\Fake\ClockUsingFixedTime;
 use ParcelMap\Tests\Fake\CoverageRepositoryUsingMemory;
 use ParcelMap\Tests\Fake\ImportProgressUsingMemory;
 use ParcelMap\Tests\Fake\ParcelConverterUsingMemory;
+use ParcelMap\Tests\Fake\ParcelDataPublisherUsingMemory;
+use ParcelMap\Tests\Fake\ParcelStoreBuilderUsingMemory;
 use ParcelMap\Tests\Fake\RuianExportDownloaderUsingMemory;
 use ParcelMap\Tests\Fake\TilesetBuilderUsingMemory;
 use ParcelMap\Tests\Fake\TilesetInspectorUsingMemory;
-use ParcelMap\Tests\Fake\TilesetPublisherUsingMemory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -41,7 +46,8 @@ final class ImportParcelsUseCaseTest extends TestCase
     private RuianExportDownloaderUsingMemory $downloader;
     private ParcelConverterUsingMemory $converter;
     private TilesetBuilderUsingMemory $builder;
-    private TilesetPublisherUsingMemory $publisher;
+    private ParcelStoreBuilderUsingMemory $storeBuilder;
+    private ParcelDataPublisherUsingMemory $publisher;
     private ImportProgressUsingMemory $progress;
 
     #[Test]
@@ -63,7 +69,12 @@ final class ImportParcelsUseCaseTest extends TestCase
             ['memory://municipalities/572659', 'memory://municipalities/222222'],
             $this->builder->builtFrom,
         );
-        self::assertSame(['memory://tileset 20261120093000 2026-10-31'], $this->publisher->published);
+        self::assertSame(
+            ['memory://municipalities/572659', 'memory://municipalities/222222'],
+            $this->storeBuilder->builtFrom,
+        );
+        self::assertEquals(self::coverage(), $this->storeBuilder->coverage);
+        self::assertSame(['memory://tileset memory://parcel-store 20261120093000 2026-10-31'], $this->publisher->published);
         self::assertSame('2026-10-31', $output->exportDate);
         self::assertSame('20261120093000', $output->tilesetVersion);
         self::assertSame(22 + 3 + 5, $output->totalParcels);
@@ -195,6 +206,7 @@ final class ImportParcelsUseCaseTest extends TestCase
         self::assertCount(1, $this->publisher->published);
     }
 
+
     #[Test]
     public function it_publishes_nothing_when_a_tile_is_over_budget(): void
     {
@@ -217,6 +229,51 @@ final class ImportParcelsUseCaseTest extends TestCase
     }
 
     #[Test]
+    public function it_builds_no_parcel_store_and_publishes_nothing_when_a_tile_is_over_budget(): void
+    {
+        $statistics = new TilesetStatistics(new ZoomTileStatistics(11, 15, 150_001, new TileCoordinate(11, 1111, 690)));
+        $useCase = $this->useCase(publishedDates: ['2026-10-31'], statistics: $statistics);
+
+        try {
+            $useCase->execute(new ImportParcelsInput('2026-10-31'), $this->progress);
+            self::fail('Expected TilesetOverBudget.');
+        } catch (TilesetOverBudget) {
+            self::assertSame([], $this->storeBuilder->builtFrom);
+            self::assertNotContains('parcel store from 30 parcels', $this->progress->events);
+            self::assertSame([], $this->publisher->published);
+        }
+    }
+
+    #[Test]
+    public function it_publishes_nothing_when_the_parcel_store_cannot_be_built(): void
+    {
+        $useCase = $this->useCase(publishedDates: ['2026-10-31'], failingStoreBuilder: true);
+
+        try {
+            $useCase->execute(new ImportParcelsInput('2026-10-31'), $this->progress);
+            self::fail('Expected ParcelStoreBuildFailed.');
+        } catch (ParcelStoreBuildFailed) {
+            self::assertSame([], $this->publisher->published);
+        }
+    }
+
+    #[Test]
+    public function it_reports_the_unknown_codes_of_the_parcel_store(): void
+    {
+        $useCase = $this->useCase(
+            publishedDates: ['2026-10-31'],
+            unknownCodes: [new UnknownCode(CodeList::LandUse, 31, 3)],
+        );
+
+        $output = $useCase->execute(new ImportParcelsInput('2026-10-31'), $this->progress);
+
+        self::assertCount(1, $output->unknownCodes);
+        self::assertSame('land use', $output->unknownCodes[0]->codeList);
+        self::assertSame(31, $output->unknownCodes[0]->code);
+        self::assertSame(3, $output->unknownCodes[0]->parcelCount);
+    }
+
+    #[Test]
     public function it_publishes_nothing_when_the_inspection_fails(): void
     {
         $useCase = $this->useCase(publishedDates: ['2026-10-31'], statistics: TilesetInspectionFailed::because('unreadable'));
@@ -234,7 +291,7 @@ final class ImportParcelsUseCaseTest extends TestCase
     {
         $useCase = $this->useCase(publishedDates: ['2026-10-31'], failingPublisher: true);
 
-        $this->expectException(TilesetPublishFailed::class);
+        $this->expectException(ParcelDataPublishFailed::class);
 
         $useCase->execute(new ImportParcelsInput('2026-10-31'), $this->progress);
     }
@@ -254,6 +311,7 @@ final class ImportParcelsUseCaseTest extends TestCase
                 'converted 572659 1/2 2 areas, 25 parcels',
                 'converted 222222 2/2 1 areas, 5 parcels',
                 'build from 30 parcels',
+                'parcel store from 30 parcels',
             ],
             $this->progress->events,
         );
@@ -298,6 +356,7 @@ final class ImportParcelsUseCaseTest extends TestCase
     /**
      * @param list<string> $publishedDates
      * @param list<int> $cachedMunicipalities
+     * @param list<UnknownCode> $unknownCodes
      */
     private function useCase(
         array $publishedDates,
@@ -306,13 +365,16 @@ final class ImportParcelsUseCaseTest extends TestCase
         bool $failingConverter = false,
         bool $failingBuilder = false,
         bool $failingPublisher = false,
+        bool $failingStoreBuilder = false,
         TilesetStatistics|TilesetInspectionFailed|null $statistics = null,
+        array $unknownCodes = [],
     ): ImportParcelsUseCase {
         $this->downloader = new RuianExportDownloaderUsingMemory($publishedDates, $cachedMunicipalities);
         $this->progress = new ImportProgressUsingMemory();
         $this->converter = new ParcelConverterUsingMemory([659541 => 22, 740225 => 3, 111111 => 5], $failingConverter);
         $this->builder = new TilesetBuilderUsingMemory($failingBuilder);
-        $this->publisher = new TilesetPublisherUsingMemory($failingPublisher);
+        $this->storeBuilder = new ParcelStoreBuilderUsingMemory($failingStoreBuilder, $unknownCodes);
+        $this->publisher = new ParcelDataPublisherUsingMemory($failingPublisher);
 
         return new ImportParcelsUseCase(
             new CoverageRepositoryUsingMemory($coverage ?? self::coverage()),
@@ -320,6 +382,7 @@ final class ImportParcelsUseCaseTest extends TestCase
             $this->converter,
             $this->builder,
             new TilesetInspectorUsingMemory($statistics ?? self::withinBudget()),
+            $this->storeBuilder,
             $this->publisher,
             new ClockUsingFixedTime(new DateTimeImmutable('2026-11-20 09:30:00', new DateTimeZone('UTC'))),
             new TileSizeBudget(150_000),
@@ -333,12 +396,12 @@ final class ImportParcelsUseCaseTest extends TestCase
 
     private static function coverage(): Coverage
     {
-        $municipality = new MunicipalityCode(572659);
+        $municipality = new Municipality(new MunicipalityCode(572659), 'Jičín');
 
         return new Coverage(
             new CadastralArea(new CadastralAreaCode(659541), 'Jičín', $municipality),
             new CadastralArea(new CadastralAreaCode(740225), 'Robousy', $municipality),
-            new CadastralArea(new CadastralAreaCode(111111), 'Other', new MunicipalityCode(222222)),
+            new CadastralArea(new CadastralAreaCode(111111), 'Other', new Municipality(new MunicipalityCode(222222), 'Other')),
         );
     }
 }

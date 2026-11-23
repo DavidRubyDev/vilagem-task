@@ -10,7 +10,7 @@ final readonly class CadastralArea
     public function __construct(
         public CadastralAreaCode $code,
         public string $name,
-        public MunicipalityCode $municipality,
+        public Municipality $municipality,
     ) {
         if (trim($name) === '') {
             throw InvalidCadastralArea::emptyName($code->value);

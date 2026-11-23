@@ -288,15 +288,16 @@ Source-data term (Czech) → name used in code.
 |---------------------------------------|----------------------|----------------------------------------------------------------|
 | parcela                               | `Parcel`             |                                                                |
 | katastrální území (KÚ)                | `CadastralArea`      | Identified by a 6-digit code.                                  |
-| obec                                  | `Municipality`       |                                                                |
+| obec                                  | `Municipality`       | Code (`MunicipalityCode`) and name; names come from `config/coverage.csv`. |
 | okres                                 | `District`           | Jičín district, code 3604.                                     |
 | kód okresu                            | `DistrictCode`       | 4 digits; Jičín is 3604.                                       |
-| parcelní číslo                        | `ParcelNumber`       | Base number (kmenové číslo) + optional subdivision (poddělení), e.g. `123/4`. |
+| parcelní číslo                        | `ParcelNumber`       | Kind + base number (kmenové číslo) + optional subdivision (poddělení), e.g. `st. 80/2`, `867/121`. |
 | stavební / pozemková parcela          | `ParcelKind::Building` / `ParcelKind::Land` | Building plots are displayed with the `st.` prefix. `DruhCislovaniKod` 1 = building, 2 = land. |
-| druh pozemku                          | `LandType`           | Arable land, forest, permanent grassland, …                    |
-| způsob využití pozemku                | `LandUse`            |                                                                |
+| druh pozemku                          | `LandType`           | RÚIAN `DruhPozemkuKod`: arable land, forest, permanent grassland, … A positive code outside the published code list is kept and shown as unknown. |
+| způsob využití pozemku                | `LandUse`            | RÚIAN `ZpusobyVyuzitiPozemku`; optional. Unknown positive codes are kept and shown as unknown. |
 | výměra                                | `Area`               | Square metres.                                                 |
-| list vlastnictví (LV)                 | `OwnershipSheet`     | Neither the LV number nor ownership is in the open data (RÚIAN, SHP, INSPIRE, open VFK). |
+| list vlastnictví (LV)                 | `OwnershipSheet`     | Neither the LV number nor ownership is in the open data (RÚIAN, SHP, INSPIRE, open VFK); the panel links to the cadastre viewer instead. |
+| Nahlížení do katastru nemovitostí     | Cadastre viewer (`Parcel::cadastreViewerUrl()`) | ČÚZK's public web viewer; shows owners and the LV number after login or a CAPTCHA. |
 | zjednodušená evidence (PK / EN)       | `SimplifiedRecordParcel` | Not in RÚIAN or any open source; no own geometry.             |
 | katastr nemovitostí (KN)              | Cadastre             |                                                                |
 | RÚIAN, VFR                            | —                    | ČÚZK register and its exchange format (data source).           |
@@ -315,9 +316,15 @@ Source-data term (Czech) → name used in code.
 | měsíční stavový soubor obce VFR (`OB_UKSH`) | RÚIAN export (`RuianExportDownloader`, `DownloadedExport`) | Monthly per-municipality file with parcels and original boundaries. |
 | datum souboru VFR                     | `ExportDate`         | Last day of a month; the file is published the next day.       |
 | —                                     | `Coverage`           | The cadastral areas the map covers (`config/coverage.csv`).    |
-| —                                     | `TilesetVersion`     | Identifies one published parcel tileset; part of the tile URLs. |
+| —                                     | `TilesetVersion`     | Identifies one published import (tileset and parcel store); part of the tile and parcel URLs. |
+| —                                     | `ParcelId`           | RÚIAN parcel `Id`; positive, at most 2^53 − 1. Feature id in the tiles, key of the parcel store. |
+| hranice parcely (`OriginalniHranice`) | `ParcelBoundary`     | Polygon rings in WGS84, outer ring first.                      |
+| —                                     | Parcel store (`ParcelStoreBuilder`, `BuiltParcelStore`, `ParcelRepository`) | SQLite file of parcel details per `TilesetVersion`: `data/parcels/{version}.sqlite`. |
+| —                                     | Parcel data (`ParcelDataPublisher`) | The tileset and parcel store of one import, published together under one `TilesetVersion`. |
 | —                                     | `TileCoordinate`     | Tile `zoom/x/y` in the XYZ scheme (y from the top).            |
 | —                                     | `VectorTile`         | One gzip-compressed vector tile, or none (empty).              |
 | —                                     | `Bounds`             | South-west and north-east `Coordinates` of a rectangle.        |
 | —                                     | `ParcelTileset`      | The published parcel tileset: version, export date, bounds, zoom range; `attribution()` gives the ČÚZK credit. |
+| —                                     | Selected parcel      | The parcel shown in the side panel and outlined on the map (source `selected-parcel`); in the URL as `#parcel={id}`. |
+| —                                     | Parcel detail        | What the side panel shows about a parcel (`GET /api/parcels/{version}/{id}`). |
 | —                                     | Map configuration    | What the frontend needs to start the map: initial `MapView` + `BaseMap` (`GET /api/map-config`). |
