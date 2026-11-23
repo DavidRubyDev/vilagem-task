@@ -1,6 +1,6 @@
 # 007: Land type legend
 
-- **Status:** approved
+- **Status:** in-progress
 - **Created:** 2026-11-23
 - **Branch:** task/007-land-type-legend
 - **Request:** "lets add a legend to the bottom left of the map. And let's shrink the side panel, so it does not
@@ -406,6 +406,13 @@ label in the panel.
 ## Implementation log
 
 Filled in by the implement agent, one entry per step.
+
+### Step 1: the panel fits its content
+
+- Added `tests/E2E/support/layout.ts` (`expectNoOverlap`) and `tests/E2E/layout.spec.ts` (four viewports, panel open from `/#parcel=1753295604`; panel, attribution and zoom buttons do not overlap; panel height < viewport - 24 px; at 1280 wide the panel height is below 388 px).
+- Red run (E2E, before the CSS change): `at 1280x720 > the open parcel panel fits its content and overlaps nothing` failed on `toBeLessThan(height - 24)` (panel was full height, 696 px); `at 641x480 > ...` failed with `Expected: < 456, Received: 456`. The 390x844 and 360x640 cases passed already, because the narrow variant was top-anchored and content-sized before this task (expected; they guard the new `max-height` rule).
+- CSS: `.parcel-panel` gets `bottom: auto` and `max-height: calc(100% - 1.5rem)`; the 640 px block loses `bottom: auto` (now inherited) and the 50 % cap. Green after: 34 E2E tests pass.
+- Decision below the plan: the 1280 assertion uses `height < 388` (400 - the 12 px top offset) so the bottom edge is above 400 px.
 
 ## Review
 

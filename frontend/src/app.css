@@ -51,10 +51,12 @@ body {
   position: absolute;
   top: 0.75rem;
   left: 0.75rem;
-  bottom: 0.75rem;
+  /* Fits its content and scrolls inside once the window is too small. */
+  bottom: auto;
   z-index: 2;
   box-sizing: border-box;
   width: 20rem;
+  max-height: calc(100% - 1.5rem);
   overflow: auto;
   padding: 1rem 1.25rem;
   font:
@@ -119,9 +121,7 @@ body {
   .parcel-panel {
     /* Leaves the zoom buttons of the map free. */
     right: 3.5rem;
-    bottom: auto;
     width: auto;
-    max-height: 50%;
   }
 }
 
