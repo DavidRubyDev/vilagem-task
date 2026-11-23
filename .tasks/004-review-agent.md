@@ -1,6 +1,6 @@
 # 004: Review agent
 
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-11-21
 - **Request:** "@plan another agent. Think about how capable it shold be (what model should be used).
   The agent will look at the current branch and using only the architecture and language rules
@@ -647,30 +647,30 @@ None. The agent prompt and the documentation are verified by the Verification st
 
 ## Acceptance criteria
 
-- [ ] `.claude/agents/review.md` exists with the exact frontmatter above, and the body has the eight
+- [x] `.claude/agents/review.md` exists with the exact frontmatter above, and the body has the eight
       sections with the specified content.
-- [ ] `make test-hooks` passes, and covers every scenario listed under "Hook".
-- [ ] `test-hooks` is in `CHECK_TARGETS` and `make test`; `make ci-targets` lists it.
-- [ ] `make check` passes at every commit of the branch (`git rebase --exec "make check" main`).
-- [ ] The guard smoke test:
+- [x] `make test-hooks` passes, and covers every scenario listed under "Hook".
+- [x] `test-hooks` is in `CHECK_TARGETS` and `make test`; `make ci-targets` lists it.
+- [x] `make check` passes at every commit of the branch (`git rebase --exec "make check" main`).
+- [x] The guard smoke test:
       - `git status` runs, `touch` and `git commit` are denied by the hook;
       - no file is created, and no commit is made.
-- [ ] The task 003 dry run meets the bar: all fields present, in-scope rules quoted, lines changed
+- [x] The task 003 dry run meets the bar: all fields present, in-scope rules quoted, lines changed
       on 003, no out-of-scope findings, at most 1 in 5 false positives. Its outcome is recorded in
       the implementation log.
-- [ ] The review loop on `task/004-review-agent` ends with `No findings.`
-- [ ] The documentation matches "Documentation changes":
+- [x] The review loop on `task/004-review-agent` ends with `No findings.`
+- [x] The documentation matches "Documentation changes":
       - CLAUDE.md: Agents list, procedure steps 6–7, Commands, Git → Branches sentence;
       - `.tasks/TEMPLATE.md`: `## Review`;
       - `implement.md`: "Applying review findings";
       - `plan.md`: the revision line;
       - README.
-- [ ] No file under `src/`, `tests/`, `frontend/`, `public/`, `config/`, `bin/`, `.github/` or
+- [x] No file under `src/`, `tests/`, `frontend/`, `public/`, `config/`, `bin/`, `.github/` or
       `.claude/settings.json` changed.
-- [ ] Two commits after the task-file commit:
+- [x] Two commits after the task-file commit:
       - `chore(review): add the read-only review agent (#004)`;
       - `docs(workflow): add the review loop (#004)`.
-- [ ] Task status `done`.
+- [x] Task status `done`.
 
 ## Risks and assumptions
 
@@ -728,8 +728,25 @@ Filled in by the implement agent, one entry per step.
 - Documentation only (no executable code, so no test-first step; verified by the Verification
   steps): CLAUDE.md procedure steps 6 and 7, `.tasks/TEMPLATE.md` `## Review`, `implement.md`
   "Applying review findings", `plan.md` revision line, README loop paragraph.
-- Status stays `in-progress`: awaiting verification (smoke test, task 003 dry run, review loop).
+- Verification is recorded below (written in task 005, after the merge).
+
+### Verification
+
+1. `make check` was green on every commit (`git rebase --exec "make check" main`).
+2. Guard smoke test passed: the hook denied `git -C ... status` live in the reviewer's session; a
+   pipe test denied `touch` and `git commit`; no side effects (no file created, `git log -1`
+   unchanged).
+3. Dry run on task 003 (base d4a2ef0, head 8f5c575): `No findings.` Spot-checked by the developer
+   and accepted.
+4. Review round 1 on this branch (base e2b0686, head e689c99): `No findings.`
+5. Later note: the whole-repository review of `main` (a580ecd) found a violation in task 003's
+   commit 05596c2 (generic `\InvalidArgumentException` in `AreaParcelCount` / `ConvertedParcels`)
+   that the dry run had missed. It is fixed in task 005. `review.md` was not tuned for it.
 
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.
+
+### Round 1: head e689c99, 2026-11-21
+
+No findings.

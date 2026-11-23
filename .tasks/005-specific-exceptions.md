@@ -1,6 +1,6 @@
 # 005: Specific exceptions
 
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-11-23
 - **Branch:** `refactor/005-specific-exceptions`
 - **Request:** a refactor task that fixes three confirmed findings from a whole-repository review of
@@ -351,23 +351,23 @@ None.
 
 ## Acceptance criteria
 
-- [ ] `git grep -nE "new \\\\?(RuntimeException|InvalidArgumentException)\(" -- src` prints nothing.
-- [ ] `ProcessNotStarted`, `StoredTileCorrupt` and `InvalidConvertedParcels` exist with exactly the
+- [x] `git grep -nE "new \\\\?(RuntimeException|InvalidArgumentException)\(" -- src` prints nothing.
+- [x] `ProcessNotStarted`, `StoredTileCorrupt` and `InvalidConvertedParcels` exist with exactly the
       named constructors and messages in "Architecture", and are thrown where specified.
-- [ ] The new and changed tests in "Test scenarios" exist and pass, with no PHP warning in the
+- [x] The new and changed tests in "Test scenarios" exist and pass, with no PHP warning in the
       PHPUnit output.
-- [ ] HTTP status codes, headers and CLI exit codes are unchanged; the API and E2E suites pass
+- [x] HTTP status codes, headers and CLI exit codes are unchanged; the API and E2E suites pass
       without changes.
-- [ ] The documentation matches "Documentation changes (step 1)"; `refactor/005-specific-exceptions`
+- [x] The documentation matches "Documentation changes (step 1)"; `refactor/005-specific-exceptions`
       maps to `.tasks/005-specific-exceptions.md` under the new `review.md` rule.
-- [ ] `.tasks/004-review-agent.md` matches "Task 004 record (step 5)"; no other part of 004 and no
+- [x] `.tasks/004-review-agent.md` matches "Task 004 record (step 5)"; no other part of 004 and no
       other task file (001–003) is changed.
-- [ ] No change in `frontend/`, `public/`, `config/`, `bin/`, `src/Bootstrap/`, `.github/`,
+- [x] No change in `frontend/`, `public/`, `config/`, `bin/`, `src/Bootstrap/`, `.github/`,
       `.claude/settings.json`, `.claude/hooks/`, `deptrac.yaml`, the Glossary.
-- [ ] Five commits after the task-file commit, in the order and with the subjects of "Steps".
-- [ ] `make check` passes at every commit (`git rebase --exec "make check" main`).
-- [ ] Task status `done`.
-- [ ] No performance impact: only failure paths change.
+- [x] Five commits after the task-file commit, in the order and with the subjects of "Steps".
+- [x] `make check` passes at every commit (`git rebase --exec "make check" main`).
+- [x] Task status `done`.
+- [x] No performance impact: only failure paths change.
 
 ## Risks and assumptions
 
@@ -407,6 +407,14 @@ Documentation only, as planned: CLAUDE.md, TEMPLATE.md, plan.md, implement.md, r
 
 `InvalidConvertedParcels` (extends `\InvalidArgumentException`) with `noParcels`, `noAreas`, `duplicateArea`. The three existing tests now expect it (red first: they failed with the generic exception); `it_rejects_an_area_without_parcels` also asserts the area code in the message, as the plan specifies.
 
+### Step 5: task 004 record
+
+`.tasks/004-review-agent.md` set to `done`, acceptance criteria ticked, verification and review round 1 recorded. This task's status set to `done` and its acceptance criteria ticked.
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.
+
+### Round 1: head b858f85, 2026-11-23
+
+No findings.
