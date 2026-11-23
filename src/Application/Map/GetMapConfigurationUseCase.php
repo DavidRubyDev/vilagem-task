@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ParcelMap\Application\Map;
 
+use ParcelMap\Domain\Cadastre\ParcelRepository;
 use ParcelMap\Domain\Map\MapSettingsRepository;
 use ParcelMap\Domain\Map\ParcelDataNotImported;
 use ParcelMap\Domain\Map\ParcelTileset;
@@ -14,6 +15,7 @@ final readonly class GetMapConfigurationUseCase
     public function __construct(
         private MapSettingsRepository $settings,
         private ParcelTilesetRepository $tilesets,
+        private ParcelRepository $parcels,
     ) {}
 
     public function execute(): MapConfigurationOutput
@@ -59,6 +61,7 @@ final readonly class GetMapConfigurationUseCase
             $tileset->bounds->northEast->latitude,
             $attribution->text,
             $attribution->url,
+            $this->parcels->isPublished($tileset->version),
         );
     }
 }

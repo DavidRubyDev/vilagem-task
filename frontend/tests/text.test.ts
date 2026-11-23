@@ -11,6 +11,11 @@ describe('TEXT', () => {
     expect(TEXT.heading('st. 72')).toBe('Parcel st. 72');
   });
 
+  it('words the zoom hint and the notice about missing parcel details', () => {
+    expect(TEXT.zoomHint).toBe('Zoom in to select a parcel.');
+    expect(TEXT.detailsNotice).toBe('Parcel details have not been imported yet. Run make data, then reload this page.');
+  });
+
   it('uses English', () => {
     expect(UI_LOCALE).toBe('en');
   });

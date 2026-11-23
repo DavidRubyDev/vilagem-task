@@ -46,6 +46,14 @@ describe('loadMapConfiguration', () => {
     expect(configuration).toEqual(validBody);
   });
 
+  it('accepts parcel data without parcel details', async () => {
+    const body = { ...validBody, parcels: { ...validBody.parcels, parcelUrlTemplate: null } };
+
+    const configuration = await loadMapConfiguration(() => Promise.resolve(jsonResponse(body)), '/api/map-config');
+
+    expect(configuration.parcels?.parcelUrlTemplate).toBeNull();
+  });
+
   it('accepts a configuration without parcel data', async () => {
     const body = { ...validBody, parcels: null };
 

@@ -14,4 +14,7 @@ interface ParcelRepository
      * @throws ParcelStoreUnreadable
      */
     public function get(TilesetVersion $version, ParcelId $id): Parcel;
+
+    /** Whether there is a store for this version; says nothing about whether it can be read. */
+    public function isPublished(TilesetVersion $version): bool;
 }

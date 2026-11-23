@@ -3,12 +3,14 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import './app.css';
 import { fitPadding } from './fitPadding';
-import { loadMapConfiguration, type ParcelLayerConfiguration } from './mapConfiguration';
+import { loadMapConfiguration } from './mapConfiguration';
 import { createMapOptions, type InitialBounds } from './mapOptions';
 import { loadParcelDetail, parcelDetailUrl, type ParcelDetail } from './parcelDetail';
 import { parcelIdFromHash } from './parcelHash';
 import { ParcelPanel } from './parcelPanel';
 import { ParcelSelection } from './parcelSelection';
+import { TEXT } from './text';
+import { showZoomHint } from './zoomHint';
 
 function showError(container: HTMLElement): void {
   container.remove();
@@ -19,11 +21,11 @@ function showError(container: HTMLElement): void {
   document.body.append(message);
 }
 
-function showNoParcelDataNotice(): void {
+function showNotice(text: string): void {
   const notice = document.createElement('p');
   notice.className = 'map-notice';
   notice.setAttribute('role', 'status');
-  notice.textContent = 'Parcel data has not been imported yet. Run make data, then reload this page.';
+  notice.textContent = text;
   document.body.append(notice);
 }
 
@@ -38,13 +40,13 @@ interface LinkedParcel {
  */
 async function openLinkedParcel(
   id: number,
-  parcels: ParcelLayerConfiguration,
+  parcelUrlTemplate: string,
   panel: ParcelPanel,
   fetchFn: typeof fetch,
 ): Promise<LinkedParcel | null> {
   panel.showLoading();
   try {
-    const result = await loadParcelDetail(fetchFn, parcelDetailUrl(parcels.parcelUrlTemplate, id));
+    const result = await loadParcelDetail(fetchFn, parcelDetailUrl(parcelUrlTemplate, id));
     if (!result.found) {
       panel.showNotFound();
       return null;
@@ -76,24 +78,31 @@ async function start(): Promise<void> {
     const fetchFn = window.fetch.bind(window);
     const configuration = await loadMapConfiguration(fetchFn, '/api/map-config');
     const { parcels } = configuration;
-    if (parcels === null) {
-      showNoParcelDataNotice();
+    // Neither parcel data nor parcel details: the map has nothing to select, and a parcel in the URL is ignored.
+    if (parcels === null || parcels.parcelUrlTemplate === null) {
+      showNotice(
+        parcels === null
+          ? 'Parcel data has not been imported yet. Run make data, then reload this page.'
+          : TEXT.detailsNotice,
+      );
       new Map(createMapOptions(configuration, container, window.location.origin)).addControl(
         new NavigationControl({ showCompass: false }),
         'top-right',
       );
       return;
     }
+    const { parcelUrlTemplate } = parcels;
 
     const panel = new ParcelPanel(() => {
       selection.clear();
     });
     const linkedId = parcelIdFromHash(window.location.hash);
-    const linked = linkedId === null ? null : await openLinkedParcel(linkedId, parcels, panel, fetchFn);
+    const linked = linkedId === null ? null : await openLinkedParcel(linkedId, parcelUrlTemplate, panel, fetchFn);
 
     const map = new Map(createMapOptions(configuration, container, window.location.origin, linked?.initialBounds));
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
-    const selection = new ParcelSelection(map, panel, fetchFn, parcels.parcelUrlTemplate, window);
+    const selection = new ParcelSelection(map, panel, fetchFn, parcelUrlTemplate, window);
+    showZoomHint(map);
     if (linked !== null) {
       map.once('load', () => {
         selection.adopt(linked.detail);

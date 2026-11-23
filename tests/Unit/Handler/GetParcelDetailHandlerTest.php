@@ -113,7 +113,7 @@ final class GetParcelDetailHandlerTest extends TestCase
 
         return new GetParcelDetailHandler(new GetParcelDetailUseCase(
             new ParcelTilesetRepositoryUsingMemory($tileset),
-            new ParcelRepositoryUsingMemory(new TilesetVersion(self::VERSION), $parcel),
+            new ParcelRepositoryUsingMemory(new TilesetVersion(self::VERSION), [$parcel]),
         ));
     }
 }

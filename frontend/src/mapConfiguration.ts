@@ -1,6 +1,7 @@
 export interface ParcelLayerConfiguration {
   readonly tileUrlTemplate: string;
-  readonly parcelUrlTemplate: string;
+  /** null when the parcel details have not been imported (a tileset from before the parcel store). */
+  readonly parcelUrlTemplate: string | null;
   readonly minZoom: number;
   readonly maxZoom: number;
   readonly bounds: {
@@ -43,9 +44,10 @@ function isParcelLayerConfiguration(value: unknown): value is ParcelLayerConfigu
     typeof tileUrlTemplate === 'string' &&
     tileUrlTemplate.startsWith('/') &&
     ['{z}', '{x}', '{y}'].every((placeholder) => tileUrlTemplate.includes(placeholder)) &&
-    typeof parcelUrlTemplate === 'string' &&
-    parcelUrlTemplate.startsWith('/') &&
-    parcelUrlTemplate.includes('{id}') &&
+    (parcelUrlTemplate === null ||
+      (typeof parcelUrlTemplate === 'string' &&
+        parcelUrlTemplate.startsWith('/') &&
+        parcelUrlTemplate.includes('{id}'))) &&
     isFiniteNumber(minZoom) &&
     isFiniteNumber(maxZoom) &&
     isRecord(bounds) &&

@@ -32,7 +32,9 @@ make data                # once: download the ČÚZK parcels and build the tiles
 
 Before `make data` the page shows only the OpenStreetMap base map and a notice, "Parcel data has not
 been imported yet. Run make data, then reload this page." After `make data`, reload the page: the parcels
-appear over Jičín. From zoom 14, clicking a parcel opens a panel on the left with its number, plot type, cadastral
+appear over Jičín. If the data was imported by a version from before the parcel details (task 006), the page shows
+"Parcel details have not been imported yet. Run make data, then reload this page." and clicks select nothing: rerun
+`make data` to build the parcel store. From zoom 14, clicking a parcel opens a panel on the left with its number, plot type, cadastral
 area, municipality, land type, land use (when it has one) and area; the close button, Escape or a click on no
 parcel close it. The selected parcel is outlined on the map. Ownership is not in the open data (neither the owners
 nor the ownership sheet number), so the panel links to the parcel in the ČÚZK cadastre viewer
@@ -41,7 +43,7 @@ nor the ownership sheet number), so the panel links to the parcel in the ČÚZK 
 The selected parcel is kept in the URL as `#parcel=<RÚIAN id>` (updated with `history.replaceState`, so clicking does
 not fill the browser history; closing the panel removes it). Opening such a link fits the map to the parcel (at most
 zoom 18) and shows its panel, and changing the hash selects another parcel. The link has the id only, not the tileset
-version, so it survives re-imports; an id that no longer exists shows "This parcel was not found". Below zoom 14 clicks select nothing.
+version, so it survives re-imports; an id that no longer exists shows "This parcel was not found". Below zoom 14 clicks select nothing, and a hint at the bottom says "Zoom in to select a parcel." until zoom 14.
 
 `docker compose up` runs a one-shot `node` service (`npm ci && npm run build`), then starts the
 PHP server. The first run pulls the Playwright image (about 2 GB), which is also used for all
@@ -113,7 +115,7 @@ when there is none), area in m², the boundary as a GeoJSON Polygon, `cadastreVi
 the response is immutable for its version (`Cache-Control: public, max-age=31536000, immutable`). It answers `404`
 for an unknown id, an id that is not 1 to 15 digits, another version, a missing parcel store or no imported data.
 `GET /api/map-config` tells the frontend where to ask: `parcels.parcelUrlTemplate`, e.g.
-`/api/parcels/20261123140206/{id}`.
+`/api/parcels/20261123140206/{id}`, or `null` when the parcel store of the current tileset is missing.
 
 ### Frontend
 

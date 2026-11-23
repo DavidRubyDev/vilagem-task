@@ -70,6 +70,15 @@ final class ParcelRepositoryUsingSqliteTest extends TestCase
     }
 
     #[Test]
+    public function it_knows_which_versions_have_a_store(): void
+    {
+        $repository = $this->fixtureRepository();
+
+        self::assertTrue($repository->isPublished(new TilesetVersion(FixtureTileset::VERSION)));
+        self::assertFalse($repository->isPublished(new TilesetVersion('19990101000000')));
+    }
+
+    #[Test]
     public function it_rejects_an_unknown_parcel(): void
     {
         $this->expectException(ParcelNotFound::class);

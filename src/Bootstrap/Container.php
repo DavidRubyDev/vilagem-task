@@ -96,6 +96,7 @@ final readonly class Container
                     new GetMapConfigurationHandler(new GetMapConfigurationUseCase(
                         new MapSettingsRepositoryUsingConstants(),
                         new ParcelTilesetRepositoryUsingMbtiles($this->tilesetFile()),
+                        new ParcelRepositoryUsingSqlite($this->parcelStoreDirectory()),
                     )),
                 ),
                 new Route(

@@ -1,6 +1,6 @@
 # 006: Parcel detail panel
 
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-11-23
 - **Branch:** task/006-parcel-detail-panel
 - **Request:** "task 006, the parcel detail panel — clicking a parcel on the map shows its details", the
@@ -1359,6 +1359,102 @@ Filled in by the implement agent, one entry per step.
 - `ParcelBoundary::bounds()` throws `InvalidBounds` for a degenerate outer ring (zero width or height). Real RÚIAN
   parcels have an area of at least 1 m², so this is not expected.
 
+### Step 8: when selection is not possible
+
+- `ParcelRepository::isPublished()` (a file check), `ParcelLayerOutput::detailsAvailable`,
+  `GetMapConfigurationUseCase` takes the `ParcelRepository`, and `/api/map-config` sends `parcelUrlTemplate: null`
+  when the store is missing. A unit test of `GetMapConfigurationHandler` covers the null case, because the API suite
+  runs on the fixture data, which has a store.
+- Frontend: `mapConfiguration.ts` accepts `null`, `zoomHint.ts` (the hint is set once at creation and then updated on
+  `load` and `zoomend`), `TEXT.zoomHint` / `TEXT.detailsNotice`, and `main.ts` shows the details notice and creates
+  no selection when `parcelUrlTemplate` is null.
+- `UnreadableParcelRepositoryUsingMemory` replaces an anonymous class in `GetParcelDetailUseCaseTest`, which would
+  have needed the new interface method.
+
+### Acceptance checks with real data
+
+Run on 2026-11-23 against a separate data dir (`PARCEL_MAP_DATA_DIR=var/acceptance`, its `cache` symlinked to the
+cached 2026-10-31 export), so the data of the dev app was not touched; the directory was deleted afterwards.
+
+- `parcels:import --export-date=2026-10-31` from the cache: 272,011 parcels, no `Warning:` line, tiles unchanged (the
+  budget gate passes, largest tile 186.1 kB at zoom 13). It published `tiles/parcels.mbtiles` (55.9 MB) and
+  `parcels/20261123142224.sqlite` (45.9 MB, under the 60 MB limit) with the same version.
+- Time: 51 s wall clock including container start for the whole import from the cache. The README gave about 45 s
+  for the import before this task, so the store costs about 6 s, within the 15 s allowed. The earlier figure is from
+  the README, not a new measurement.
+- A second import left two stores (the new one and the previous one), a third one deleted the oldest, as specified.
+- 100 sequential detail requests for random ids against a throwaway PHP server (8 workers) in the same container,
+  localhost: median 1.9 ms, p95 4.2 ms, maximum 8.4 ms (limit: median under 20 ms). The response for 1753295604 had
+  `Cache-Control: public, max-age=31536000, immutable`, and `/api/map-config` had
+  `parcelUrlTemplate: /api/parcels/20261123142420/{id}`.
+- Frontend listeners: the code adds only `click`, `zoomend`, `hashchange` and `keydown` handlers, the close button
+  handler, and a `load` handler (once for a linked parcel, and for the zoom hint). No `move`, `render` or `mousemove`
+  listener. The parcel tile layers have no `feature-state` and no filter (unit test); selecting changes only the
+  one-feature `selected-parcel` source.
+- Not done: the manual check in a real browser with real data (clicking parcels at zoom 16 over Jičín, the ČÚZK link
+  opening in a new tab, reloading a `#parcel=` link, the Chrome performance panel for long tasks). The E2E tests
+  cover the same behaviour on the fixture data, and the viewer link is never opened by a test. NOT done.
+
+### Red-run verification (review round 1)
+
+The developer asked to verify the tests that were written together with their code instead of red first. For each one
+the production code it covers was mutated in the working tree at head (a check removed, a value changed, a call
+dropped), the test run, and the file restored; nothing of this was committed. Result: every listed test fails for the
+expected reason, except the three ineffective ones listed at the end.
+
+- **Step 1** (Municipality, Coverage, extractor, CSV; 7 mutations): `MunicipalityTest` (empty name accepted, `equals`
+  always false), `CoverageTest` (different municipality names accepted, `areasOf` ignoring the code),
+  `DistrictAreaExtractorUsingOgr2ogrTest` (wrong municipality name), `CoverageRepositoryUsingCsvTest` (name not
+  written, 3 fields accepted). Failure reasons: "exception ... is thrown" not thrown, or two arrays/strings not
+  identical. `CadastralAreaTest::it_holds_its_municipality` cannot be mutated: the property is enforced by its type.
+- **Step 2** (domain, import, store, publisher; 41 mutations): `ParcelIdTest`, `ParcelKindTest`, `ParcelNumberTest`,
+  `LandTypeTest`, `LandUseTest`, `AreaTest`, `ParcelBoundaryTest`, `ParcelTest`, `UnknownCodeTest`, `CoverageTest::area`,
+  `ImportParcelsUseCaseTest` (store built before the budget gate, no store progress event, unknown codes dropped, a
+  wrong store published), `ImportProgressUsingConsoleTest`, `ImportParcelsCommandTest`,
+  `ParcelConverterUsingOgr2ogrTest` (attribute dropped from the SQL), `TilesetBuilderUsingTippecanoeTest` (an extra
+  property kept), `ParcelStoreBuilderUsingSqliteTest` (unknown-code counting for both lists, non-Polygon accepted,
+  duplicate id not detected, partial file kept, boundary not compressed, sort order) and
+  `ParcelDataPublisherUsingSqliteTest` (store not stamped, store not removed after a failed tileset rename, no prune,
+  live store not kept). All fail with the expected assertion or missing exception.
+- **Step 3** (repository, use case, handler, route; 14 mutations): `ParcelRepositoryUsingSqliteTest` (not-published
+  check, not-found check, zlib check, holes dropped), `GetParcelDetailUseCaseTest` (version check, invalid id passed
+  on, missing store, kind, land use), `GetParcelDetailHandlerTest` (cache header, 404), `ParcelDetailRouteTest`.
+- **Step 4** (frontend, 24 mutations plus 7 E2E): `landUses`, `landTypes`, `parcelFormat`, `text`, `parcelDetail`,
+  `mapOptions` and `mapConfiguration` unit tests (names, colours, formats, 404, abort, signal, URL, field checks, minimum
+  zoom, `{id}` and relative template); E2E: zoom gate, Escape, click on nothing, close button, land use row, error state.
+- **Step 5** (highlight; 8 mutations plus 1 E2E): `selectedParcel.test.ts` (empty collection, id, geometry),
+  `mapOptions.test.ts` (casing width, outline colour, source, layer order), `parcelDetail.test.ts` (boundary check);
+  E2E: the highlight is not drawn when the data is not set.
+- **Step 6** (viewer link; 4 mutations plus 1 E2E): `ParcelTest`, `GetParcelDetailUseCaseTest`,
+  `GetParcelDetailHandlerTest` and `parcelDetail.test.ts` (https check); E2E: link without `href`.
+- **Step 7** (URL; 13 mutations plus 5 E2E): `ParcelBoundaryTest::bounds` (swapped corners, holes widening the bounds),
+  use case and handler bounds, `parcelHash`, `fitPadding`, `mapOptions` (`initialBounds`, `fit` maximum zoom, initial
+  view kept), `parcelDetail` bounds check; E2E: hash not written, hash not removed, no `hashchange` listener, map not
+  fitted to the linked parcel, not-found message, malformed hash used.
+- **Step 8** (selection not possible; 4 mutations plus 2 E2E): `GetMapConfigurationUseCaseTest` (detailsAvailable
+  always true, inverted), `GetMapConfigurationHandlerTest` (null template), `ParcelRepositoryUsingSqliteTest::isPublished`,
+  `mapConfiguration.test.ts` (null rejected); E2E: hint always visible, details notice not shown.
+- Not mutated: the highlight set on the map `load` event for a linked parcel (`adopt`) and the fit after a
+  `hashchange` (`ParcelSelection.fitTo`) have no test that fails without them; the E2E for a linked parcel checks the
+  highlight, which `adopt` draws, but I did not run that mutation.
+
+**Ineffective tests found (not changed, reported to the coordinator first):**
+
+1. `GetParcelDetailUseCaseTest::it_maps_a_building_parcel_without_land_use` does not tell the cadastral area name from
+   the municipality name (both are "Jičín"); replacing `$area->municipality->name` with `$area->name` in the use case
+   leaves it green. The API test with the Robousy parcel would catch it, the unit test does not.
+2. `GetParcelDetailHandlerTest::it_answers_404_for_an_id_that_is_not_one_to_fifteen_digits` (`sixteen digits`) and the
+   API test for a 16-digit id: removing the 15-digit limit in `GetParcelDetailHandler` keeps both green, because the
+   unknown id also gives 404. The limit is masked.
+3. `parcelDetail.test.ts` "the status is 500": without the `!response.ok` check the test still passes, because the
+   JSON error body fails the shape check and also throws `ParcelDetailError`. The status branch is masked.
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.
+
+### Round 1: head 1ca6bcf, 2026-11-23
+
+1. Confirmed. `src/Infrastructure/Import/ParcelStoreBuilderUsingSqlite.php:238` and `tests/Integration/Infrastructure/Import/ParcelStoreBuilderUsingSqliteTest.php:242`, Code rules (`mixed`): both `mixed` parameters now have an `@param mixed` line that says why. Fixed in `feat(import): publish a parcel store with each tileset (#006)`.
+2. Confirmed. `frontend/src/parcelSelection.ts:17` and `CLAUDE.md:328`, DDD rules (Glossary in the same change): the "Selected parcel" row is added in `feat(map): show the details of a clicked parcel in a side panel (#006)` ("shown in the side panel"), extended in `feat(map): highlight the selected parcel (#006)` and `feat(map): keep the selected parcel in the URL (#006)` (`#parcel={id}`). Fixed in those three commits.
+3. Confirmed. `tests/Fake/UnreadableParcelRepositoryUsingMemory.php:14`, Naming: the fake is removed and `ParcelRepositoryUsingMemory` has an `unreadable` flag that makes `get()` throw `ParcelStoreUnreadable`; its parcels now come as a list argument, because a variadic could not be followed by the flag. Fixed in `feat(map): explain when parcels cannot be selected (#006)`.

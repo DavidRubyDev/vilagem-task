@@ -246,3 +246,77 @@ test.describe('the selected parcel in the URL', () => {
     await expect(panelOf(page)).toBeHidden();
   });
 });
+
+test.describe('when selecting is not possible', () => {
+  const HINT = 'Zoom in to select a parcel.';
+  const NOTICE = 'Parcel details have not been imported yet. Run make data, then reload this page.';
+
+  async function openWithoutDetails(page: Page, path: string, zoom: number): Promise<void> {
+    await page.route('**/api/map-config', async (route) => {
+      const response = await route.fetch();
+      const body = (await response.json()) as { parcels: Record<string, unknown> };
+      await route.fulfill({
+        response,
+        json: {
+          ...body,
+          initialView: { center: { longitude: ST_72.longitude, latitude: ST_72.latitude }, zoom },
+          parcels: { ...body.parcels, parcelUrlTemplate: null },
+        },
+      });
+    });
+    await page.goto(path);
+    await expect(page.locator('.maplibregl-canvas')).toBeVisible();
+  }
+
+  test('hints at zooming in below zoom 14', async ({ page }) => {
+    await openAt(page, ST_72.longitude, ST_72.latitude, 12);
+    await expect(page.getByText(HINT)).toBeVisible();
+  });
+
+  test('shows no hint at zoom 18', async ({ page }) => {
+    await openAt(page, ST_72.longitude, ST_72.latitude, 18);
+
+    await page.waitForTimeout(500);
+
+    await expect(page.getByText(HINT)).toBeHidden();
+  });
+
+  test('hides the hint after zooming in to zoom 14', async ({ page }) => {
+    await openAt(page, ST_72.longitude, ST_72.latitude, 13);
+    await expect(page.getByText(HINT)).toBeVisible();
+
+    await page.getByRole('button', { name: 'Zoom in' }).click();
+
+    await expect(page.getByText(HINT)).toBeHidden();
+  });
+
+  test('explains that the details are not imported, and selects nothing', async ({ page }) => {
+    const detailRequests: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('/api/parcels/')) detailRequests.push(request.url());
+    });
+    await openWithoutDetails(page, '/', 18);
+
+    await expect(page.getByRole('status')).toHaveText(NOTICE);
+    await page.locator('.maplibregl-canvas').click();
+    await page.waitForTimeout(1000);
+
+    expect(detailRequests).toEqual([]);
+    await expect(panelOf(page)).toBeHidden();
+    await expect(page.getByText(HINT)).toHaveCount(0);
+  });
+
+  test('ignores the parcel of the URL', async ({ page }) => {
+    const detailRequests: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('/api/parcels/')) detailRequests.push(request.url());
+    });
+
+    await openWithoutDetails(page, `/#parcel=${String(ST_72.id)}`, 12);
+    await page.waitForTimeout(500);
+
+    expect(detailRequests).toEqual([]);
+    await expect(panelOf(page)).toBeHidden();
+    expect(page.url()).toContain(`#parcel=${String(ST_72.id)}`);
+  });
+});

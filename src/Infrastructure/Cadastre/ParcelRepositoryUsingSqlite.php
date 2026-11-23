@@ -37,9 +37,14 @@ final readonly class ParcelRepositoryUsingSqlite implements ParcelRepository
 {
     public function __construct(private string $directory) {}
 
+    public function isPublished(TilesetVersion $version): bool
+    {
+        return is_file($this->file($version));
+    }
+
     public function get(TilesetVersion $version, ParcelId $id): Parcel
     {
-        $file = sprintf('%s/%s.sqlite', $this->directory, $version->value);
+        $file = $this->file($version);
         if (!is_file($file)) {
             throw ParcelStoreNotPublished::forVersion($version->value);
         }
@@ -58,6 +63,11 @@ final readonly class ParcelRepositoryUsingSqlite implements ParcelRepository
         } catch (InvalidArgumentException|JsonException $exception) {
             throw ParcelStoreUnreadable::because(sprintf('parcel %d is invalid: %s', $id->value, $exception->getMessage()));
         }
+    }
+
+    private function file(TilesetVersion $version): string
+    {
+        return sprintf('%s/%s.sqlite', $this->directory, $version->value);
     }
 
     /**

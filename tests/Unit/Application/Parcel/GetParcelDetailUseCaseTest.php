@@ -128,12 +128,7 @@ final class GetParcelDetailUseCaseTest extends TestCase
     #[Test]
     public function it_lets_an_unreadable_store_through(): void
     {
-        $useCase = new GetParcelDetailUseCase($this->tilesets(), new class implements \ParcelMap\Domain\Cadastre\ParcelRepository {
-            public function get(TilesetVersion $version, ParcelId $id): Parcel
-            {
-                throw ParcelStoreUnreadable::because('broken');
-            }
-        });
+        $useCase = new GetParcelDetailUseCase($this->tilesets(), new ParcelRepositoryUsingMemory(new TilesetVersion(self::VERSION), unreadable: true));
 
         $this->expectException(ParcelStoreUnreadable::class);
 
@@ -146,8 +141,10 @@ final class GetParcelDetailUseCaseTest extends TestCase
             $this->tilesets(),
             new ParcelRepositoryUsingMemory(
                 new TilesetVersion(self::VERSION),
-                self::parcel(1753295604, ParcelKind::Building, 72, null, 13, null, 455),
-                self::parcel(99225194010, ParcelKind::Land, 867, 121, 14, 26, 725),
+                [
+                    self::parcel(1753295604, ParcelKind::Building, 72, null, 13, null, 455),
+                    self::parcel(99225194010, ParcelKind::Land, 867, 121, 14, 26, 725),
+                ],
             ),
         );
     }
