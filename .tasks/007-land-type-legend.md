@@ -1,6 +1,6 @@
 # 007: Land type legend
 
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-11-23
 - **Branch:** task/007-land-type-legend
 - **Request:** "lets add a legend to the bottom left of the map. And let's shrink the side panel, so it does not
@@ -421,6 +421,20 @@ Filled in by the implement agent, one entry per step.
 - Implemented `zoomHintVisible`, `showZoomHint(map, isPanelOpen)` returning `{ update }`, `ParcelPanel` `onVisibilityChange`, and the `main.ts` wiring (`let hint` assigned after the map exists, same closure pattern as `selection`). README sentence updated.
 - Below the plan's level: `ParcelPanel` calls `onVisibilityChange` only when `hidden` actually changes (a `setHidden` helper), so `showDetail` after `showLoading` does not trigger a redundant update.
 
+### Step 3: land type legend
+
+- Tests first: `legend.test.ts` (5), a `mapOptions.test.ts` test for `PARCEL_FILL_OPACITY`, a `text.test.ts` test for the legend strings, `tests/E2E/legend.spec.ts` (3 tests), the `.map-legend` count assertion in `no-parcel-data.spec.ts`, and `layout.spec.ts` extended to all elements and four states at four viewports (16 tests; the legend is opened first).
+- Red runs: Vitest: `legend.test.ts` failed with `Cannot find module '../src/legend'`; `shares the fill opacity with the legend swatches` failed with `expected undefined to be 0.45` (no export); `words the legend` failed with `expected undefined to be 'Land type'`. E2E: 19 failed, 31 passed: all 16 `layout.spec.ts` tests and all 3 `legend.spec.ts` tests failed at `expect(locator).toBeVisible()` because there was no `.map-legend`.
+- Could not be made red: the new `.map-legend` `toHaveCount(0)` assertion in `no-parcel-data.spec.ts` passes before and after, as the legend did not exist before; it guards `parcels === null` against a future regression.
+- Green after: all 136 Vitest tests and 50 E2E tests passed on the first implementation run (no CSS iteration needed; the no-overlap checks pass at all four viewports in all four states).
+- Below the plan's level: in `main.ts` a small `newLegend()` helper reads the media query once and is used by both branches; the `parcels === null` branch now keeps the `Map` in a local to add the legend only when `parcels !== null`. Since that branch is reached with `parcels !== null` only when details are not imported, the check is explicit rather than implied.
+- `LegendControl.onAdd`/`onRemove` declare no parameters (ESLint rejects unused `_map`; a shorter signature still implements `IControl`).
+- Manual check in a real browser: NOT done (headless Chromium only, through the E2E tests).
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.
+
+### Round 1: head 4b2e329, 2026-11-23
+
+No findings.

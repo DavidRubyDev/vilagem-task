@@ -36,13 +36,16 @@ function parcelSource(parcels: ParcelLayerConfiguration, origin: string): Source
 // budget. Outlines start here, and so does selecting a parcel (smaller parcels are a pixel or two wide below it).
 export const COMPLETE_PARCELS_MIN_ZOOM = 14;
 
+// Shared with the legend swatches, so they look like the map.
+export const PARCEL_FILL_OPACITY = 0.45;
+
 const parcelLayers: LayerSpecification[] = [
   {
     id: 'parcels-fill',
     type: 'fill',
     source: 'parcels',
     'source-layer': 'parcels',
-    paint: { 'fill-color': landTypeFillColour(), 'fill-opacity': 0.45 },
+    paint: { 'fill-color': landTypeFillColour(), 'fill-opacity': PARCEL_FILL_OPACITY },
   },
   {
     id: 'parcels-outline',

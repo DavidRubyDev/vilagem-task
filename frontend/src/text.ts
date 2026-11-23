@@ -13,6 +13,8 @@ export const TEXT = {
   area: 'Area',
   viewerLink: 'Show owners in the ČÚZK cadastre viewer',
   zoomHint: 'Zoom in to select a parcel.',
+  legendTitle: 'Land type',
+  legendUnknown: 'Unknown land type',
   detailsNotice: 'Parcel details have not been imported yet. Run make data, then reload this page.',
   buildingPlot: 'Building plot',
   landPlot: 'Land plot',

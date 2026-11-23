@@ -1,7 +1,7 @@
 import type { ExpressionSpecification } from 'maplibre-gl';
 import { TEXT } from './text';
 
-interface LandTypeStyle {
+export interface LandTypeStyle {
   readonly name: string;
   readonly colour: string;
 }
@@ -22,7 +22,7 @@ export const LAND_TYPES: ReadonlyMap<number, LandTypeStyle> = new Map([
   [14, { name: 'Other area', colour: '#bdbdbd' }], // ostatní plocha
 ]);
 
-const FALLBACK_COLOUR = '#9e9e9e';
+export const FALLBACK_COLOUR = '#9e9e9e';
 
 export function landTypeName(code: number): string {
   return LAND_TYPES.get(code)?.name ?? TEXT.unknownLandType(code);
