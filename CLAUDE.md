@@ -324,4 +324,5 @@ Source-data term (Czech) → name used in code.
 | —                                     | `VectorTile`         | One gzip-compressed vector tile, or none (empty).              |
 | —                                     | `Bounds`             | South-west and north-east `Coordinates` of a rectangle.        |
 | —                                     | `ParcelTileset`      | The published parcel tileset: version, export date, bounds, zoom range; `attribution()` gives the ČÚZK credit. |
+| —                                     | Parcel detail        | What the side panel shows about a parcel (`GET /api/parcels/{version}/{id}`). |
 | —                                     | Map configuration    | What the frontend needs to start the map: initial `MapView` + `BaseMap` (`GET /api/map-config`). |

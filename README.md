@@ -94,6 +94,17 @@ first. A tile without data answers `204`; an unknown version, a bad coordinate o
 `404`. The compose file starts the built-in PHP server with `PHP_CLI_SERVER_WORKERS=8` so one slow request
 does not block the others.
 
+### Parcel details
+
+`GET /api/parcels/{version}/{id}` serves the details of one parcel from the parcel store of that tileset
+version, `id` being the RÚIAN parcel id (the feature id in the tiles): number, kind (`building` or `land`),
+cadastral area and municipality (code and name), land type and land use as RÚIAN codes (`landUseCode` is `null`
+when there is none), area in m² and the boundary as a GeoJSON Polygon. It is one primary-key lookup. Like tiles,
+the response is immutable for its version (`Cache-Control: public, max-age=31536000, immutable`). It answers `404`
+for an unknown id, an id that is not 1 to 15 digits, another version, a missing parcel store or no imported data.
+`GET /api/map-config` tells the frontend where to ask: `parcels.parcelUrlTemplate`, e.g.
+`/api/parcels/20261123140206/{id}`.
+
 ### Frontend
 
 TypeScript, built with Vite, MapLibre GL JS from npm (bundled, no CDN). Edit `frontend/`, then run

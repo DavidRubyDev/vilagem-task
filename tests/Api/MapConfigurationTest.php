@@ -35,6 +35,7 @@ final class MapConfigurationTest extends TestCase
                 ],
                 'parcels' => [
                     'tileUrlTemplate' => '/tiles/parcels/' . FixtureTileset::VERSION . '/{z}/{x}/{y}.pbf',
+                    'parcelUrlTemplate' => '/api/parcels/' . FixtureTileset::VERSION . '/{id}',
                     'minZoom' => FixtureTileset::MIN_ZOOM,
                     'maxZoom' => FixtureTileset::MAX_ZOOM,
                     'bounds' => [

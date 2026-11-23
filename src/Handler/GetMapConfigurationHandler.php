@@ -34,6 +34,7 @@ final readonly class GetMapConfigurationHandler implements RequestHandler
             ],
             'parcels' => $parcels === null ? null : [
                 'tileUrlTemplate' => ParcelTileRoute::urlTemplate($parcels->tilesetVersion),
+                'parcelUrlTemplate' => ParcelDetailRoute::urlTemplate($parcels->tilesetVersion),
                 'minZoom' => $parcels->minZoom,
                 'maxZoom' => $parcels->maxZoom,
                 'bounds' => [

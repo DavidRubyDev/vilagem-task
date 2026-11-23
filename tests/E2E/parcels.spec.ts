@@ -1,11 +1,11 @@
+import { FIXTURE_VERSION } from './support/fixture';
 import { expect, test } from './support/offlineTiles';
 
-const VERSION = '20261120111929';
 const CONDITIONS_URL =
   'https://cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-prostorovych-dat-CUZK.aspx';
 
 test('requests the parcel tile of the map centre and receives a vector tile', async ({ page }) => {
-  const response = page.waitForResponse(`**/tiles/parcels/${VERSION}/12/2222/1381.pbf`);
+  const response = page.waitForResponse(`**/tiles/parcels/${FIXTURE_VERSION}/12/2222/1381.pbf`);
 
   await page.goto('/');
 
@@ -17,8 +17,8 @@ test('requests the parcel tile of the map centre and receives a vector tile', as
 test('requests the tile of the next zoom level after zooming in', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('.maplibregl-canvas')).toBeVisible();
-  const zoom13 = page.waitForResponse(`**/tiles/parcels/${VERSION}/13/4445/2762.pbf`);
-  const response = page.waitForResponse(`**/tiles/parcels/${VERSION}/14/8890/5525.pbf`);
+  const zoom13 = page.waitForResponse(`**/tiles/parcels/${FIXTURE_VERSION}/13/4445/2762.pbf`);
+  const response = page.waitForResponse(`**/tiles/parcels/${FIXTURE_VERSION}/14/8890/5525.pbf`);
 
   // A second click during the first zoom animation would not add a full level, so wait for zoom 13 to settle.
   await page.getByRole('button', { name: 'Zoom in' }).click();

@@ -1302,6 +1302,21 @@ Filled in by the implement agent, one entry per step.
   regenerated with the converter (25 lines).
 - README, Glossary and `tests/Fixtures/README.md` updated as listed.
 
+### Step 3: parcel details endpoint
+
+- Domain: `ParcelRepository` (`get()` only; `isPublished()` comes in step 8) and the three exceptions. Application:
+  `GetParcelDetailUseCase` with input, output (without the cadastre viewer URL and bounds) and `ParcelDetailNotFound`.
+  Infrastructure: `ParcelRepositoryUsingSqlite`. Handler: `GetParcelDetailHandler`, `ParcelDetailRoute`; the route is
+  wired in `Container`, and `/api/map-config` gains `parcelUrlTemplate`.
+- Fixture data regenerated with the task 002 procedure (temporary data dir with the fixture zip in `cache/ruian/`):
+  new version `20261123140206`, store `tests/Fixtures/data/parcels/20261123140206.sqlite`. Bounds
+  `15.350516,50.432327,15.403251,50.437799`, zooms 9 to 16 and the tiles `12/2222/1381`, `13/4445/2762`,
+  `14/8890/5525` (present) and `14/8891/5525` (empty) are unchanged; `16/35562/22101` exists. The version is now in
+  `FixtureTileset::VERSION` and `tests/E2E/support/fixture.ts` (`FIXTURE_VERSION`, used by `parcels.spec.ts`).
+- Deliberate change to an existing test: `MapConfigurationTest` expects `parcelUrlTemplate` in the exact body.
+- `ParcelRepositoryUsingMemory` takes the version that has a store (or null) and the parcels, so one fake serves the
+  unknown-version and missing-store cases.
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.
