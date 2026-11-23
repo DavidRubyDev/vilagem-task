@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { MapConfiguration, ParcelLayerConfiguration } from '../src/mapConfiguration';
 import { landTypeFillColour } from '../src/landTypes';
-import { createMapOptions } from '../src/mapOptions';
+import { COMPLETE_PARCELS_MIN_ZOOM, createMapOptions } from '../src/mapOptions';
 
 const parcels: ParcelLayerConfiguration = {
   tileUrlTemplate: '/tiles/parcels/v1/{z}/{x}/{y}.pbf',
+  parcelUrlTemplate: '/api/parcels/v1/{id}',
   minZoom: 9,
   maxZoom: 16,
   bounds: { west: 15.1, south: 50.2, east: 15.3, north: 50.4 },
@@ -134,10 +135,16 @@ describe('createMapOptions', () => {
       });
     });
 
-    it('draws the outline from zoom 14', () => {
+    it('draws the outline from zoom 14, the zoom from which parcels can be selected', () => {
       const outline = styleOf(options()).layers[2];
 
-      expect(outline).toMatchObject({ type: 'line', source: 'parcels', 'source-layer': 'parcels', minzoom: 14 });
+      expect(COMPLETE_PARCELS_MIN_ZOOM).toBe(14);
+      expect(outline).toMatchObject({
+        type: 'line',
+        source: 'parcels',
+        'source-layer': 'parcels',
+        minzoom: COMPLETE_PARCELS_MIN_ZOOM,
+      });
     });
   });
 

@@ -1,5 +1,6 @@
 export interface ParcelLayerConfiguration {
   readonly tileUrlTemplate: string;
+  readonly parcelUrlTemplate: string;
   readonly minZoom: number;
   readonly maxZoom: number;
   readonly bounds: {
@@ -37,11 +38,14 @@ function isFiniteNumber(value: unknown): value is number {
 
 function isParcelLayerConfiguration(value: unknown): value is ParcelLayerConfiguration {
   if (!isRecord(value)) return false;
-  const { tileUrlTemplate, minZoom, maxZoom, bounds, attribution } = value;
+  const { tileUrlTemplate, parcelUrlTemplate, minZoom, maxZoom, bounds, attribution } = value;
   return (
     typeof tileUrlTemplate === 'string' &&
     tileUrlTemplate.startsWith('/') &&
     ['{z}', '{x}', '{y}'].every((placeholder) => tileUrlTemplate.includes(placeholder)) &&
+    typeof parcelUrlTemplate === 'string' &&
+    parcelUrlTemplate.startsWith('/') &&
+    parcelUrlTemplate.includes('{id}') &&
     isFiniteNumber(minZoom) &&
     isFiniteNumber(maxZoom) &&
     isRecord(bounds) &&

@@ -30,8 +30,10 @@ function parcelSource(parcels: ParcelLayerConfiguration, origin: string): Source
   };
 }
 
-// Outlines start at zoom 14: below it, tiles leave out the smallest parcels to stay within the tile budget, so
-// outlines would be incomplete.
+// From this zoom on the tiles are complete: below it they leave out the smallest parcels to stay within the tile
+// budget. Outlines start here, and so does selecting a parcel (smaller parcels are a pixel or two wide below it).
+export const COMPLETE_PARCELS_MIN_ZOOM = 14;
+
 const parcelLayers: LayerSpecification[] = [
   {
     id: 'parcels-fill',
@@ -45,7 +47,7 @@ const parcelLayers: LayerSpecification[] = [
     type: 'line',
     source: 'parcels',
     'source-layer': 'parcels',
-    minzoom: 14,
+    minzoom: COMPLETE_PARCELS_MIN_ZOOM,
     paint: {
       'line-color': '#3d3d3d',
       'line-opacity': 0.7,

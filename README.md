@@ -10,7 +10,8 @@ Built as an interview task for Viagem a.s.
 > on Jičín (zoom 12) with the OSM attribution. `GET /api/map-config` serves the map
 > configuration. `make data` downloads the ČÚZK parcels of the whole Jičín district (240 cadastral areas,
 > 272,011 parcels) and builds a vector tileset from them; the map then shows the parcels over OSM, filled by
-> land type (outlines from zoom 14) with the credit "ČÚZK, 2026". Clicking a parcel is not implemented yet.
+> land type (outlines from zoom 14) with the credit "ČÚZK, 2026". From zoom 14, clicking a parcel opens a side panel
+> with its details.
 > The application is built in the tasks in [`.tasks/`](.tasks/). This README is updated as features land.
 
 ## Prerequisites
@@ -31,7 +32,9 @@ make data                # once: download the ČÚZK parcels and build the tiles
 
 Before `make data` the page shows only the OpenStreetMap base map and a notice, "Parcel data has not
 been imported yet. Run make data, then reload this page." After `make data`, reload the page: the parcels
-appear over Jičín.
+appear over Jičín. From zoom 14, clicking a parcel opens a panel on the left with its number, plot type, cadastral
+area, municipality, land type, land use (when it has one) and area; the close button, Escape or a click on no
+parcel close it. Below zoom 14 clicks select nothing.
 
 `docker compose up` runs a one-shot `node` service (`npm ci && npm run build`), then starts the
 PHP server. The first run pulls the Playwright image (about 2 GB), which is also used for all
@@ -257,6 +260,12 @@ A running log of decisions, surprises and what I would do with more time.
 - **No logging in this version.** Nothing is logged: the import prints warnings (such as unknown land type or land
   use codes) to stderr, and the server reports uncaught errors to stderr. A production version would have a logger
   that records every error and any other meaningful information.
+- **Parcels can be selected from zoom 14 only.** Below zoom 14 the tiles leave out the smallest parcels and parcels
+  are a pixel or two wide, so a click would hit the wrong parcel or nothing. It is the same constant as the outline
+  layer (`COMPLETE_PARCELS_MIN_ZOOM`).
+- **English interface, ready for translations.** Every string of the panel lives in `frontend/src/text.ts`, and the
+  land type and land use names in `landTypes.ts` and `landUses.ts`, keyed by the RÚIAN codes the API returns. A later
+  language switch replaces these lookups, not the components.
 - **Docker for everything.** Same PHP version and tools on every machine.
 - **PHP 8.6.** It is still at the RC stage at the time of setup (`php:8.6-rc-cli` image). The
   Dockerfile switches to the GA image once it is released.

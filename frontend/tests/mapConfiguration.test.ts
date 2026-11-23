@@ -11,6 +11,7 @@ const validBody = {
   },
   parcels: {
     tileUrlTemplate: '/tiles/parcels/20261120093000/{z}/{x}/{y}.pbf',
+    parcelUrlTemplate: '/api/parcels/20261120093000/{id}',
     minZoom: 9,
     maxZoom: 16,
     bounds: { west: 15.328422, south: 50.395744, east: 15.427924, north: 50.459793 },
@@ -107,6 +108,18 @@ describe('loadMapConfiguration', () => {
 
     it('the parcel tile template has no {z}', async () => {
       await rejectsWith(() => Promise.resolve(jsonResponse(withParcels({ tileUrlTemplate: '/tiles/{x}/{y}.pbf' }))));
+    });
+
+    it('the parcel url template is missing', async () => {
+      await rejectsWith(() => Promise.resolve(jsonResponse(withParcels({ parcelUrlTemplate: undefined }))));
+    });
+
+    it('the parcel url template has no {id}', async () => {
+      await rejectsWith(() => Promise.resolve(jsonResponse(withParcels({ parcelUrlTemplate: '/api/parcels/v1/' }))));
+    });
+
+    it('the parcel url template is relative without a leading slash', async () => {
+      await rejectsWith(() => Promise.resolve(jsonResponse(withParcels({ parcelUrlTemplate: 'api/parcels/v1/{id}' }))));
     });
 
     it('the parcel minZoom is not finite', async () => {

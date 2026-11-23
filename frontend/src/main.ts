@@ -4,6 +4,8 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import './app.css';
 import { loadMapConfiguration } from './mapConfiguration';
 import { createMapOptions } from './mapOptions';
+import { ParcelPanel } from './parcelPanel';
+import { ParcelSelection } from './parcelSelection';
 
 function showError(container: HTMLElement): void {
   container.remove();
@@ -34,6 +36,16 @@ async function start(): Promise<void> {
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
     if (configuration.parcels === null) {
       showNoParcelDataNotice();
+    } else {
+      const fetchFn = window.fetch.bind(window);
+      const selection = new ParcelSelection(
+        map,
+        new ParcelPanel(() => {
+          selection.clear();
+        }),
+        fetchFn,
+        configuration.parcels.parcelUrlTemplate,
+      );
     }
   } catch (error) {
     console.warn('The map could not be loaded.', error);

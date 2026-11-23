@@ -1317,6 +1317,18 @@ Filled in by the implement agent, one entry per step.
 - `ParcelRepositoryUsingMemory` takes the version that has a store (or null) and the parcels, so one fake serves the
   unknown-version and missing-store cases.
 
+### Step 4: side panel
+
+- Added `text.ts`, `landUses.ts`, `parcelFormat.ts`, `parcelDetail.ts`, `parcelPanel.ts`, `parcelSelection.ts`; the
+  land type catalogue is now `LAND_TYPES` (name and colour); `COMPLETE_PARCELS_MIN_ZOOM` in `mapOptions.ts`;
+  `parcelUrlTemplate` is validated in `mapConfiguration.ts`; the panel CSS is in `app.css`.
+- `ParcelSelection.select(id)` has no `options` parameter yet: `fit` is introduced in step 7, where it is used.
+- Deliberate changes to existing tests: `landTypes.test.ts` uses `LAND_TYPES` instead of `LAND_TYPE_COLOURS`;
+  `mapConfiguration.test.ts` and `mapOptions.test.ts` carry a `parcelUrlTemplate` in their fixtures.
+- Deviation from the plan's E2E scenario: the click "where the fixture has no parcel" at `(width - 100, height / 2)`
+  hits parcel 1753303604 at the default 1280x720 viewport (540 px east of the centre at zoom 18; the parcel spans
+  525 to 589 px). The test clicks 310 px further north, `(width - 100, height / 2 - 310)`, where no fixture parcel is.
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.
