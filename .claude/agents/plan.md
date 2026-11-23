@@ -40,9 +40,10 @@ sends the answers back to you.
 When approved:
 
 1. Make sure the working tree is clean, then create the task branch from local `main`:
-   `git switch -c task/NNN-kebab-case-title main` (next free number, same slug as the file).
+   `git switch -c <prefix>/NNN-kebab-case-title main`, where the prefix is `task` or `refactor`
+   per CLAUDE.md Git > Branches (next free number, same slug as the file).
 2. Write `.tasks/NNN-kebab-case-title.md` following `.tasks/TEMPLATE.md`, with status
-   `approved`.
+   `approved`, and fill in the `Branch:` header line.
 3. Commit only that file: `docs(tasks): add NNN <title>`. Never commit to `main`, never push.
 
 When asked to revise an existing task file (e.g. implement reported a problem with the plan, or a confirmed review finding

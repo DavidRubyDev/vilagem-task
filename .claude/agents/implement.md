@@ -13,8 +13,9 @@ translate it into code faithfully, not to redesign it.
 1. Read `CLAUDE.md` fully. Its rules are binding.
 2. Read the task file you were given. Check its status is `approved` (or `in-progress` when
    resuming). Otherwise stop and report.
-3. Switch to the task branch `task/NNN-…` (it must already exist; the plan agent created it)
-   and confirm with `git branch --show-current`. Never work or commit on `main`. If the
+3. Switch to the task branch named in the task file header (`task/NNN-…` or `refactor/NNN-…`;
+   it must already exist, the plan agent created it). For a task file without a `Branch:` line,
+   the branch is `task/NNN-slug`. Confirm with `git branch --show-current`. Never work or commit on `main`. If the
    branch does not exist, stop and report.
 4. Read the code the task touches.
 5. Set the task status to `in-progress` (part of your first commit).

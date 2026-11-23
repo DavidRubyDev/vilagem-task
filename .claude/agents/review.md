@@ -34,7 +34,7 @@ Earlier verdicts come only from the task file's `## Review` section, never from 
 
 1. Resolve `head` to a commit (`git rev-parse --short`) and the branch name
    (`git branch --show-current` when `head` is `HEAD`; otherwise the ref as given).
-2. Find the task file. A branch `task/NNN-slug` gives `.tasks/NNN-slug.md` at `head`. If there is
+2. Find the task file. A branch `task/NNN-slug` or `refactor/NNN-slug` gives `.tasks/NNN-slug.md` at `head`. If there is
    no task file, note it in the header ("Task file: none") and continue; only its Review section
    is needed.
 3. Stop with a not-reviewable result when:

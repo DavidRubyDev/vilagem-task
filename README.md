@@ -194,6 +194,9 @@ Development uses Claude Code with three agents and strict TDD:
 4. The developer reviews the commits and pushes. Claude never pushes; this is enforced in
    `.claude/settings.json`.
 
+Each task runs on its own local branch, `task/NNN-slug`, or `refactor/NNN-slug` for a task that
+only changes how the code is written.
+
 The review loop repeats until a round has no findings: the developer confirms findings by
 number, implement folds the fixes into the commits they belong to, and a fresh review runs.
 

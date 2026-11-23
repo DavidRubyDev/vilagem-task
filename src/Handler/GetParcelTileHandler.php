@@ -18,6 +18,9 @@ final readonly class GetParcelTileHandler implements RequestHandler
 
     public function __construct(private GetParcelTileUseCase $getParcelTile) {}
 
+    /**
+     * @throws StoredTileCorrupt when the stored tile cannot be decompressed for a client without gzip
+     */
     public function handle(Request $request): Response
     {
         $parameters = $request->pathParameters;
@@ -54,9 +57,10 @@ final readonly class GetParcelTileHandler implements RequestHandler
         }
 
         // MapLibre does not decompress tiles itself, so a client without gzip gets plain bytes.
-        $plain = gzdecode($tile->gzippedData);
+        // PHP raises a warning before returning false; the failure is reported as an exception instead.
+        $plain = @gzdecode($tile->gzippedData);
         if ($plain === false) {
-            throw new \RuntimeException('A stored tile is not valid gzip data.');
+            throw StoredTileCorrupt::cannotDecompress();
         }
 
         return new Response(200, $headers, $plain);
