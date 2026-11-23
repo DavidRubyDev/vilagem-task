@@ -36,15 +36,15 @@ final class DistrictAreaExtractorUsingOgr2ogrTest extends TestCase
 
         self::assertEqualsCanonicalizing(
             [
-                '601462 Běchary 572675',
-                '659541 Jičín 572659',
-                '725838 Popovice u Jičína 572659',
-                '740217 Moravčice 572659',
-                '740225 Robousy 572659',
-                '771775 Hubálov 572659',
+                '601462 Běchary 572675 Běchary',
+                '659541 Jičín 572659 Jičín',
+                '725838 Popovice u Jičína 572659 Jičín',
+                '740217 Moravčice 572659 Jičín',
+                '740225 Robousy 572659 Jičín',
+                '771775 Hubálov 572659 Jičín',
             ],
             array_map(
-                static fn(CadastralArea $area): string => sprintf('%d %s %d', $area->code->value, $area->name, $area->municipality->value),
+                static fn(CadastralArea $area): string => sprintf('%d %s %d %s', $area->code->value, $area->name, $area->municipality->code->value, $area->municipality->name),
                 $areas,
             ),
         );

@@ -16,6 +16,7 @@ use ParcelMap\Application\Coverage\StructureReadFailed;
 use ParcelMap\Domain\Cadastre\CadastralArea;
 use ParcelMap\Domain\Cadastre\CadastralAreaCode;
 use ParcelMap\Domain\Cadastre\CoverageNotSaved;
+use ParcelMap\Domain\Cadastre\Municipality;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
 use ParcelMap\Tests\Fake\ClockUsingFixedTime;
 use ParcelMap\Tests\Fake\CoverageRepositoryUsingMemory;
@@ -192,9 +193,9 @@ final class GenerateCoverageUseCaseTest extends TestCase
     private static function areas(): array
     {
         return [
-            new CadastralArea(new CadastralAreaCode(740225), 'Robousy', new MunicipalityCode(572659)),
-            new CadastralArea(new CadastralAreaCode(601462), 'Běchary', new MunicipalityCode(572675)),
-            new CadastralArea(new CadastralAreaCode(659541), 'Jičín', new MunicipalityCode(572659)),
+            new CadastralArea(new CadastralAreaCode(740225), 'Robousy', new Municipality(new MunicipalityCode(572659), 'Jičín')),
+            new CadastralArea(new CadastralAreaCode(601462), 'Běchary', new Municipality(new MunicipalityCode(572675), 'Běchary')),
+            new CadastralArea(new CadastralAreaCode(659541), 'Jičín', new Municipality(new MunicipalityCode(572659), 'Jičín')),
         ];
     }
 }

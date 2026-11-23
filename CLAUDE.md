@@ -288,7 +288,7 @@ Source-data term (Czech) → name used in code.
 |---------------------------------------|----------------------|----------------------------------------------------------------|
 | parcela                               | `Parcel`             |                                                                |
 | katastrální území (KÚ)                | `CadastralArea`      | Identified by a 6-digit code.                                  |
-| obec                                  | `Municipality`       |                                                                |
+| obec                                  | `Municipality`       | Code (`MunicipalityCode`) and name; names come from `config/coverage.csv`. |
 | okres                                 | `District`           | Jičín district, code 3604.                                     |
 | kód okresu                            | `DistrictCode`       | 4 digits; Jičín is 3604.                                       |
 | parcelní číslo                        | `ParcelNumber`       | Base number (kmenové číslo) + optional subdivision (poddělení), e.g. `123/4`. |

@@ -20,6 +20,7 @@ use ParcelMap\Domain\Cadastre\CadastralArea;
 use ParcelMap\Domain\Cadastre\CadastralAreaCode;
 use ParcelMap\Domain\Cadastre\Coverage;
 use ParcelMap\Domain\Cadastre\CoverageUnavailable;
+use ParcelMap\Domain\Cadastre\Municipality;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
 use ParcelMap\Domain\Map\TileCoordinate;
 use ParcelMap\Domain\Map\TilesetStatistics;
@@ -333,12 +334,12 @@ final class ImportParcelsUseCaseTest extends TestCase
 
     private static function coverage(): Coverage
     {
-        $municipality = new MunicipalityCode(572659);
+        $municipality = new Municipality(new MunicipalityCode(572659), 'Jičín');
 
         return new Coverage(
             new CadastralArea(new CadastralAreaCode(659541), 'Jičín', $municipality),
             new CadastralArea(new CadastralAreaCode(740225), 'Robousy', $municipality),
-            new CadastralArea(new CadastralAreaCode(111111), 'Other', new MunicipalityCode(222222)),
+            new CadastralArea(new CadastralAreaCode(111111), 'Other', new Municipality(new MunicipalityCode(222222), 'Other')),
         );
     }
 }

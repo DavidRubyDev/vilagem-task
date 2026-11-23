@@ -115,12 +115,12 @@ final readonly class ImportParcelsUseCase
     private function parcelCount(array $converted, CadastralArea $area): int
     {
         foreach ($converted as $parcels) {
-            if ($parcels->municipality->equals($area->municipality)) {
+            if ($parcels->municipality->equals($area->municipality->code)) {
                 return $parcels->parcelCountOf($area->code);
             }
         }
 
-        throw new LogicException(sprintf('The municipality %d was not converted.', $area->municipality->value));
+        throw new LogicException(sprintf('The municipality %d was not converted.', $area->municipality->code->value));
     }
 
     private function exportDate(ImportParcelsInput $input): ExportDate

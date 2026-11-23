@@ -10,6 +10,7 @@ use ParcelMap\Application\Import\DownloadedExport;
 use ParcelMap\Domain\Cadastre\CadastralArea;
 use ParcelMap\Domain\Cadastre\CadastralAreaCode;
 use ParcelMap\Domain\Cadastre\ExportDate;
+use ParcelMap\Domain\Cadastre\Municipality;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
 use ParcelMap\Infrastructure\Import\ParcelConverterUsingOgr2ogr;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
@@ -132,7 +133,7 @@ final class ParcelConverterUsingOgr2ogrTest extends TestCase
 
     private static function area(int $code, string $name): CadastralArea
     {
-        return new CadastralArea(new CadastralAreaCode($code), $name, new MunicipalityCode(572659));
+        return new CadastralArea(new CadastralAreaCode($code), $name, new Municipality(new MunicipalityCode(572659), 'Jičín'));
     }
 
     /**

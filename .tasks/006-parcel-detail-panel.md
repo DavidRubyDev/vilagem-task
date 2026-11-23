@@ -1,6 +1,6 @@
 # 006: Parcel detail panel
 
-- **Status:** approved
+- **Status:** in-progress
 - **Created:** 2026-11-23
 - **Branch:** task/006-parcel-detail-panel
 - **Request:** "task 006, the parcel detail panel — clicking a parcel on the map shows its details", the
@@ -1264,6 +1264,20 @@ Scenarios:
 ## Implementation log
 
 Filled in by the implement agent, one entry per step.
+
+### Step 1: coverage with municipality names
+
+- Added `Municipality` (code + name) and `InvalidMunicipality`; `CadastralArea` holds it; `Coverage` rejects two
+  areas of one municipality with different names (`InvalidCoverage::inconsistentMunicipality`).
+- `DistrictAreaExtractorUsingOgr2ogr` reads `Kod, Nazev` of `Obce`; a non-numeric municipality code or an area whose
+  municipality is not in the first query fails with `StructureReadFailed`.
+- `CoverageRepositoryUsingCsv` reads and writes the 4 columns.
+- Deliberate changes to existing tests: every `CadastralArea` construction in tests takes a `Municipality`;
+  `GenerateCoverageCommandTest` expects the 4-column file; `CoverageRepositoryUsingCsvTest` expects the new header,
+  rows and error cases (the old 3-column header is now a "line 1" error) and the committed file's municipality names;
+  `DistrictAreaExtractorUsingOgr2ogrTest` also asserts the municipality names.
+- Regenerated `config/coverage.csv` from the cached `20261031_ST_UZSZ.xml.zip`: 241 lines, sha256
+  `333b9272...bef98` as expected.
 
 ## Review
 

@@ -11,13 +11,14 @@ use ParcelMap\Application\Coverage\StructureReadFailed;
 use ParcelMap\Domain\Cadastre\CadastralArea;
 use ParcelMap\Domain\Cadastre\CadastralAreaCode;
 use ParcelMap\Domain\Cadastre\DistrictCode;
+use ParcelMap\Domain\Cadastre\Municipality;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
 
 /**
  * Reads the municipalities and cadastral areas of a district straight from the zipped state structure file
  * with GDAL. Two queries, because GDAL's SQL cannot filter one layer on a field of a joined layer: first the
- * codes of the municipalities of the district (Obce), then the cadastral areas with a digital map of those
+ * codes and names of the municipalities of the district (Obce), then the cadastral areas with a digital map of those
  * municipalities (KatastralniUzemi). Areas without a digital map have no parcel polygons and are left out.
  */
 final readonly class DistrictAreaExtractorUsingOgr2ogr implements DistrictAreaExtractor
@@ -28,23 +29,31 @@ final readonly class DistrictAreaExtractorUsingOgr2ogr implements DistrictAreaEx
     {
         $municipalities = $this->query(
             $structure,
-            sprintf('SELECT Kod FROM Obce WHERE OkresKod = %d', $district->value),
-            ['Kod'],
+            sprintf('SELECT Kod, Nazev FROM Obce WHERE OkresKod = %d', $district->value),
+            ['Kod', 'Nazev'],
         );
         if ($municipalities === []) {
             return [];
+        }
+
+        $municipalityNames = [];
+        foreach ($municipalities as [$code, $name]) {
+            if (!ctype_digit($code)) {
+                throw StructureReadFailed::because(sprintf('the code of the municipality "%s" is not a number.', $name));
+            }
+            $municipalityNames[(int) $code] = $name;
         }
 
         $rows = $this->query(
             $structure,
             sprintf(
                 "SELECT Kod, Nazev, ObecKod FROM KatastralniUzemi WHERE ExistujeDigitalniMapa = 'true' AND ObecKod IN (%s)",
-                implode(',', array_map(static fn(array $row): string => $row[0], $municipalities)),
+                implode(',', array_keys($municipalityNames)),
             ),
             ['Kod', 'Nazev', 'ObecKod'],
         );
 
-        return array_map(fn(array $row): CadastralArea => $this->area($row), $rows);
+        return array_map(fn(array $row): CadastralArea => $this->area($row, $municipalityNames), $rows);
     }
 
     /**
@@ -107,16 +116,25 @@ final readonly class DistrictAreaExtractorUsingOgr2ogr implements DistrictAreaEx
 
     /**
      * @param list<string> $row Kod, Nazev, ObecKod
+     * @param array<int, string> $municipalityNames by municipality code
      */
-    private function area(array $row): CadastralArea
+    private function area(array $row, array $municipalityNames): CadastralArea
     {
         [$code, $name, $municipality] = $row;
         if (!ctype_digit($code) || !ctype_digit($municipality)) {
             throw StructureReadFailed::because(sprintf('the codes of the cadastral area "%s" are not numbers.', $name));
         }
 
+        if (!isset($municipalityNames[(int) $municipality])) {
+            throw StructureReadFailed::because(sprintf('the cadastral area "%s" belongs to the unknown municipality %s.', $name, $municipality));
+        }
+
         try {
-            return new CadastralArea(new CadastralAreaCode((int) $code), $name, new MunicipalityCode((int) $municipality));
+            return new CadastralArea(
+                new CadastralAreaCode((int) $code),
+                $name,
+                new Municipality(new MunicipalityCode((int) $municipality), $municipalityNames[(int) $municipality]),
+            );
         } catch (InvalidArgumentException $exception) {
             throw StructureReadFailed::because($exception->getMessage());
         }

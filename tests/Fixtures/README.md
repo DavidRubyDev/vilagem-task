@@ -45,16 +45,17 @@ Horní Hradiště (municipality Plasy) has no digital map; district 3605 has no 
 
 ## `coverage/fixture.csv`
 
-Two areas of the fixture export: 659541 Jičín and 740225 Robousy (municipality 572659).
+Two areas of the fixture export: 659541 Jičín and 740225 Robousy (municipality 572659 Jičín). The fourth
+column, `municipality_name`, is the name of the municipality from the state structure file.
 
 ## `coverage/two-municipalities.csv`
 
-Three areas of two fixture municipalities: 601462 Běchary (572675), 659541 Jičín and 740225 Robousy (572659).
+Three areas of two fixture municipalities: 601462 Běchary (572675 Běchary), 659541 Jičín and 740225 Robousy (572659 Jičín).
 Used to test the progress output of the import.
 
 ## `coverage/unpublished-municipality.csv`
 
-659541 Jičín (572659) and `699999,Missing,599999`. Municipality 599999 is not served by the test download server
+659541 Jičín (572659 Jičín) and `699999,Missing,599999,Missing`. Municipality 599999 is not served by the test download server
 (404), so the import fails after the first download; used to test that the completed downloads stay cached.
 
 ## `geojson/572659.geojsonl`

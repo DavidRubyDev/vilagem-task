@@ -7,6 +7,7 @@ namespace ParcelMap\Tests\Unit\Domain\Cadastre;
 use ParcelMap\Domain\Cadastre\CadastralArea;
 use ParcelMap\Domain\Cadastre\CadastralAreaCode;
 use ParcelMap\Domain\Cadastre\InvalidCadastralArea;
+use ParcelMap\Domain\Cadastre\Municipality;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -20,7 +21,7 @@ final class CadastralAreaTest extends TestCase
     {
         $this->expectException(InvalidCadastralArea::class);
 
-        new CadastralArea(new CadastralAreaCode(659541), $name, new MunicipalityCode(572659));
+        new CadastralArea(new CadastralAreaCode(659541), $name, self::municipality(572659));
     }
 
     /**
@@ -34,9 +35,22 @@ final class CadastralAreaTest extends TestCase
     #[Test]
     public function it_equals_by_code_only(): void
     {
-        $area = new CadastralArea(new CadastralAreaCode(659541), 'Jičín', new MunicipalityCode(572659));
+        $area = new CadastralArea(new CadastralAreaCode(659541), 'Jičín', self::municipality(572659));
 
-        self::assertTrue($area->equals(new CadastralArea(new CadastralAreaCode(659541), 'Other', new MunicipalityCode(572660))));
-        self::assertFalse($area->equals(new CadastralArea(new CadastralAreaCode(740225), 'Jičín', new MunicipalityCode(572659))));
+        self::assertTrue($area->equals(new CadastralArea(new CadastralAreaCode(659541), 'Other', self::municipality(572660))));
+        self::assertFalse($area->equals(new CadastralArea(new CadastralAreaCode(740225), 'Jičín', self::municipality(572659))));
+    }
+
+    #[Test]
+    public function it_holds_its_municipality(): void
+    {
+        $municipality = self::municipality(572659);
+
+        self::assertSame($municipality, new CadastralArea(new CadastralAreaCode(659541), 'Jičín', $municipality)->municipality);
+    }
+
+    private static function municipality(int $code): Municipality
+    {
+        return new Municipality(new MunicipalityCode($code), 'Municipality ' . $code);
     }
 }
