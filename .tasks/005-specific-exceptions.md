@@ -1,6 +1,6 @@
 # 005: Specific exceptions
 
-- **Status:** approved
+- **Status:** in-progress
 - **Created:** 2026-11-23
 - **Branch:** `refactor/005-specific-exceptions`
 - **Request:** a refactor task that fixes three confirmed findings from a whole-repository review of
@@ -390,6 +390,10 @@ None.
 ## Implementation log
 
 Filled in by the implement agent, one entry per step.
+
+### Step 1: refactor branch convention
+
+Documentation only, as planned: CLAUDE.md, TEMPLATE.md, plan.md, implement.md, review.md and README. Status set to `in-progress`.
 
 ## Review
 

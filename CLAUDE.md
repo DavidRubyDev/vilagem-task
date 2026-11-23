@@ -198,8 +198,12 @@ and the implement agent.
 
 ### Branches
 
-- Every task has its own branch: `task/NNN-kebab-case-title`, matching the task file name.
-  The plan agent creates it from local `main`; the task file is its first commit.
+- Every task has its own branch, named after the task file: `refactor/NNN-kebab-case-title` for a
+  refactor task (it changes how the code is written, not what the application does: code-rule
+  fixes, review follow-ups, restructuring), `task/NNN-kebab-case-title` for every other task.
+  Both prefixes share the NNN sequence. The plan agent picks the prefix, writes the branch into
+  the task file header, and creates the branch from local `main`; the task file is its first
+  commit.
 - **Never commit to `main`.** This is enforced by a hook in `.claude/settings.json` that denies
   commit, merge, cherry-pick, revert, am and rebase while `main` is checked out. Switch to the
   task branch in a separate command before committing; the hook checks the branch that is

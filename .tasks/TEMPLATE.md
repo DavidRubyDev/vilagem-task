@@ -2,6 +2,7 @@
 
 - **Status:** approved | in-progress | done | blocked
 - **Created:** YYYY-MM-DD
+- **Branch:** task/NNN-kebab-case-title | refactor/NNN-kebab-case-title
 - **Request:** the developer's request, in their words.
 
 ## Goal
