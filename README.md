@@ -33,6 +33,8 @@ make data                # once: download the ČÚZK parcels and build the tiles
 The interface is Czech by default. The messages quoted below are the English texts of the Czech-by-default
 interface. Two flag buttons above the legend (Czech, English) switch the language; the language's name shows on
 hover. Switching re-renders every text in place: the page does not reload and the map and its tiles are untouched.
+The chosen language is remembered in the browser (`localStorage`); without a stored choice the page is Czech,
+whatever the browser language.
 
 Before `make data` the page shows only the OpenStreetMap base map and a notice, "Parcel data has not
 been imported yet. Run make data, then reload this page." After `make data`, reload the page: the parcels

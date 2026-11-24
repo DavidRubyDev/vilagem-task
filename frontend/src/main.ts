@@ -4,8 +4,9 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import './app.css';
 import { applyDocumentTexts } from './documentTexts';
 import { fitPadding } from './fitPadding';
-import { DEFAULT_LANGUAGE, languageName } from './language';
+import { chooseLanguage, languageName } from './language';
 import { availableLanguages, flagUrl, textsUrl } from './languageFiles';
+import { rememberLanguage, storedLanguage } from './languagePreference';
 import { LanguageSwitcherControl } from './languageSwitcher';
 import { LegendControl } from './legend';
 import { Localization } from './localization';
@@ -90,7 +91,10 @@ async function start(): Promise<void> {
   try {
     setWorkerUrl(workerUrl);
     const fetchFn = window.fetch.bind(window);
-    const language = DEFAULT_LANGUAGE;
+    const language = chooseLanguage(
+      storedLanguage(() => window.localStorage),
+      availableLanguages(),
+    );
     // The texts are a static file and the configuration a handler: they are requested together, not one after the other.
     const [configurationResult, textsResult] = await Promise.allSettled([
       loadMapConfiguration(fetchFn, '/api/map-config'),
@@ -113,6 +117,9 @@ async function start(): Promise<void> {
     const loadedTexts = textsResult.value;
     applyDocumentTexts(document, loadedTexts);
     const localization = new Localization(loadedTexts, (code) => loadTexts(fetchFn, textsUrl(code), code));
+    localization.onChange((next) => {
+      rememberLanguage(() => window.localStorage, next.language);
+    });
     const { parcels } = configuration;
     // Neither parcel data nor parcel details: the map has nothing to select, and a parcel in the URL is ignored.
     if (parcels === null || parcels.parcelUrlTemplate === null) {

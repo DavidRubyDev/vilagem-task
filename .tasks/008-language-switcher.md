@@ -1,6 +1,6 @@
 # 008: Language switcher
 
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-11-24
 - **Branch:** task/008-language-switcher
 - **Request:** "language switcher. Only english and czech for now. The switcher lives above the legend. The texts are not
@@ -1004,7 +1004,36 @@ What was done:
     `window` before the switch.
 - No existing test changed in this step; `ELEMENTS` of `layout.spec.ts` gained `.map-language`.
 
+### Step 3: Remember the chosen language
+
+Red runs (before production code):
+
+- Vitest: `languagePreference.test.ts` failed with `Cannot find module '../src/languagePreference'`.
+- E2E (`language.spec.ts`, "the remembered language"): "survives a reload, and only its texts are requested then"
+  failed (`Expected: "en"`, `Received: "cs"` for `html[lang]` after the reload). The other two cases ("is replaced by
+  choosing Czech again", "is ignored when it is not a language") passed before the implementation and could not be
+  made to fail first: without persistence the page is always Czech, which is exactly what they assert. They guard
+  the negative paths once persistence exists (a stored `cs` and a stored invalid value both give Czech).
+
+What was done:
+
+- `languagePreference.ts` (`storedLanguage`, `rememberLanguage`, `LANGUAGE_STORAGE_KEY`); `main.ts` starts with
+  `chooseLanguage(storedLanguage(() => window.localStorage), availableLanguages())` and registers an `onChange`
+  listener that remembers the language. It is registered right after the `Localization` is created, so it is the
+  first listener.
+- Nothing else changed; no existing test changed.
+
+### Manual check in a real browser
+
+NOT done: no interactive browser is available to the implement agent. Covered instead by headless Chromium in E2E:
+both flag images load (`naturalWidth > 0`), the `title` of each button is its name, and switching with the panel open
+keeps the same canvas element and requests no tile. The look of the flags on a high-density screen, the native
+tooltip on hover and the absence of flicker still need a human look.
 
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.
+
+### Round 1: head 0b5c2e6, 2026-11-24
+
+No findings.

@@ -265,3 +265,46 @@ test.describe('the language switcher', () => {
     await expect(page.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'false');
   });
 });
+
+test.describe('the remembered language', () => {
+  test('survives a reload, and only its texts are requested then', async ({ page }) => {
+    const requests = recordRequests(page);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'English' }).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    requests.texts.length = 0;
+
+    await page.reload();
+
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.locator('.map-legend summary')).toHaveText('Land type');
+    await expect(page.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
+    await page.waitForLoadState('networkidle');
+    expect(requests.texts).toHaveLength(1);
+    expect(requests.texts[0]).toMatch(/\/build\/languages\/en-[^/]+\.json$/);
+  });
+
+  test('is replaced by choosing Czech again', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'English' }).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await page.getByRole('button', { name: 'Čeština' }).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'cs');
+
+    await page.reload();
+
+    await expect(page.locator('html')).toHaveAttribute('lang', 'cs');
+    await expect(page.locator('.map-legend summary')).toHaveText('Druh pozemku');
+  });
+
+  test('is ignored when it is not a language', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem('parcel-map.language', 'xx');
+    });
+
+    await page.goto('/');
+
+    await expect(page.locator('html')).toHaveAttribute('lang', 'cs');
+    await expect(page.locator('.map-legend summary')).toHaveText('Druh pozemku');
+  });
+});
