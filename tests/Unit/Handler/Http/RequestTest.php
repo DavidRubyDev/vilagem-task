@@ -71,4 +71,53 @@ final class RequestTest extends TestCase
         self::assertSame(['version' => 'v1'], $copy->pathParameters);
         self::assertSame('/x', $copy->path);
     }
+
+    #[Test]
+    public function it_reads_the_query_parameters_decoded(): void
+    {
+        $request = Request::fromServer(['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/api/search/v1?q=Vald%C5%A1tejnovo+n%C3%A1m%C4%9Bst%C3%AD%2058&near=15.35,50.43']);
+
+        self::assertSame('/api/search/v1', $request->path);
+        self::assertSame('Valdštejnovo náměstí 58', $request->queryParameter('q'));
+        self::assertSame('15.35,50.43', $request->queryParameter('near'));
+    }
+
+    #[Test]
+    public function it_has_no_query_parameters_without_a_query_string(): void
+    {
+        $request = Request::fromServer(['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/']);
+
+        self::assertSame([], $request->queryParameters);
+        self::assertNull($request->queryParameter('q'));
+    }
+
+    #[Test]
+    public function it_keeps_an_empty_value_and_drops_array_parameters(): void
+    {
+        $request = Request::fromServer(['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/x?q=&list[]=1&map[a]=2&near=1']);
+
+        self::assertSame('', $request->queryParameter('q'));
+        self::assertNull($request->queryParameter('list'));
+        self::assertNull($request->queryParameter('map'));
+        self::assertSame(['q' => '', 'near' => '1'], $request->queryParameters);
+    }
+
+    #[Test]
+    public function it_drops_parameters_with_numeric_names(): void
+    {
+        $request = Request::fromServer(['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/x?5=a&q=b']);
+
+        self::assertSame(['q' => 'b'], $request->queryParameters);
+    }
+
+    #[Test]
+    public function it_keeps_the_query_parameters_in_a_copy_with_path_parameters(): void
+    {
+        $request = new Request('GET', '/x', [], [], ['q' => '72']);
+
+        $copy = $request->withPathParameters(['version' => 'v1']);
+
+        self::assertSame(['q' => '72'], $copy->queryParameters);
+        self::assertSame(['version' => 'v1'], $copy->pathParameters);
+    }
 }

@@ -266,7 +266,7 @@ make format         # cs-fix + NODE npm run format
 make test-frontend  # NODE npm test (Vitest)
 make test-e2e       # starts the test app, then NODE npm run e2e in the test project (Playwright; needs make assets first)
 make up-app         # starts the test app: docker compose -p parcel-map-test -f compose.yaml -f compose.test.yaml up -d --wait --no-deps app
-make data           # PHP bin/console parcels:import: download the RÚIAN export (cached) and build data/tiles/parcels.mbtiles
+make data           # PHP bin/console parcels:import: download the RÚIAN export (cached) and build data/tiles/parcels.mbtiles, the parcel store and the search index
 make perf           # NODE npm run perf; Playwright measurement of the running app (make up) with real data (make data); not part of check
 make coverage       # PHP bin/console coverage:generate --district=3604; regenerates config/coverage.csv (review the diff, commit it)
 make assets         # NODE npm ci && npm run build -> public/build/   (make watch rebuilds on change)
@@ -323,9 +323,20 @@ Source-data term (Czech) → name used in code.
 | —                                     | `ParcelId`           | RÚIAN parcel `Id`; positive, at most 2^53 − 1. Feature id in the tiles, key of the parcel store. |
 | hranice parcely (`OriginalniHranice`) | `ParcelBoundary`     | Polygon rings in WGS84, outer ring first.                      |
 | —                                     | Parcel store (`ParcelStoreBuilder`, `BuiltParcelStore`, `ParcelRepository`) | SQLite file of parcel details per `TilesetVersion`: `data/parcels/{version}.sqlite`. |
-| —                                     | Parcel data (`ParcelDataPublisher`) | The tileset and parcel store of one import, published together under one `TilesetVersion`. |
+| —                                     | Parcel data (`ParcelDataPublisher`) | The tileset, parcel store and search index of one import, published together under one `TilesetVersion`. |
 | —                                     | `TileCoordinate`     | Tile `zoom/x/y` in the XYZ scheme (y from the top).            |
 | —                                     | `VectorTile`         | One gzip-compressed vector tile, or none (empty).              |
+| —                                     | `SearchIndex`        | The search index of one tileset version (`data/search/{version}.sqlite`): parcel numbers and places of the covered area. |
+| —                                     | `SearchText`         | Text normalised for search: lower case, no diacritics, only `a-z`, `0-9`, `/` and single spaces. |
+| —                                     | `SearchQuery`        | A parsed search text: parcel number, cadastral area code, name terms. |
+| —                                     | `ParcelNumberQuery`  | A parcel number as searched: base, optional subdivision, optional kind (`st.`). |
+| —                                     | `ParcelMatch`        | A parcel found by its number: id, number, cadastral area. |
+| —                                     | `Place` / `PlaceKind` | A search result that is a location: municipality, cadastral area, part of a municipality, street or address. |
+| část obce                             | `PlaceKind::MunicipalityPart` | Part of a municipality (`CastiObci`).                |
+| ulice                                 | `PlaceKind::Street`  | `Ulice`.                                                       |
+| adresní místo                         | `Address` / `PlaceKind::Address` | An address point (`AdresniMista`); its building's identifying parcel (`IdentifikacniParcelaId`) links it to a `Parcel`. |
+| číslo popisné / evidenční             | `HouseNumber`, `HouseNumberKind::Descriptive` / `::Registration` | Written `624` / `č. ev. 12`; `TypStavebnihoObjektuKod` 1 / 2. |
+| číslo orientační                      | orientation number (part of `HouseNumber`) | Written after a slash: `624/3a`.        |
 | —                                     | `Bounds`             | South-west and north-east `Coordinates` of a rectangle.        |
 | —                                     | `ParcelTileset`      | The published parcel tileset: version, export date, bounds, zoom range; `attribution()` gives the ČÚZK credit. |
 | —                                     | Selected parcel      | The parcel shown in the side panel and outlined on the map (source `selected-parcel`); in the URL as `#parcel={id}`. |

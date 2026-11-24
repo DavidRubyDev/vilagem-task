@@ -70,10 +70,13 @@ Run `make data` once (and again whenever you want a newer export). It runs
    files are dated on the last day of a month and appear the next day, so without
    `--export-date` the import takes the latest one and falls back once to the month before);
 2. converts the parcels of the listed cadastral areas to WGS84 with GDAL (`ogr2ogr`), reading each
-   municipality file once into `data/build/municipalities/{municipality}.geojsonl`;
+   municipality file once into `data/build/municipalities/{municipality}.geojsonl`, and reads its parts of the
+   municipality, streets, buildings and address points in a second GDAL run into
+   `data/build/places/{municipality}.sqlite` (the search index builder joins them);
 3. builds one vector tileset with tippecanoe and checks it against the tile size budget;
 4. builds the parcel store, a SQLite file of parcel details (number, area, land type, land use, boundary), and
-   publishes it together with the tileset under one version, atomically.
+   the search index, a SQLite file of parcel numbers with their bounds, and publishes both together with the
+   tileset under one version, atomically.
 
 The list of cadastral areas, `config/coverage.csv`, is generated from the RÚIAN state structure file
 (`{YYYYMMDD}_ST_UZSZ.xml.zip`, same directory as the municipality files) by `make coverage`, which runs
@@ -83,23 +86,23 @@ map are listed (areas without one have no parcel polygons). `make data` never re
 
 Data lives in `data/` (git-ignored): `cache/ruian/` holds the downloads (a cached file is never
 downloaded again, so a rerun is offline), `build/` the intermediate files, `tiles/parcels.mbtiles` the
-published tileset and `parcels/{version}.sqlite` the published parcel store (about 46 MB for the district,
-zlib-compressed boundaries). `config/coverage.csv` lists the whole district: 240 cadastral areas of 111
+published tileset, `parcels/{version}.sqlite` the published parcel store (about 46 MB for the district,
+zlib-compressed boundaries) and `search/{version}.sqlite` the published search index. `config/coverage.csv` lists the whole district: 240 cadastral areas of 111
 municipalities, 272,011 parcels. The first `make data` downloads 111 municipality files (54 MB per monthly
-export) and takes about 1 minute; a rerun from the cache about 45 seconds. The tileset is about 56 MB and
+export) and takes about 1 minute; a rerun from the cache about 45 seconds (with the search index and its places about 85 seconds; measured on 2026-11-24 from the cache: 57 s before the places, 85 s after, so +28 s). The search index of the district has 33,000 places and is 27 MB. The tileset is about 56 MB and
 the intermediate GeoJSON in `build/` about 130 MB. The tile build needs about 1 to 2 GB of memory (Docker Desktop
 users: allow at least 4 GB). Smoothness gate: a vector tile is limited to 200 kB (gzip; at most about 20 tiles are visible on a 1920x1080
 screen, so a view stays under 4 MB). The limit is passed to tippecanoe, and after the build the import reads the
 tileset back: if any tile is larger it fails with "Tile z/x/y has N bytes, over the budget of 200000 bytes; the
 tileset was not published." and nothing is published. On success it prints the tile count and the largest tile
 per zoom level. The import prints its progress (one line per municipality download and conversion,
-then the tile build and the parcel store build). A failed run keeps the completed downloads in the cache, so a rerun resumes. ČÚZK publishes
+then the tile build, the parcel store build and the search index build). A failed run keeps the completed downloads in the cache, so a rerun resumes. ČÚZK publishes
 the monthly files over about an hour on the 1st; if a later municipality is not published yet the import stops
 with "The RÚIAN export of … for municipality … is not published": rerun it later or pass `--export-date` of the
 month before. Old cached months and build files are kept; delete them by hand when needed.
 
-The store of the previous tileset is kept next to the new one, because requests in flight may still read it; older
-stores are deleted. An unknown land type or land use code (one outside the published ČÚZK code list) does not fail
+The store and the search index of the previous tileset are kept next to the new ones, because requests in flight may
+still read them; older ones are deleted. An unknown land type or land use code (one outside the published ČÚZK code list) does not fail
 the import: it is stored, and the import prints a warning per code on stderr.
 
 The data is licensed CC BY 4.0; the required credit is "ČÚZK, {year of the export}". Conditions:
@@ -124,7 +127,34 @@ when there is none), area in m², the boundary as a GeoJSON Polygon, `cadastreVi
 the response is immutable for its version (`Cache-Control: public, max-age=31536000, immutable`). It answers `404`
 for an unknown id, an id that is not 1 to 15 digits, another version, a missing parcel store or no imported data.
 `GET /api/map-config` tells the frontend where to ask: `parcels.parcelUrlTemplate`, e.g.
-`/api/parcels/20261123140206/{id}`, or `null` when the parcel store of the current tileset is missing.
+`/api/parcels/20261124150349/{id}`, or `null` when the parcel store of the current tileset is missing.
+
+### Search
+
+`GET /api/search/{version}?q=<text>&near=<lon>,<lat>` answers `{"places": [...], "parcels": [...]}` from the search
+index `data/search/{version}.sqlite` of that tileset version (`near` is the map centre; equal matches are ordered by
+distance from it). Typing is read the way people write parcel numbers: `72` finds land 72 and building plot st. 72,
+`st. 72` building plots only, `80/2` the subdivision, numbers match exactly (`80` does not suggest `80/2`); a word
+narrows the parcels to the cadastral areas whose name or municipality name has a word starting with it
+(`867/121 rob`), and a 6-digit code to one cadastral area (`867/121 740225`). Matching ignores case and diacritics.
+Places (municipalities, cadastral areas, parts of municipalities, streets and addresses such as
+`Valdštejnovo náměstí 58`) are found when the text has a word of two letters or more: every word or number must start a
+word of the place's name or context ("Staré Město, Jičín"); the exact name comes first, then names starting with the text,
+then the kind and the distance from `near`. A municipality, a cadastral area and a part of the same name are one place
+(the biggest kind). An address is indexed when its building stands on a covered parcel, and carries that parcel's id.
+At most 8 places and 8 parcels come back. Like tiles and parcel details the response is immutable for its version
+(`Cache-Control: public, max-age=31536000, immutable`); `400` for a missing or blank `q`, a text over 100
+characters or a malformed `near`, `404` for another version or no index, `405` for other methods.
+`GET /api/map-config` tells the frontend where to ask: `parcels.searchUrl`, or `null` when the search index of the
+current tileset is missing (data imported before the search was added: run `make data`).
+
+In the browser the search box sits at the top left (the parcel panel below it), and shows the places and parcels found as you
+type (a request starts 200 ms after the last keystroke; a newer request aborts the one in flight). It is an ARIA
+combobox: Arrow Up/Down move through the results, Enter opens the active one (or the first), Escape closes the list
+(a second Escape closes the parcel panel). Picking a parcel selects it exactly as a link does: panel, highlight,
+`#parcel=` and the map fitted to it. Picking an address selects the parcel its building stands on; picking another place
+closes an open parcel panel and fits the map to the place (at most zoom 17; a place without bounds is eased to at zoom 17). The box adds no map listener and typing causes no tile request. Without a search
+index of the current version the box is not shown.
 
 ### Frontend
 
@@ -147,7 +177,7 @@ title and the fallback error of `frontend/index.html` repeat the Czech texts and
 | `make test`       | `test-unit`, `test-integration`, `test-api`, `test-frontend`, `test-e2e`      | All tests                                     |
 | `make test-unit`  | `PHP vendor/bin/phpunit --testsuite unit`                                     | Unit tests                                    |
 | `make test-integration` | `PHP vendor/bin/phpunit --testsuite integration`                        | Adapters against real GDAL, tippecanoe, SQLite and a local HTTP server |
-| `make data`       | `PHP bin/console parcels:import`                                              | Download the RÚIAN export and build the parcel tileset |
+| `make data`       | `PHP bin/console parcels:import`                                              | Download the RÚIAN export and build the parcel tileset, store and search index |
 | `make test-api`   | starts the test app (`docker compose -p parcel-map-test -f compose.yaml -f compose.test.yaml up -d --wait --no-deps app`), then `phpunit --testsuite api` in it | API tests over real HTTP and CLI |
 | `make cs`         | `PHP vendor/bin/php-cs-fixer check --diff`                                    | Code style (PER-CS)                           |
 | `make cs-fix`     | `PHP vendor/bin/php-cs-fixer fix`                                             | Fix code style                                |
@@ -182,7 +212,11 @@ The main quality criterion is that the map stays smooth with the whole district 
    long tasks and writes the report to `var/perf/district-perf.json`, but does not assert them: Docker's headless
    Chromium renders WebGL in software, so frame times say little about real hardware. Measured on 2026-11-20: the
    district view loads 9 tiles (263 kB), Jičín at zoom 12 loads 15 tiles (1.9 MB), tile responses take 13 to 56 ms.
-3. **A manual check in Chrome** on real hardware (performance panel while panning and zooming over the district
+3. **Search latency** (`tests/Perf/search.spec.ts`, part of `make perf`): every query of a fixed list is asked 20
+   times over HTTP and must have a p95 of at most 30 ms; the report goes to `var/perf/search-perf.json`. It uses
+   Node's fetch, because Playwright's request context and Chromium add about 40 ms to every response of PHP's
+   built-in server (even a 404) in the Docker setup.
+4. **A manual check in Chrome** on real hardware (performance panel while panning and zooming over the district
    at zoom 10 and over Jičín at zoom 12 to 16: no long tasks over 50 ms once the tiles have loaded).
 
 ## Continuous integration
@@ -257,6 +291,10 @@ A running log of decisions, surprises and what I would do with more time.
   draws what is in view, simplified for the current zoom.
 - **Whole district as the goal.** With pre-built vector tiles, covering the whole district
   costs about the same as covering four cadastral areas.
+- **Offline search of the covered area only.** The search runs on an index that the import builds from the RÚIAN
+  exports it already downloads, so no query leaves the server, tests need no network and a query takes a few
+  milliseconds. An external geocoder (query text would leave the server, API keys or an unreliable public instance)
+  and a Czech Republic-wide address search are left out on purpose.
 - **Plain PHP, hexagonal architecture.** No framework; the domain stays independent of storage
   and delivery, so the storage can change (e.g. to PostGIS) without touching the domain.
 - **Source: the RÚIAN VFR monthly municipality export.** One feature carries the parcel
@@ -335,6 +373,14 @@ _To be filled in._
 
 ### With more time
 
+- A search of the whole Czech Republic from the ČÚZK address CSV
+  (`https://vdp.cuzk.gov.cz/vymenny_format/csv/<date>_OB_ADR_csv.zip`: 63 MB zipped, about 2.95 million address points,
+  CC BY 4.0, monthly). Measured while planning: a synthetic index of 2.97 million places builds in 18 s and takes 369 MB;
+  queries stay under 25 ms at p95 when addresses sit in their own full-text table and are searched only when the
+  query has a number. Outside the covered area it would find places only and move the map there.
+- An external geocoder with points of interest (query text would leave the server; Nominatim forbids autocomplete,
+  Mapy.com needs an API key and its branding, a self-hosted Photon needs Java and a 1 GB Czech dump).
+- Typo tolerance in the search (none today: "jicn" finds nothing).
 - Generate the frontend code catalogues and the PHP known-code lists of land types and land uses from one source;
   today they are pinned by separate tests and a code-list change must update both by hand.
 - A generalised land-cover overview layer (parcels dissolved by land type) for low zooms, instead of leaving out

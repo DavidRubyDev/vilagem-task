@@ -17,5 +17,6 @@ final readonly class ParcelLayerOutput
         public string $attributionText,
         public string $attributionUrl,
         public bool $detailsAvailable,
+        public bool $searchAvailable,
     ) {}
 }

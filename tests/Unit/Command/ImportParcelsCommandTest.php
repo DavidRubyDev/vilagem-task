@@ -23,9 +23,11 @@ use ParcelMap\Domain\Map\ZoomTileStatistics;
 use ParcelMap\Tests\Fake\ClockUsingFixedTime;
 use ParcelMap\Tests\Fake\CoverageRepositoryUsingMemory;
 use ParcelMap\Tests\Fake\ParcelConverterUsingMemory;
+use ParcelMap\Tests\Fake\PlaceConverterUsingMemory;
 use ParcelMap\Tests\Fake\ParcelDataPublisherUsingMemory;
 use ParcelMap\Tests\Fake\ParcelStoreBuilderUsingMemory;
 use ParcelMap\Tests\Fake\RuianExportDownloaderUsingMemory;
+use ParcelMap\Tests\Fake\SearchIndexBuilderUsingMemory;
 use ParcelMap\Tests\Fake\TilesetBuilderUsingMemory;
 use ParcelMap\Tests\Fake\TilesetInspectorUsingMemory;
 use ParcelMap\Tests\Unit\Command\Console\MemoryConsoleOutput;
@@ -63,7 +65,25 @@ final class ImportParcelsCommandTest extends TestCase
 
         self::assertSame(ExitCode::SUCCESS, $exitCode);
         self::assertSame([], $output->stderr);
-        self::assertSame('Published tileset and parcel store 20261120093000 with 5 parcels.', end($output->stdout));
+        self::assertSame('Published tileset, parcel store and search index 20261120093000 with 5 parcels.', end($output->stdout));
+    }
+
+    #[Test]
+    public function it_prints_the_indexed_places_after_the_tile_statistics(): void
+    {
+        $output = new MemoryConsoleOutput();
+
+        $this->command([])->run(['--export-date=2026-10-31'], $output);
+
+        self::assertSame(
+            [
+                'Tiles per zoom level (budget 150.0 kB per tile):',
+                '  zoom 9: 4 tiles, largest 100.0 kB',
+                'Indexed places: municipalities 2, cadastral areas 3, parts of municipalities 4, streets 5, addresses 6.',
+                'Published tileset, parcel store and search index 20261120093000 with 5 parcels.',
+            ],
+            array_slice($output->stdout, -4),
+        );
     }
 
     /**
@@ -78,9 +98,11 @@ final class ImportParcelsCommandTest extends TestCase
             new CoverageRepositoryUsingMemory($coverage),
             new RuianExportDownloaderUsingMemory(['2026-10-31'], []),
             new ParcelConverterUsingMemory([659541 => 5], false),
+            new PlaceConverterUsingMemory(),
             new TilesetBuilderUsingMemory(),
             new TilesetInspectorUsingMemory(new TilesetStatistics(new ZoomTileStatistics(9, 4, 100_000, new TileCoordinate(9, 277, 172)))),
             new ParcelStoreBuilderUsingMemory(false, $unknownCodes),
+            new SearchIndexBuilderUsingMemory(),
             new ParcelDataPublisherUsingMemory(),
             new ClockUsingFixedTime(new DateTimeImmutable('2026-11-20 09:30:00', new DateTimeZone('UTC'))),
             new TileSizeBudget(150_000),

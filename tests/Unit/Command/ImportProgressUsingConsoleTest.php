@@ -94,4 +94,23 @@ final class ImportProgressUsingConsoleTest extends TestCase
 
         self::assertSame(['Building the parcel store from 25 parcels.'], $this->output->stdout);
     }
+
+    #[Test]
+    public function it_announces_the_search_index_build_with_one_municipality(): void
+    {
+        $this->progress->searchIndexBuildStarted(25, 1);
+
+        self::assertSame(['Building the search index from 25 parcels and the places of 1 municipality.'], $this->output->stdout);
+    }
+
+    #[Test]
+    public function it_announces_the_search_index_build_with_several_municipalities(): void
+    {
+        $this->progress->searchIndexBuildStarted(272011, 111);
+
+        self::assertSame(
+            ['Building the search index from 272011 parcels and the places of 111 municipalities.'],
+            $this->output->stdout,
+        );
+    }
 }

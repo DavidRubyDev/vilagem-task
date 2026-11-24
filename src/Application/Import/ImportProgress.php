@@ -18,4 +18,6 @@ interface ImportProgress
     public function tilesetBuildStarted(int $parcelCount): void;
 
     public function parcelStoreBuildStarted(int $parcelCount): void;
+
+    public function searchIndexBuildStarted(int $parcelCount, int $municipalityCount): void;
 }

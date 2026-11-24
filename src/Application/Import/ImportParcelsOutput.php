@@ -11,6 +11,7 @@ final readonly class ImportParcelsOutput
      * @param list<ImportedAreaOutput> $areas
      * @param list<ZoomTilesOutput> $zoomLevels ascending by zoom
      * @param list<UnknownCodeOutput> $unknownCodes in the order of the parcel store builder
+     * @param IndexedPlacesOutput $indexedPlaces the places in the search index, by kind
      */
     public function __construct(
         public string $exportDate,
@@ -20,5 +21,6 @@ final readonly class ImportParcelsOutput
         public int $tileSizeBudgetBytes,
         public array $zoomLevels,
         public array $unknownCodes,
+        public IndexedPlacesOutput $indexedPlaces,
     ) {}
 }

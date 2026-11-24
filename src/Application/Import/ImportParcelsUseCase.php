@@ -24,9 +24,11 @@ final readonly class ImportParcelsUseCase
         private CoverageRepository $coverage,
         private RuianExportDownloader $downloader,
         private ParcelConverter $converter,
+        private PlaceConverter $placeConverter,
         private TilesetBuilder $builder,
         private TilesetInspector $inspector,
         private ParcelStoreBuilder $storeBuilder,
+        private SearchIndexBuilder $searchIndexBuilder,
         private ParcelDataPublisher $publisher,
         private Clock $clock,
         private TileSizeBudget $budget,
@@ -49,10 +51,12 @@ final readonly class ImportParcelsUseCase
         );
 
         $converted = [];
+        $convertedPlaces = [];
         foreach ($municipalities as $index => $municipality) {
             $areas = $coverage->areasOf($municipality);
             $parcels = $this->converter->convert($exports[$municipality->value], $areas);
             $converted[] = $parcels;
+            $convertedPlaces[] = $this->placeConverter->convert($exports[$municipality->value]);
             $progress->municipalityConverted(
                 $municipality->value,
                 $index + 1,
@@ -79,8 +83,10 @@ final readonly class ImportParcelsUseCase
         $this->requireWithinBudget($statistics);
         $progress->parcelStoreBuildStarted($totalParcels);
         $store = $this->storeBuilder->build($converted, $coverage);
+        $progress->searchIndexBuildStarted($totalParcels, count($municipalities));
+        $index = $this->searchIndexBuilder->build($converted, $convertedPlaces, $coverage);
         $version = TilesetVersion::fromTime($this->clock->now());
-        $this->publisher->publish($tileset, $store, $version, $exportDate);
+        $this->publisher->publish($tileset, $store, $index, $version, $exportDate);
 
         return new ImportParcelsOutput(
             $exportDate->toString(),
@@ -95,6 +101,13 @@ final readonly class ImportParcelsUseCase
             array_map(
                 static fn(UnknownCode $code): UnknownCodeOutput => new UnknownCodeOutput($code->list->value, $code->code, $code->parcelCount),
                 $store->unknownCodes,
+            ),
+            new IndexedPlacesOutput(
+                $index->places->municipalities,
+                $index->places->cadastralAreas,
+                $index->places->municipalityParts,
+                $index->places->streets,
+                $index->places->addresses,
             ),
         );
     }

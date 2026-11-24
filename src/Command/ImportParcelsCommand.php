@@ -26,7 +26,7 @@ final readonly class ImportParcelsCommand implements Command
 
     public function description(): string
     {
-        return 'Download the RÚIAN export and build the parcel tileset and parcel store.';
+        return 'Download the RÚIAN export and build the parcel tileset, parcel store and search index.';
     }
 
     public function run(array $arguments, ConsoleOutput $output): int
@@ -68,6 +68,15 @@ final readonly class ImportParcelsCommand implements Command
                 $zoom->largestTileBytes / 1000,
             ));
         }
+        $places = $result->indexedPlaces;
+        $output->writeLine(sprintf(
+            'Indexed places: municipalities %d, cadastral areas %d, parts of municipalities %d, streets %d, addresses %d.',
+            $places->municipalities,
+            $places->cadastralAreas,
+            $places->municipalityParts,
+            $places->streets,
+            $places->addresses,
+        ));
         foreach ($result->unknownCodes as $unknown) {
             $output->writeError(sprintf(
                 'Warning: unknown %1$s code %2$d on %3$d %4$s; the map shows it as "Unknown %1$s (code %2$d)".',
@@ -78,7 +87,7 @@ final readonly class ImportParcelsCommand implements Command
             ));
         }
         $output->writeLine(sprintf(
-            'Published tileset and parcel store %s with %d parcels.',
+            'Published tileset, parcel store and search index %s with %d parcels.',
             $result->tilesetVersion,
             $result->totalParcels,
         ));

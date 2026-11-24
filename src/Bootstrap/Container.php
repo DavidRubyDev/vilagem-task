@@ -9,6 +9,7 @@ use ParcelMap\Application\Import\ImportParcelsUseCase;
 use ParcelMap\Application\Map\GetMapConfigurationUseCase;
 use ParcelMap\Application\Map\GetParcelTileUseCase;
 use ParcelMap\Application\Parcel\GetParcelDetailUseCase;
+use ParcelMap\Application\Search\SearchMapUseCase;
 use ParcelMap\Command\Console\ConsoleApplication;
 use ParcelMap\Command\GenerateCoverageCommand;
 use ParcelMap\Command\ImportParcelsCommand;
@@ -22,6 +23,8 @@ use ParcelMap\Handler\Http\Router;
 use ParcelMap\Handler\Http\StderrErrorReporter;
 use ParcelMap\Handler\ParcelDetailRoute;
 use ParcelMap\Handler\ParcelTileRoute;
+use ParcelMap\Handler\SearchMapHandler;
+use ParcelMap\Handler\SearchRoute;
 use ParcelMap\Handler\ShowMapPageHandler;
 use ParcelMap\Infrastructure\Cadastre\CoverageRepositoryUsingCsv;
 use ParcelMap\Infrastructure\Cadastre\ParcelRepositoryUsingSqlite;
@@ -32,12 +35,15 @@ use ParcelMap\Infrastructure\Http\ZipFileDownloader;
 use ParcelMap\Infrastructure\Import\ParcelConverterUsingOgr2ogr;
 use ParcelMap\Infrastructure\Import\ParcelDataPublisherUsingSqlite;
 use ParcelMap\Infrastructure\Import\ParcelStoreBuilderUsingSqlite;
+use ParcelMap\Infrastructure\Import\PlaceConverterUsingOgr2ogr;
 use ParcelMap\Infrastructure\Import\RuianExportDownloaderUsingHttp;
+use ParcelMap\Infrastructure\Import\SearchIndexBuilderUsingSqlite;
 use ParcelMap\Infrastructure\Import\TilesetBuilderUsingTippecanoe;
 use ParcelMap\Infrastructure\Import\TilesetInspectorUsingMbtiles;
 use ParcelMap\Infrastructure\Map\MapSettingsRepositoryUsingConstants;
 use ParcelMap\Infrastructure\Map\ParcelTilesetRepositoryUsingMbtiles;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
+use ParcelMap\Infrastructure\Search\SearchIndexRepositoryUsingSqlite;
 
 final readonly class Container
 {
@@ -67,10 +73,12 @@ final readonly class Container
                     $coverage,
                     new RuianExportDownloaderUsingHttp($zipDownloader, $ruianBaseUrl, $dataDir . '/cache/ruian'),
                     new ParcelConverterUsingOgr2ogr($runner, $dataDir . '/build'),
+                    new PlaceConverterUsingOgr2ogr($runner, $dataDir . '/build'),
                     new TilesetBuilderUsingTippecanoe($runner, $dataDir . '/build'),
                     new TilesetInspectorUsingMbtiles(),
                     new ParcelStoreBuilderUsingSqlite($dataDir . '/build'),
-                    new ParcelDataPublisherUsingSqlite($this->tilesetFile(), $this->parcelStoreDirectory()),
+                    new SearchIndexBuilderUsingSqlite($dataDir . '/build'),
+                    new ParcelDataPublisherUsingSqlite($this->tilesetFile(), $this->parcelStoreDirectory(), $this->searchIndexDirectory()),
                     new ClockUsingSystemTime(),
                     TileSizeBudget::smoothMap(),
                 ),
@@ -97,6 +105,7 @@ final readonly class Container
                         new MapSettingsRepositoryUsingConstants(),
                         new ParcelTilesetRepositoryUsingMbtiles($this->tilesetFile()),
                         new ParcelRepositoryUsingSqlite($this->parcelStoreDirectory()),
+                        new SearchIndexRepositoryUsingSqlite($this->searchIndexDirectory()),
                     )),
                 ),
                 new Route(
@@ -110,6 +119,14 @@ final readonly class Container
                     new GetParcelDetailHandler(new GetParcelDetailUseCase(
                         new ParcelTilesetRepositoryUsingMbtiles($this->tilesetFile()),
                         new ParcelRepositoryUsingSqlite($this->parcelStoreDirectory()),
+                    )),
+                ),
+                new Route(
+                    'GET',
+                    SearchRoute::PATTERN,
+                    new SearchMapHandler(new SearchMapUseCase(
+                        new ParcelTilesetRepositoryUsingMbtiles($this->tilesetFile()),
+                        new SearchIndexRepositoryUsingSqlite($this->searchIndexDirectory()),
                     )),
                 ),
                 new Route('GET', '/', new ShowMapPageHandler($this->projectDir . '/frontend/index.html')),
@@ -126,6 +143,11 @@ final readonly class Container
     private function parcelStoreDirectory(): string
     {
         return $this->path('PARCEL_MAP_DATA_DIR', self::DEFAULT_DATA_DIR) . '/parcels';
+    }
+
+    private function searchIndexDirectory(): string
+    {
+        return $this->path('PARCEL_MAP_DATA_DIR', self::DEFAULT_DATA_DIR) . '/search';
     }
 
     private function path(string $variable, string $default): string

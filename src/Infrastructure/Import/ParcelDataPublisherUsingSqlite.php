@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ParcelMap\Infrastructure\Import;
 
 use ParcelMap\Application\Import\BuiltParcelStore;
+use ParcelMap\Application\Import\BuiltSearchIndex;
 use ParcelMap\Application\Import\BuiltTileset;
 use ParcelMap\Application\Import\ParcelDataPublisher;
 use ParcelMap\Application\Import\ParcelDataPublishFailed;
@@ -15,13 +16,14 @@ use PDOException;
 use Pdo\Sqlite;
 
 /**
- * Publishes the tileset and the parcel store of one import under one version.
+ * Publishes the tileset, the parcel store and the search index of one import under one version.
  *
- * The tileset rename is the single commit point. The store is placed first at `{directory}/{version}.sqlite`, a path
- * nobody reads until a tileset carries that version; then the tileset is renamed onto the live path (atomic on one
- * filesystem, so a running server keeps reading the old file until it is replaced). If that rename fails, the store
- * is removed again. So a reader never sees a tileset without its store. Afterwards every store except the new one and
- * the one of the previously live tileset is deleted: requests in flight may still be reading the previous one.
+ * The tileset rename is the single commit point. The store and the index are placed first at
+ * `{directory}/{version}.sqlite`, paths nobody reads until a tileset carries that version; then the tileset is renamed
+ * onto the live path (atomic on one filesystem, so a running server keeps reading the old file until it is replaced).
+ * If that rename fails, both placed files are removed again. So a reader never sees a tileset without its store and
+ * index. Afterwards every store and index except the new ones and the ones of the previously live tileset is deleted:
+ * requests in flight may still be reading the previous ones.
  * Version strings are safe as file names, because TilesetVersion allows only letters, digits and hyphens.
  */
 final readonly class ParcelDataPublisherUsingSqlite implements ParcelDataPublisher
@@ -29,12 +31,14 @@ final readonly class ParcelDataPublisherUsingSqlite implements ParcelDataPublish
     public function __construct(
         private string $tilesetFile,
         private string $parcelStoreDirectory,
+        private string $searchIndexDirectory,
     ) {}
 
-    public function publish(BuiltTileset $tileset, BuiltParcelStore $store, TilesetVersion $version, ExportDate $exportDate): void
+    public function publish(BuiltTileset $tileset, BuiltParcelStore $store, BuiltSearchIndex $index, TilesetVersion $version, ExportDate $exportDate): void
     {
         $this->stamp($tileset->path, $version, $exportDate);
         $this->stamp($store->path, $version, $exportDate);
+        $this->stamp($index->path, $version, $exportDate);
         $liveVersion = $this->liveVersion();
 
         $storeTarget = sprintf('%s/%s.sqlite', $this->parcelStoreDirectory, $version->value);
@@ -43,14 +47,25 @@ final readonly class ParcelDataPublisherUsingSqlite implements ParcelDataPublish
             throw ParcelDataPublishFailed::because(sprintf('cannot move %s to %s.', $store->path, $storeTarget));
         }
 
+        $indexTarget = sprintf('%s/%s.sqlite', $this->searchIndexDirectory, $version->value);
+        self::createDirectory($this->searchIndexDirectory);
+        if (!@rename($index->path, $indexTarget)) {
+            @unlink($storeTarget);
+
+            throw ParcelDataPublishFailed::because(sprintf('cannot move %s to %s.', $index->path, $indexTarget));
+        }
+
         self::createDirectory(dirname($this->tilesetFile));
         if (!@rename($tileset->path, $this->tilesetFile)) {
             @unlink($storeTarget);
+            @unlink($indexTarget);
 
             throw ParcelDataPublishFailed::because(sprintf('cannot move %s to %s.', $tileset->path, $this->tilesetFile));
         }
 
-        $this->pruneStores(array_filter([$version->value, $liveVersion]));
+        $keptVersions = array_filter([$version->value, $liveVersion]);
+        $this->prune($this->parcelStoreDirectory, $keptVersions);
+        $this->prune($this->searchIndexDirectory, $keptVersions);
     }
 
     private function stamp(string $path, TilesetVersion $version, ExportDate $exportDate): void
@@ -99,10 +114,10 @@ final readonly class ParcelDataPublisherUsingSqlite implements ParcelDataPublish
     /**
      * @param array<array-key, string> $keptVersions
      */
-    private function pruneStores(array $keptVersions): void
+    private function prune(string $directory, array $keptVersions): void
     {
-        $kept = array_map(fn(string $version): string => sprintf('%s/%s.sqlite', $this->parcelStoreDirectory, $version), $keptVersions);
-        foreach (glob($this->parcelStoreDirectory . '/*.sqlite') ?: [] as $file) {
+        $kept = array_map(static fn(string $version): string => sprintf('%s/%s.sqlite', $directory, $version), $keptVersions);
+        foreach (glob($directory . '/*.sqlite') ?: [] as $file) {
             // The new data is already live and a leftover file is harmless, so a failed delete is ignored.
             if (!in_array($file, $kept, true)) {
                 @unlink($file);

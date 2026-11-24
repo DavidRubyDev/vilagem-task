@@ -13,6 +13,7 @@ import { Localization } from './localization';
 import { loadMapConfiguration } from './mapConfiguration';
 import { labelMapControls } from './mapLabels';
 import { MapNotice } from './mapNotice';
+import { MapSearch } from './mapSearch';
 import { createMapOptions, type InitialBounds } from './mapOptions';
 import { loadParcelDetail, parcelDetailUrl, type ParcelDetail } from './parcelDetail';
 import { parcelIdFromHash } from './parcelHash';
@@ -154,6 +155,8 @@ async function start(): Promise<void> {
       },
       () => {
         hintRef.current?.update();
+        // Lets the stylesheet give the corner of the legend back while the panel is open (see app.css).
+        document.body.classList.toggle('parcel-panel-open', panel.isOpen());
       },
     );
     const linkedId = parcelIdFromHash(window.location.hash);
@@ -169,6 +172,8 @@ async function start(): Promise<void> {
     const selection = new ParcelSelection(map, panel, fetchFn, parcelUrlTemplate, window);
     const hint = showZoomHint(map, () => panel.isOpen(), loadedTexts);
     hintRef.current = hint;
+    const search =
+      parcels.searchUrl === null ? null : new MapSearch(map, selection, fetchFn, parcels.searchUrl, loadedTexts);
     localization.onChange((next) => {
       applyDocumentTexts(document, next);
       labelMapControls(map, next);
@@ -176,6 +181,7 @@ async function start(): Promise<void> {
       hint.setTexts(next);
       legend.setTexts(next);
       switcher.setTexts(next);
+      search?.setTexts(next);
     });
     if (linked !== null) {
       map.once('load', () => {
