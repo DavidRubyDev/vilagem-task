@@ -12,7 +12,10 @@ export class ParcelPanel {
   private readonly viewerLink: HTMLAnchorElement;
   private readonly message: HTMLElement;
 
-  constructor(onClose: () => void) {
+  constructor(
+    onClose: () => void,
+    private readonly onVisibilityChange: () => void,
+  ) {
     this.root = document.createElement('aside');
     this.root.className = 'parcel-panel';
     this.root.setAttribute('aria-label', TEXT.panelLabel);
@@ -78,11 +81,11 @@ export class ParcelPanel {
     this.addFact(TEXT.area, formatArea(detail.areaSquareMetres));
     this.viewerLink.href = detail.cadastreViewerUrl;
     this.viewerLink.hidden = false;
-    this.root.hidden = false;
+    this.setHidden(false);
   }
 
   hide(): void {
-    this.root.hidden = true;
+    this.setHidden(true);
   }
 
   private showMessageOnly(text: string): void {
@@ -91,7 +94,13 @@ export class ParcelPanel {
     this.facts.replaceChildren();
     this.viewerLink.hidden = true;
     this.message.textContent = text;
-    this.root.hidden = false;
+    this.setHidden(false);
+  }
+
+  private setHidden(hidden: boolean): void {
+    if (this.root.hidden === hidden) return;
+    this.root.hidden = hidden;
+    this.onVisibilityChange();
   }
 
   private addFact(label: string, value: string): void {

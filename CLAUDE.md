@@ -328,3 +328,4 @@ Source-data term (Czech) → name used in code.
 | —                                     | Selected parcel      | The parcel shown in the side panel and outlined on the map (source `selected-parcel`); in the URL as `#parcel={id}`. |
 | —                                     | Parcel detail        | What the side panel shows about a parcel (`GET /api/parcels/{version}/{id}`). |
 | —                                     | Map configuration    | What the frontend needs to start the map: initial `MapView` + `BaseMap` (`GET /api/map-config`). |
+| —                                     | Legend               | The land type key in the bottom-left corner of the map (`LegendControl`), built from the frontend land type catalogue. |

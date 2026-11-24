@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MapConfiguration, ParcelLayerConfiguration } from '../src/mapConfiguration';
 import { landTypeFillColour } from '../src/landTypes';
-import { COMPLETE_PARCELS_MIN_ZOOM, createMapOptions } from '../src/mapOptions';
+import { COMPLETE_PARCELS_MIN_ZOOM, createMapOptions, PARCEL_FILL_OPACITY } from '../src/mapOptions';
 
 const parcels: ParcelLayerConfiguration = {
   tileUrlTemplate: '/tiles/parcels/v1/{z}/{x}/{y}.pbf',
@@ -164,6 +164,13 @@ describe('createMapOptions', () => {
         expect(JSON.stringify(layer)).not.toContain('feature-state');
         expect(layer).not.toHaveProperty('filter');
       }
+    });
+
+    it('shares the fill opacity with the legend swatches', () => {
+      const fill = styleOf(options()).layers[1];
+
+      expect(PARCEL_FILL_OPACITY).toBe(0.45);
+      expect(fill).toMatchObject({ paint: { 'fill-opacity': PARCEL_FILL_OPACITY } });
     });
 
     it('fills parcels at 0.45 opacity, coloured by land type', () => {

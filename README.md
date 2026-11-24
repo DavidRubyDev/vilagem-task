@@ -43,7 +43,10 @@ nor the ownership sheet number), so the panel links to the parcel in the ČÚZK 
 The selected parcel is kept in the URL as `#parcel=<RÚIAN id>` (updated with `history.replaceState`, so clicking does
 not fill the browser history; closing the panel removes it). Opening such a link fits the map to the parcel (at most
 zoom 18) and shows its panel, and changing the hash selects another parcel. The link has the id only, not the tileset
-version, so it survives re-imports; an id that no longer exists shows "This parcel was not found". Below zoom 14 clicks select nothing, and a hint at the bottom says "Zoom in to select a parcel." until zoom 14.
+version, so it survives re-imports; an id that no longer exists shows "This parcel was not found". Below zoom 14 clicks select nothing, and a hint at the bottom says "Zoom in to select a parcel." until zoom 14, while no parcel panel is open.
+
+A land type legend sits in the bottom-left corner of the map (open on wide screens, collapsed up to 640 px width; click
+"Land type" to toggle it). It lists the land type colours and "Unknown land type".
 
 `docker compose up` runs a one-shot `node` service (`npm ci && npm run build`), then starts the
 PHP server. The first run pulls the Playwright image (about 2 GB), which is also used for all
@@ -290,6 +293,11 @@ A running log of decisions, surprises and what I would do with more time.
   Dockerfile switches to the GA image once it is released.
 - **Vite with fixed asset names** (`/build/app.js`, `/build/app.css`). The hand-written HTML
   shell can reference them without a manifest. Cost: no cache-busting yet.
+- **The legend is a static MapLibre control built from the frontend land type catalogue.** Plain `<details>` DOM,
+  no map or DOM listener, so it costs nothing while panning or zooming.
+- **On windows up to 800 px the legend is lifted above the zoom hint** (`bottom: 4.75rem`), so the two never overlap
+  and the hint can stay at the bottom centre. The parcel panel's height cap reserves room for the open legend. The
+  E2E test `layout.spec.ts` checks that no two map elements overlap at four viewport sizes.
 - **The Playwright image is used for all Node tooling.** One platform (glibc) for `node_modules`.
   The image and `@playwright/test` must have the same version; bump them together.
 - **TypeScript 6.0.3** until typescript-eslint supports TypeScript 7.

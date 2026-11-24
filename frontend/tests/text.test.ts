@@ -16,6 +16,11 @@ describe('TEXT', () => {
     expect(TEXT.detailsNotice).toBe('Parcel details have not been imported yet. Run make data, then reload this page.');
   });
 
+  it('words the legend', () => {
+    expect(TEXT.legendTitle).toBe('Land type');
+    expect(TEXT.legendUnknown).toBe('Unknown land type');
+  });
+
   it('uses English', () => {
     expect(UI_LOCALE).toBe('en');
   });

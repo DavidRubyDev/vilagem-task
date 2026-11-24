@@ -3,6 +3,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import './app.css';
 import { fitPadding } from './fitPadding';
+import { LegendControl } from './legend';
 import { loadMapConfiguration } from './mapConfiguration';
 import { createMapOptions, type InitialBounds } from './mapOptions';
 import { loadParcelDetail, parcelDetailUrl, type ParcelDetail } from './parcelDetail';
@@ -27,6 +28,11 @@ function showNotice(text: string): void {
   notice.setAttribute('role', 'status');
   notice.textContent = text;
   document.body.append(notice);
+}
+
+/** Collapsed on phones, where the open legend would cover a third of the screen. Read once, so no listener. */
+function newLegend(): LegendControl {
+  return new LegendControl(!window.matchMedia('(max-width: 640px)').matches);
 }
 
 interface LinkedParcel {
@@ -85,24 +91,33 @@ async function start(): Promise<void> {
           ? 'Parcel data has not been imported yet. Run make data, then reload this page.'
           : TEXT.detailsNotice,
       );
-      new Map(createMapOptions(configuration, container, window.location.origin)).addControl(
-        new NavigationControl({ showCompass: false }),
-        'top-right',
-      );
+      const bareMap = new Map(createMapOptions(configuration, container, window.location.origin));
+      bareMap.addControl(new NavigationControl({ showCompass: false }), 'top-right');
+      if (parcels !== null) {
+        bareMap.addControl(newLegend(), 'bottom-left');
+      }
       return;
     }
     const { parcelUrlTemplate } = parcels;
+    // The panel is created, and may already open for a link, before the map and its hint exist.
+    const hintRef: { current: { update(): void } | null } = { current: null };
 
-    const panel = new ParcelPanel(() => {
-      selection.clear();
-    });
+    const panel = new ParcelPanel(
+      () => {
+        selection.clear();
+      },
+      () => {
+        hintRef.current?.update();
+      },
+    );
     const linkedId = parcelIdFromHash(window.location.hash);
     const linked = linkedId === null ? null : await openLinkedParcel(linkedId, parcelUrlTemplate, panel, fetchFn);
 
     const map = new Map(createMapOptions(configuration, container, window.location.origin, linked?.initialBounds));
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
+    map.addControl(newLegend(), 'bottom-left');
     const selection = new ParcelSelection(map, panel, fetchFn, parcelUrlTemplate, window);
-    showZoomHint(map);
+    hintRef.current = showZoomHint(map, () => panel.isOpen());
     if (linked !== null) {
       map.once('load', () => {
         selection.adopt(linked.detail);

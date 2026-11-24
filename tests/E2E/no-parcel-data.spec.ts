@@ -21,6 +21,7 @@ test('tells the user to import the parcel data when there is none', async ({ pag
   expect(parcelRequests).toEqual([]);
   await expect(page.getByRole('complementary', { name: 'Parcel details' })).toHaveCount(0);
   await expect(page.getByText('Zoom in to select a parcel.')).toHaveCount(0);
+  await expect(page.locator('.map-legend')).toHaveCount(0);
 });
 
 test('shows no notice when the parcel data is imported', async ({ page }) => {
