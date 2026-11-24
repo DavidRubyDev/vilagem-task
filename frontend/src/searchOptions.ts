@@ -1,8 +1,14 @@
 import { formatCadastralArea } from './parcelFormat';
-import type { ParcelResult, SearchResults } from './searchResults';
+import type { ParcelResult, PlaceResult, SearchResults } from './searchResults';
 import type { Texts } from './texts';
 
-export type PickTarget = { readonly kind: 'parcel'; readonly id: number };
+export type PickTarget =
+  | { readonly kind: 'parcel'; readonly id: number }
+  | {
+      readonly kind: 'place';
+      readonly center: [number, number];
+      readonly bounds: [number, number, number, number] | null;
+    };
 
 export interface SearchOption {
   readonly id: string;
@@ -12,9 +18,23 @@ export interface SearchOption {
 }
 
 export interface SearchGroup {
-  readonly key: 'parcels';
+  readonly key: 'places' | 'parcels';
   readonly label: string;
   readonly options: SearchOption[];
+}
+
+function placeOption(place: PlaceResult, texts: Texts, id: string): SearchOption {
+  const kind = texts.text(`place.${place.kind}`);
+  const { bounds } = place;
+  const target: PickTarget =
+    place.kind === 'address' && place.parcelId !== null
+      ? { kind: 'parcel', id: place.parcelId }
+      : {
+          kind: 'place',
+          center: [place.center.longitude, place.center.latitude],
+          bounds: bounds === null ? null : [bounds.west, bounds.south, bounds.east, bounds.north],
+        };
+  return { id, name: place.name, context: place.context === '' ? kind : `${kind} · ${place.context}`, target };
 }
 
 function parcelContext(parcel: ParcelResult): string {
@@ -27,6 +47,14 @@ export function searchGroups(results: SearchResults, texts: Texts): SearchGroup[
   const groups: SearchGroup[] = [];
   let count = 0;
   const optionId = (): string => `map-search-option-${String(count++)}`;
+
+  if (results.places.length > 0) {
+    groups.push({
+      key: 'places',
+      label: texts.text('search.places'),
+      options: results.places.map((place) => placeOption(place, texts, optionId())),
+    });
+  }
 
   if (results.parcels.length > 0) {
     groups.push({

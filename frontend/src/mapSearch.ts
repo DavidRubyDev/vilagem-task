@@ -3,11 +3,14 @@ import { debounce } from './debounce';
 import type { ParcelSelection } from './parcelSelection';
 import { SearchBox } from './searchBox';
 import { searchGroups, type PickTarget } from './searchOptions';
+import { searchFitPadding } from './fitPadding';
 import { searchRequestUrl, shouldSearch } from './searchQuery';
 import { loadSearchResults, type SearchResults } from './searchResults';
 import type { Texts } from './texts';
 
 export const SEARCH_DEBOUNCE_MS = 200;
+// Street level: a fitted place never zooms closer than this, and a place without bounds is shown at it.
+const PLACE_ZOOM = 17;
 
 /**
  * Wires the search box to the search API and the map. No map listener is added: the map centre is read with
@@ -87,7 +90,24 @@ export class MapSearch {
   private onPick(target: PickTarget): void {
     this.debounced.cancel();
     this.abort();
-    this.selection.select(target.id, { fit: true });
+    if (target.kind === 'parcel') {
+      this.selection.select(target.id, { fit: true });
+      return;
+    }
+    // A place is not a parcel: the panel closes, and the map makes one camera move to the place.
+    this.selection.clear();
+    if (target.bounds === null) {
+      this.map.easeTo({ center: target.center, zoom: PLACE_ZOOM });
+      return;
+    }
+    const [west, south, east, north] = target.bounds;
+    this.map.fitBounds(
+      [
+        [west, south],
+        [east, north],
+      ],
+      { maxZoom: PLACE_ZOOM, padding: searchFitPadding(this.box.element().getBoundingClientRect()) },
+    );
   }
 
   private abort(): void {

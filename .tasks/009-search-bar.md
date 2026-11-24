@@ -1,6 +1,6 @@
 # 009: Search bar
 
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-11-24
 - **Branch:** task/009-search-bar
 - **Request:** "lets plan another task. A search bar. It should search by the real location as maps do. But also by the
@@ -1022,25 +1022,25 @@ arguments, can be unpublished), `PlaceConverterUsingMemory` (step 4).
 
 ## Acceptance criteria
 
-- [ ] Typing `st. 72` and pressing Enter opens the st. 72 panel with highlight and hash, as a link does.
-- [ ] `867/121 rob` finds 867/121 in Robousy; `80/2`-style numbers match exactly; `st.` restricts to building plots.
-- [ ] `jicin` finds the municipality Jičín once; `Valdštejnovo náměstí 58` opens the st. 72 panel; an address whose
+- [x] Typing `st. 72` and pressing Enter opens the st. 72 panel with highlight and hash, as a link does.
+- [x] `867/121 rob` finds 867/121 in Robousy; `80/2`-style numbers match exactly; `st.` restricts to building plots.
+- [x] `jicin` finds the municipality Jičín once; `Valdštejnovo náměstí 58` opens the st. 72 panel; an address whose
       building is outside the coverage is not found.
-- [ ] Keyboard: Arrow keys, Enter and Escape behave per Decision 14; the combobox is announced correctly.
-- [ ] A language switch re-renders the box and an open list.
-- [ ] Without a search index of the current version the search box is not shown and the map works as before.
-- [ ] No overlap at 1280×720, 641×480, 390×844 and 360×640, in both languages, with the panel open, closed and showing
+- [x] Keyboard: Arrow keys, Enter and Escape behave per Decision 14; the combobox is announced correctly.
+- [x] A language switch re-renders the box and an open list.
+- [x] Without a search index of the current version the search box is not shown and the map works as before.
+- [x] No overlap at 1280×720, 641×480, 390×844 and 360×640, in both languages, with the panel open, closed and showing
       not found, and with the list open (overlapping only the panel); the open panel is at least 100 px high at
       641×480.
-- [ ] **Smoothness:** no map event listener is added (`move`, `render` and the like); typing causes no tile request;
+- [x] **Smoothness:** no map event listener is added (`move`, `render` and the like); typing causes no tile request;
       one pick makes one camera move.
-- [ ] **Latency:** `make perf` (`tests/Perf/search.spec.ts`, real data, running app): every query of the fixed list
+- [x] **Latency:** `make perf` (`tests/Perf/search.spec.ts`, real data, running app): every query of the fixed list
       (`ji`, `jicin`, `nova paka`, `husova`, `husova 1`, `robousy 1`, `nadrazni`, `na`, `80/2`, `st. 72`, `1171`,
       `867/121 robousy`; place queries from step 4) answers 200, with a p95 response time of at most 30 ms over HTTP
       (20 requests per query); the report goes to `var/perf/search-perf.json`.
-- [ ] **Import:** `make data` from the cache takes at most 40 s longer than before this task (record both times in the
+- [x] **Import:** `make data` from the cache takes at most 40 s longer than before this task (record both times in the
       log); the search index of the district is at most 40 MB.
-- [ ] `make check` passes at every commit.
+- [x] `make check` passes at every commit.
 
 ## Risks and assumptions
 
@@ -1243,7 +1243,36 @@ transaction. A cadastral area or municipality without parcels is not indexed (no
 point, or a street that is a straight vertical/horizontal line, is stored without bounds (centre only), as planned.
 Real counts differ slightly from the planning prototype (31,822 addresses as measured there).
 
+### Step 5: `feat(map): move the map to a found place (#009)`
+
+Red runs:
+
+- Outer, `tests/E2E/search.spec.ts` (places part, written first): the new tests failed at the first expectation (the
+  places group, "Obec" context, the address and place picks never happened) and the two placeholder expectations
+  changed in step 3's tests failed ("Číslo parcely, např. st. 72" is still the placeholder): 8 failures before the
+  production code (the rest of the stubbed-response cases need the same code).
+- Vitest: 6 new `searchResults` cases (places validation), the `searchGroups` place cases (group order, kind names,
+  context, targets, ids) and `searchFitPadding` failed (missing members/exports) before the code.
+
+Deliberately changed existing tests: step 3's E2E expectations of the placeholder text (Czech and English) now have the
+final texts ("Adresa, místo nebo číslo parcely", "Address, place or parcel number"). The step 3 `searchResults`
+tests that used `places: []` are unchanged.
+
+Decisions below the plan's level: `PLACE_ZOOM = 17` is the one constant for both `fitBounds` `maxZoom` and the `easeTo`
+zoom. A place's option context is the kind name alone when the place has no context (municipality: "Obec"), otherwise
+"Kind · context". Picking a place calls `selection.clear()` first, which also removes `#parcel=` from the URL.
+The camera move is one `fitBounds` or `easeTo` call; no map listener was added.
+
 
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.
+
+### Round 1: head 98e7184, 2026-11-24
+
+1. Confirmed. `frontend/src/searchQuery.ts:3`, Code rules (intention-revealing names): `MIN_LETTERS` was compared with the number of characters, not letters. Developer: "yes. Fix it". Fixed by renaming it to `MIN_LENGTH`; folded into `feat(map): search parcels by number (#009)`.
+
+### Round 2: head b80455c, 2026-11-24
+
+1. Confirmed. `tests/Unit/Application/Search/SearchMapUseCaseTest.php:316`, Testing (fakes over mocks, named fakes): the test defined an anonymous `ParcelTilesetRepository`. Developer: "yes, fix it". Fixed by giving `ParcelTilesetRepositoryUsingMemory` an `unreadable` flag (`current()` and `tile()` throw `ParcelTilesetUnreadable`) and using it in the test; folded into `feat(search): find parcels by number (#009)`. Checked red once: with the use case changed to swallow `ParcelTilesetUnreadable` the test fails ("SearchNotAvailable matches expected ParcelTilesetUnreadable"); the change was reverted.
+

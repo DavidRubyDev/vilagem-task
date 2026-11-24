@@ -215,7 +215,7 @@ test.describe('searching parcels by number', () => {
     await expect(input).toHaveAttribute('aria-expanded', 'false');
     await expect(input).toHaveAttribute('aria-controls', 'map-search-list');
     await expect(page.getByRole('search', { name: 'Hledat na mapě' })).toBeVisible();
-    await expect(input).toHaveAttribute('placeholder', 'Číslo parcely, např. st. 72');
+    await expect(input).toHaveAttribute('placeholder', 'Adresa, místo nebo číslo parcely');
   });
 
   test('renders texts as text, never as markup', async ({ page }) => {
@@ -241,7 +241,7 @@ test.describe('searching parcels by number', () => {
     await page.getByRole('button', { name: 'English' }).click();
 
     const input = page.getByRole('combobox', { name: 'Search the map' });
-    await expect(input).toHaveAttribute('placeholder', 'Parcel number, e.g. st. 72');
+    await expect(input).toHaveAttribute('placeholder', 'Address, place or parcel number');
     await expect(page.getByRole('option', { name: /Parcel st\. 72/ })).toBeVisible();
     await expect(page.getByRole('group', { name: 'Parcels' })).toBeVisible();
     await expect(page.getByRole('listbox', { name: 'Search results' })).toBeVisible();
@@ -259,5 +259,124 @@ test.describe('searching parcels by number', () => {
     await expect(page.locator('.maplibregl-canvas')).toBeVisible();
     await expect(page.locator('.map-search')).toHaveCount(0);
     await expect(page.locator('.maplibregl-ctrl-attrib')).toBeVisible();
+  });
+});
+
+test.describe('searching places and addresses', () => {
+  test('shows the municipality first with its kind, and moves the map there closing an open panel', async ({
+    page,
+    offlineTiles,
+  }) => {
+    await page.goto('/#parcel=1753295604');
+    await expect(panelOf(page).getByRole('heading')).toHaveText('Parcela st. 72');
+    await page.waitForLoadState('networkidle');
+    const tilesBefore = offlineTiles.requested().length;
+
+    await searchBox(page).fill('jicin');
+
+    const first = page.getByRole('option').first();
+    await expect(first.locator('.map-search-option-name')).toHaveText('Jičín');
+    await expect(first.locator('.map-search-option-context')).toHaveText('Obec');
+    await expect(page.getByRole('group', { name: 'Místa' })).toBeVisible();
+    await first.click();
+
+    await expect(panelOf(page)).toBeHidden();
+    await expect.poll(() => new URL(page.url()).hash).toBe('');
+    await expect.poll(() => offlineTiles.requested().length).toBeGreaterThan(tilesBefore);
+  });
+
+  test('opens the parcel of an address', async ({ page }) => {
+    await page.goto('/');
+    await expect(searchBox(page)).toBeVisible();
+
+    await searchBox(page).fill('Valdštejnovo náměstí 58');
+    const option = page.getByRole('option', { name: /Valdštejnovo náměstí 58/ });
+    await expect(option).toContainText('Adresa · Staré Město, Jičín');
+    await searchBox(page).press('Enter');
+
+    await expect(panelOf(page).getByRole('heading')).toHaveText('Parcela st. 72');
+    await expect.poll(() => new URL(page.url()).hash).toBe('#parcel=1753295604');
+  });
+
+  test('opens the parcel of an address of a cadastral area without a street', async ({ page }) => {
+    await page.goto('/');
+    await expect(searchBox(page)).toBeVisible();
+
+    await searchBox(page).fill('robousy 239');
+    await page.getByRole('option', { name: /Robousy 239/ }).click();
+
+    await expect.poll(() => new URL(page.url()).hash).toBe('#parcel=95522753010');
+  });
+
+  test('shows a part of a municipality with the municipality as context', async ({ page }) => {
+    await page.goto('/');
+    await expect(searchBox(page)).toBeVisible();
+
+    await searchBox(page).fill('stare');
+
+    const first = page.getByRole('option').first();
+    await expect(first.locator('.map-search-option-name')).toHaveText('Staré Město');
+    await expect(first.locator('.map-search-option-context')).toHaveText('Část obce · Jičín');
+  });
+
+  test('names the kinds in English after a language switch', async ({ page }) => {
+    await page.goto('/');
+    await expect(searchBox(page)).toBeVisible();
+    await searchBox(page).fill('stare');
+    await expect(page.getByRole('option').first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'English' }).click();
+
+    await expect(page.getByRole('option').first().locator('.map-search-option-context')).toHaveText(
+      'Part of a municipality · Jičín',
+    );
+    await expect(page.getByRole('group', { name: 'Places' })).toBeVisible();
+  });
+
+  test('eases to the centre of a place without bounds at zoom 17', async ({ page, offlineTiles }) => {
+    await stubSearch(page, 200, {
+      places: [
+        {
+          kind: 'municipalityPart',
+          code: 1,
+          name: 'Podhrad',
+          context: 'Jičín',
+          center: { longitude: 15.4, latitude: 50.4 },
+          bounds: null,
+          parcelId: null,
+        },
+      ],
+      parcels: [],
+    });
+    await openMap(page);
+
+    await searchBox(page).fill('podhrad');
+    await page.getByRole('option', { name: /Podhrad/ }).click();
+
+    await expect.poll(() => offlineTiles.requested().some((tile) => tile.startsWith('17/'))).toBe(true);
+  });
+
+  test('does not select a parcel for an address without one', async ({ page }) => {
+    await stubSearch(page, 200, {
+      places: [
+        {
+          kind: 'address',
+          code: 5,
+          name: 'Nikde 1',
+          context: 'Jičín',
+          center: { longitude: 15.35, latitude: 50.43 },
+          bounds: null,
+          parcelId: null,
+        },
+      ],
+      parcels: [],
+    });
+    await openMap(page);
+
+    await searchBox(page).fill('nikde');
+    await page.getByRole('option', { name: /Nikde 1/ }).click();
+
+    await expect(panelOf(page)).toBeHidden();
+    expect(new URL(page.url()).hash).toBe('');
   });
 });

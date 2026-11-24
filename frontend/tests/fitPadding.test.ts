@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitPadding } from '../src/fitPadding';
+import { fitPadding, searchFitPadding } from '../src/fitPadding';
 
 describe('fitPadding', () => {
   it('keeps the parcel clear of a left panel on a wide screen', () => {
@@ -12,5 +12,11 @@ describe('fitPadding', () => {
 
   it('treats exactly 640 px as narrow', () => {
     expect(fitPadding({ right: 300, bottom: 250 }, 640)).toEqual({ top: 274, right: 40, bottom: 40, left: 40 });
+  });
+});
+
+describe('searchFitPadding', () => {
+  it('keeps the place clear of the search box on top and 40 px from the other edges', () => {
+    expect(searchFitPadding({ bottom: 56 })).toEqual({ top: 80, right: 40, bottom: 40, left: 40 });
   });
 });

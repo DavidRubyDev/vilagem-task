@@ -6,9 +6,25 @@ export interface ParcelResult {
   readonly municipality: { readonly code: number; readonly name: string };
 }
 
+export type PlaceKind = 'municipality' | 'cadastralArea' | 'municipalityPart' | 'street' | 'address';
+
+export interface PlaceResult {
+  readonly kind: PlaceKind;
+  readonly code: number;
+  readonly name: string;
+  readonly context: string;
+  readonly center: { readonly longitude: number; readonly latitude: number };
+  readonly bounds: {
+    readonly west: number;
+    readonly south: number;
+    readonly east: number;
+    readonly north: number;
+  } | null;
+  readonly parcelId: number | null;
+}
+
 export interface SearchResults {
-  /** Not used until the places are shown. */
-  readonly places: readonly unknown[];
+  readonly places: readonly PlaceResult[];
   readonly parcels: readonly ParcelResult[];
 }
 
@@ -44,10 +60,39 @@ function isParcelResult(value: unknown): value is ParcelResult {
   );
 }
 
+const PLACE_KINDS: readonly unknown[] = ['municipality', 'cadastralArea', 'municipalityPart', 'street', 'address'];
+
+function isBounds(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    isFiniteNumber(value['west']) &&
+    isFiniteNumber(value['south']) &&
+    isFiniteNumber(value['east']) &&
+    isFiniteNumber(value['north'])
+  );
+}
+
+function isPlaceResult(value: unknown): value is PlaceResult {
+  if (!isRecord(value)) return false;
+  const { kind, code, name, context, center, bounds, parcelId } = value;
+  return (
+    PLACE_KINDS.includes(kind) &&
+    isFiniteNumber(code) &&
+    typeof name === 'string' &&
+    typeof context === 'string' &&
+    isRecord(center) &&
+    isFiniteNumber(center['longitude']) &&
+    isFiniteNumber(center['latitude']) &&
+    (bounds === null || isBounds(bounds)) &&
+    (parcelId === null || isParcelId(parcelId))
+  );
+}
+
 function isSearchResults(value: unknown): value is SearchResults {
   return (
     isRecord(value) &&
     Array.isArray(value['places']) &&
+    value['places'].every(isPlaceResult) &&
     Array.isArray(value['parcels']) &&
     value['parcels'].every(isParcelResult)
   );

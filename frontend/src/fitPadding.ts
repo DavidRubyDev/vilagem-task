@@ -10,6 +10,13 @@ export interface Padding {
   readonly left: number;
 }
 
+const SEARCH_BOX_GAP = 24;
+
+/** Padding that keeps a place fitted into the map clear of the search box above it. */
+export function searchFitPadding(searchBox: { bottom: number }): Padding {
+  return { top: searchBox.bottom + SEARCH_BOX_GAP, right: MARGIN, bottom: MARGIN, left: MARGIN };
+}
+
 /** Padding that keeps a parcel fitted into the map clear of the panel that overlays it. */
 export function fitPadding(panel: { right: number; bottom: number }, viewportWidth: number): Padding {
   if (viewportWidth > NARROW_VIEWPORT_MAX_WIDTH) {

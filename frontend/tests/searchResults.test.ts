@@ -13,6 +13,26 @@ function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
+const place = {
+  kind: 'municipality',
+  code: 572659,
+  name: 'Jičín',
+  context: '',
+  center: { longitude: 15.35, latitude: 50.43 },
+  bounds: { west: 15.3, south: 50.4, east: 15.4, north: 50.5 },
+  parcelId: null,
+};
+
+const address = {
+  kind: 'address',
+  code: 25344951,
+  name: 'Valdštejnovo náměstí 58',
+  context: 'Staré Město, Jičín',
+  center: { longitude: 15.351066, latitude: 50.4373768 },
+  bounds: null,
+  parcelId: 1753295604,
+};
+
 const URL = '/api/search/v1?q=st.%2072&near=15.352,50.437';
 
 async function load(response: Response | Error): Promise<Awaited<ReturnType<typeof loadSearchResults>>> {
@@ -29,6 +49,21 @@ describe('loadSearchResults', () => {
 
     expect(outcome).toEqual({ kind: 'found', results: { places: [], parcels: [parcel] } });
   });
+
+  it('returns places with bounds and addresses with a parcel', async () => {
+    const outcome = await load(jsonResponse({ places: [place, address], parcels: [] }));
+
+    expect(outcome).toEqual({ kind: 'found', results: { places: [place, address], parcels: [] } });
+  });
+
+  it.each(['municipality', 'cadastralArea', 'municipalityPart', 'street', 'address'])(
+    'accepts the kind %s',
+    async (kind) => {
+      const outcome = await load(jsonResponse({ places: [{ ...place, kind }], parcels: [] }));
+
+      expect(outcome.kind).toBe('found');
+    },
+  );
 
   it('accepts empty lists', async () => {
     const outcome = await load(jsonResponse({ places: [], parcels: [] }));
@@ -99,6 +134,40 @@ describe('loadSearchResults', () => {
 
     it('places is not a list', async () => {
       await rejects(jsonResponse({ places: {}, parcels: [] }));
+    });
+
+    it('a place has an unknown kind', async () => {
+      await rejects(jsonResponse({ places: [{ ...place, kind: 'river' }], parcels: [] }));
+    });
+
+    it('a place has no name or a name that is not text', async () => {
+      await rejects(jsonResponse({ places: [{ ...place, name: 5 }], parcels: [] }));
+      await rejects(jsonResponse({ places: [{ ...place, context: null }], parcels: [] }));
+    });
+
+    it('a place centre is not finite numbers', async () => {
+      await rejects(jsonResponse({ places: [{ ...place, center: { longitude: '15', latitude: 50 } }], parcels: [] }));
+      await rejects(jsonResponse({ places: [{ ...place, center: null }], parcels: [] }));
+    });
+
+    it('place bounds are incomplete or not numbers', async () => {
+      await rejects(jsonResponse({ places: [{ ...place, bounds: { west: 1, south: 2, east: 3 } }], parcels: [] }));
+      await rejects(
+        jsonResponse({ places: [{ ...place, bounds: { west: 1, south: 2, east: 3, north: 'x' } }], parcels: [] }),
+      );
+      await rejects(jsonResponse({ places: [{ ...place, bounds: undefined }], parcels: [] }));
+    });
+
+    it('a place parcel id is 0, fractional, too large or not a number', async () => {
+      await rejects(jsonResponse({ places: [{ ...address, parcelId: 0 }], parcels: [] }));
+      await rejects(jsonResponse({ places: [{ ...address, parcelId: 1.5 }], parcels: [] }));
+      await rejects(jsonResponse({ places: [{ ...address, parcelId: 2 ** 53 }], parcels: [] }));
+      await rejects(jsonResponse({ places: [{ ...address, parcelId: '1' }], parcels: [] }));
+      await rejects(jsonResponse({ places: [{ ...address, parcelId: undefined }], parcels: [] }));
+    });
+
+    it('a place is not an object', async () => {
+      await rejects(jsonResponse({ places: [5], parcels: [] }));
     });
 
     it('a parcel has an unknown kind', async () => {

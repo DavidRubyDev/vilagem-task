@@ -148,11 +148,12 @@ characters or a malformed `near`, `404` for another version or no index, `405` f
 `GET /api/map-config` tells the frontend where to ask: `parcels.searchUrl`, or `null` when the search index of the
 current tileset is missing (data imported before the search was added: run `make data`).
 
-In the browser the search box sits at the top left (the parcel panel below it), and shows the parcels found as you
+In the browser the search box sits at the top left (the parcel panel below it), and shows the places and parcels found as you
 type (a request starts 200 ms after the last keystroke; a newer request aborts the one in flight). It is an ARIA
 combobox: Arrow Up/Down move through the results, Enter opens the active one (or the first), Escape closes the list
 (a second Escape closes the parcel panel). Picking a parcel selects it exactly as a link does: panel, highlight,
-`#parcel=` and the map fitted to it. The box adds no map listener and typing causes no tile request. Without a search
+`#parcel=` and the map fitted to it. Picking an address selects the parcel its building stands on; picking another place
+closes an open parcel panel and fits the map to the place (at most zoom 17; a place without bounds is eased to at zoom 17). The box adds no map listener and typing causes no tile request. Without a search
 index of the current version the box is not shown.
 
 ### Frontend
