@@ -14,13 +14,13 @@ test('tells the user to import the parcel data when there is none', async ({ pag
   await page.goto('/');
 
   await expect(page.getByRole('status')).toHaveText(
-    'Parcel data has not been imported yet. Run make data, then reload this page.',
+    'Data parcel zatím nebyla importována. Spusťte make data a pak stránku načtěte znovu.',
   );
   await expect(page.locator('.maplibregl-canvas')).toBeVisible();
   await offlineTiles.waitFor('13/4445/2762');
   expect(parcelRequests).toEqual([]);
-  await expect(page.getByRole('complementary', { name: 'Parcel details' })).toHaveCount(0);
-  await expect(page.getByText('Zoom in to select a parcel.')).toHaveCount(0);
+  await expect(page.getByRole('complementary', { name: 'Podrobnosti o parcele' })).toHaveCount(0);
+  await expect(page.getByText('Pro výběr parcely přibližte mapu.')).toHaveCount(0);
   await expect(page.locator('.map-legend')).toHaveCount(0);
 });
 

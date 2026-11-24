@@ -14,7 +14,12 @@ export default defineConfig({
       output: {
         entryFileNames: '[name].js',
         chunkFileNames: '[name].js',
-        assetFileNames: '[name][extname]',
+        // Language files are fetched at run time and change with their content, so they are hashed; the hand-written
+        // HTML references only the fixed names of the other assets.
+        assetFileNames: (asset) =>
+          asset.originalFileNames.some((name) => name.startsWith('frontend/languages/'))
+            ? 'languages/[name]-[hash][extname]'
+            : '[name][extname]',
       },
     },
   },

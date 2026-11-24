@@ -11,7 +11,7 @@ Built as an interview task for Viagem a.s.
 > configuration. `make data` downloads the ČÚZK parcels of the whole Jičín district (240 cadastral areas,
 > 272,011 parcels) and builds a vector tileset from them; the map then shows the parcels over OSM, filled by
 > land type (outlines from zoom 14) with the credit "ČÚZK, 2026". From zoom 14, clicking a parcel opens a side panel
-> with its details.
+> with its details. The interface is in Czech by default.
 > The application is built in the tasks in [`.tasks/`](.tasks/). This README is updated as features land.
 
 ## Prerequisites
@@ -29,6 +29,9 @@ docker compose build
 docker compose up        # installs dependencies, builds the frontend, serves http://localhost:8000
 make data                # once: download the ČÚZK parcels and build the tileset (see Data)
 ```
+
+The interface is Czech by default. The messages quoted below are the English texts of the Czech-by-default
+interface.
 
 Before `make data` the page shows only the OpenStreetMap base map and a notice, "Parcel data has not
 been imported yet. Run make data, then reload this page." After `make data`, reload the page: the parcels
@@ -124,6 +127,10 @@ for an unknown id, an id that is not 1 to 15 digits, another version, a missing 
 
 TypeScript, built with Vite, MapLibre GL JS from npm (bundled, no CDN). Edit `frontend/`, then run
 `make assets` or keep `make watch` running. The build goes to `public/build/` (git-ignored).
+
+The interface texts are in `frontend/languages/<code>.json`, one flat file per language (`cs.json` is the reference:
+every other file must have exactly its keys and placeholders, which a test checks). Edit the wording there; the page
+title and the fallback error of `frontend/index.html` repeat the Czech texts and a test keeps them equal.
 
 ## Testing and QA
 
@@ -275,9 +282,12 @@ A running log of decisions, surprises and what I would do with more time.
 - **Parcels can be selected from zoom 14 only.** Below zoom 14 the tiles leave out the smallest parcels and parcels
   are a pixel or two wide, so a click would hit the wrong parcel or nothing. It is the same constant as the outline
   layer (`COMPLETE_PARCELS_MIN_ZOOM`).
-- **English interface, ready for translations.** Every string of the panel lives in `frontend/src/text.ts`, and the
-  land type and land use names in `landTypes.ts` and `landUses.ts`, keyed by the RÚIAN codes the API returns. A later
-  language switch replaces these lookups, not the components.
+- **Texts are data.** One JSON file per language in `frontend/languages/`, emitted by Vite as separate
+  content-hashed files (`/build/languages/cs-<hash>.json`) and never compiled into the JS bundle (a test checks
+  that). The page fetches the texts of the start language in parallel with `GET /api/map-config`, so they are not on
+  the critical path of the first map paint. Land type and land use names are in the same files, keyed by the RÚIAN
+  codes. The PHP built-in server sends no cache headers for static files, so the file is fetched on every page load
+  (about 4 KB).
 - **The selected parcel is outlined by a GeoJSON overlay, not by feature-state or a filter.** The overlay is a
   one-feature source (`selected-parcel`) drawn from the boundary in the parcel details, as a white casing under a
   magenta line. Feature-state expressions would make the paint data of every parcel feature depend on the selection,

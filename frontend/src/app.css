@@ -9,6 +9,10 @@ body {
   inset: 0;
 }
 
+.map-error[hidden] {
+  display: none;
+}
+
 .map-error {
   position: absolute;
   top: 50%;

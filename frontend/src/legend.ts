@@ -1,22 +1,23 @@
 import type { IControl } from 'maplibre-gl';
-import { FALLBACK_COLOUR, LAND_TYPES } from './landTypes';
+import { FALLBACK_COLOUR, LAND_TYPE_COLOURS } from './landTypes';
 import { PARCEL_FILL_OPACITY } from './mapOptions';
-import { TEXT } from './text';
+import type { Texts } from './texts';
 
 export interface LegendEntry {
   readonly name: string;
   readonly colour: string;
 }
 
-/** The rows of the legend: LAND_TYPES de-duplicated by name and colour, in code order, then the unknown fallback. */
-export function legendEntries(): readonly LegendEntry[] {
+/** The rows of the legend: LAND_TYPE_COLOURS de-duplicated by name and colour, in code order, then the unknown fallback. */
+export function legendEntries(texts: Texts): readonly LegendEntry[] {
   const entries: LegendEntry[] = [];
-  for (const { name, colour } of LAND_TYPES.values()) {
+  for (const [code, colour] of LAND_TYPE_COLOURS) {
+    const name = texts.landTypeName(code);
     if (!entries.some((entry) => entry.name === name && entry.colour === colour)) {
       entries.push({ name, colour });
     }
   }
-  entries.push({ name: TEXT.legendUnknown, colour: FALLBACK_COLOUR });
+  entries.push({ name: texts.text('legend.unknown'), colour: FALLBACK_COLOUR });
   return entries;
 }
 
@@ -24,7 +25,10 @@ export function legendEntries(): readonly LegendEntry[] {
 export class LegendControl implements IControl {
   private root: HTMLElement | null = null;
 
-  constructor(private readonly open: boolean) {}
+  constructor(
+    private readonly open: boolean,
+    private readonly texts: Texts,
+  ) {}
 
   onAdd(): HTMLElement {
     const details = document.createElement('details');
@@ -32,11 +36,11 @@ export class LegendControl implements IControl {
     details.open = this.open;
 
     const summary = document.createElement('summary');
-    summary.textContent = TEXT.legendTitle;
+    summary.textContent = this.texts.text('legend.title');
 
     const list = document.createElement('ul');
     list.className = 'map-legend-entries';
-    for (const entry of legendEntries()) {
+    for (const entry of legendEntries(this.texts)) {
       const swatch = document.createElement('span');
       swatch.className = 'map-legend-swatch';
       swatch.setAttribute('aria-hidden', 'true');

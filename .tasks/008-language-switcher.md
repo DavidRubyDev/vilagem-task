@@ -1,6 +1,6 @@
 # 008: Language switcher
 
-- **Status:** approved
+- **Status:** in-progress
 - **Created:** 2026-11-24
 - **Branch:** task/008-language-switcher
 - **Request:** "language switcher. Only english and czech for now. The switcher lives above the legend. The texts are not
@@ -929,6 +929,52 @@ Selectors:
 ## Implementation log
 
 Filled in by the implement agent, one entry per step.
+
+### Step 1: Czech interface from data files
+
+Red runs (before any production code):
+
+- E2E (`make assets` of the unchanged English app, then `make test-e2e`): 34 failed, 21 passed. The failing ones are
+  the new `language.spec.ts` (4 tests: the page was English with `lang="en"`, no `/build/languages/` request, no
+  texts in or reference from the bundle), the new `map-error.spec.ts` case (no Czech fallback in the HTML) and every
+  existing spec rewritten to Czech (`layout`, `legend`, `map`, `no-parcel-data`, `parcel-detail`, `parcels`,
+  `map-error`), which looked for Czech names against the English page (for example `getByRole('button', { name:
+  'Přiblížit' })` timed out). That is the expected reason.
+- Vitest (`npx vitest run`, tests written before the modules): 8 files failed. `Cannot find module '../src/texts'`,
+  `'../src/language'`, `'../src/languageFiles'`, `'../src/documentTexts'` (texts, language, languageFiles,
+  documentTexts tests and the shared `support/texts.ts`, which `legend`, `parcelFormat`, `indexHtml` import), and
+  `landTypes.test.ts` failed because `LAND_TYPE_COLOURS` is undefined (`Cannot read properties of undefined
+  (reading 'get')`).
+
+What was done:
+
+- Language files `cs.json` and `en.json` (69 keys each) were generated from the task file tables by a throw-away
+  script and formatted by Prettier. New modules: `texts.ts`, `language.ts`, `languageFiles.ts` (JSON part),
+  `documentTexts.ts`, `mapLabels.ts`, `mapNotice.ts`. `text.ts` and `landUses.ts` are removed; `LAND_TYPES` is now
+  `LAND_TYPE_COLOURS`; legend, hint, panel and `parcelFormat` take `Texts`.
+- `main.ts` fetches the texts and the configuration with `Promise.allSettled`. A failure of either shows the hidden
+  `.map-error` paragraph of `index.html` (in the loaded language if the texts arrived). The page now throws at
+  start-up when `.map-error` is missing, like it does for `#map`.
+- `vite.config.ts` hashes files from `frontend/languages/` into `languages/[name]-[hash][extname]`.
+- Replaced tests (every assertion kept, now in language-file tests):
+  - `text.test.ts` became `texts.test.ts` (heading, unknown codes, hint, details notice, legend strings, English
+    `map.error`/`notice.parcelsMissing` are asserted for both languages; the `UI_LOCALE` test went with the constant)
+    plus `languageFiles.test.ts`.
+  - `landUses.test.ts` (codes 1 to 30, names) is covered by `languageFiles.test.ts`, which pins all 30 land use and
+    all 11 land type names in both languages (stronger than the six names pinned before).
+  - `landTypes.test.ts`: name cases moved to `languageFiles.test.ts`; colour and fill-expression cases now use
+    `LAND_TYPE_COLOURS`.
+  - `legend.test.ts`, `parcelFormat.test.ts`: now take `Texts` and cover Czech and English.
+- Changed existing E2E expectations (English to Czech default, Decision 15): `layout`, `legend` (also asserts the
+  summary `Druh pozemku`), `map`, `map-error`, `no-parcel-data`, `parcel-detail`, `parcels` specs. In
+  `parcel-detail.spec.ts` the area is now `13\u00a0077 m²`.
+- `tests/Api/MapPageTest.php` (not listed in the task file) pins the page title; its expectation changed from `Jičín
+  Parcel Map` to `Mapa parcel okresu Jičín` (Czech default, same Decision 15 reasoning). First `make check` failed on it.
+- Decisions below the plan's level:
+  - `MapNotice.setTexts` exists already in step 1 (stores the key), because lint rejects a class that has only a
+    constructor. It is first exercised by E2E in step 2.
+  - `languageFiles.ts` parses the code from the glob path with `/([^/]+)\.[a-z]+$/`, which step 2 reuses for flags.
+  - `showError` takes the `.map-error` element looked up at start-up.
 
 ## Review
 

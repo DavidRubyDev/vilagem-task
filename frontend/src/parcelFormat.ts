@@ -1,15 +1,13 @@
-import { TEXT, UI_LOCALE } from './text';
+import type { Texts } from './texts';
 
-const AREA_FORMAT = new Intl.NumberFormat(UI_LOCALE);
-
-export function formatArea(squareMetres: number): string {
-  return `${AREA_FORMAT.format(squareMetres)} m²`;
+export function formatArea(squareMetres: number, texts: Texts): string {
+  return `${texts.formatNumber(squareMetres)} m²`;
 }
 
 export function formatCadastralArea(name: string, code: number): string {
   return `${name} (${String(code)})`;
 }
 
-export function plotTypeName(kind: 'building' | 'land'): string {
-  return kind === 'building' ? TEXT.buildingPlot : TEXT.landPlot;
+export function plotTypeName(kind: 'building' | 'land', texts: Texts): string {
+  return texts.text(kind === 'building' ? 'plotType.building' : 'plotType.land');
 }

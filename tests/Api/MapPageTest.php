@@ -19,6 +19,6 @@ final class MapPageTest extends TestCase
         self::assertStringContainsString('<div id="map">', $result->body);
         self::assertStringContainsString('src="/build/app.js"', $result->body);
         self::assertStringContainsString('href="/build/app.css"', $result->body);
-        self::assertStringContainsString('<title>Jičín Parcel Map</title>', $result->body);
+        self::assertStringContainsString('<title>Mapa parcel okresu Jičín</title>', $result->body);
     }
 }

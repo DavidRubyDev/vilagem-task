@@ -21,7 +21,7 @@ test('zooms in with the zoom button', async ({ page, offlineTiles }) => {
   await page.goto('/');
   await offlineTiles.waitFor('13/4445/2762');
 
-  await page.getByRole('button', { name: 'Zoom in' }).click();
+  await page.getByRole('button', { name: 'Přiblížit' }).click();
 
   await offlineTiles.waitFor('14/8890/5525');
 });

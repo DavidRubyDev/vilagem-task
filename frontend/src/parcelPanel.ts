@@ -1,8 +1,6 @@
-import { landTypeName } from './landTypes';
-import { landUseName } from './landUses';
 import type { ParcelDetail } from './parcelDetail';
 import { formatArea, formatCadastralArea, plotTypeName } from './parcelFormat';
-import { TEXT } from './text';
+import type { Texts } from './texts';
 
 /** The side panel with the details of the selected parcel. It overlays the map and never resizes it. */
 export class ParcelPanel {
@@ -13,18 +11,19 @@ export class ParcelPanel {
   private readonly message: HTMLElement;
 
   constructor(
+    private readonly texts: Texts,
     onClose: () => void,
     private readonly onVisibilityChange: () => void,
   ) {
     this.root = document.createElement('aside');
     this.root.className = 'parcel-panel';
-    this.root.setAttribute('aria-label', TEXT.panelLabel);
+    this.root.setAttribute('aria-label', texts.text('panel.label'));
     this.root.hidden = true;
 
     const close = document.createElement('button');
     close.type = 'button';
     close.className = 'parcel-panel-close';
-    close.setAttribute('aria-label', TEXT.closeLabel);
+    close.setAttribute('aria-label', texts.text('panel.close'));
     close.textContent = '×';
     close.addEventListener('click', onClose);
 
@@ -36,7 +35,7 @@ export class ParcelPanel {
     this.viewerLink.className = 'parcel-panel-viewer';
     this.viewerLink.target = '_blank';
     this.viewerLink.rel = 'noopener noreferrer';
-    this.viewerLink.textContent = TEXT.viewerLink;
+    this.viewerLink.textContent = texts.text('panel.viewerLink');
     this.viewerLink.hidden = true;
     this.message = document.createElement('p');
     this.message.className = 'parcel-panel-message';
@@ -55,30 +54,33 @@ export class ParcelPanel {
   }
 
   showLoading(): void {
-    this.showMessageOnly(TEXT.loading);
+    this.showMessageOnly(this.texts.text('panel.loading'));
   }
 
   showNotFound(): void {
-    this.showMessageOnly(TEXT.notFound);
+    this.showMessageOnly(this.texts.text('panel.notFound'));
   }
 
   showError(): void {
-    this.showMessageOnly(TEXT.error);
+    this.showMessageOnly(this.texts.text('panel.error'));
   }
 
   showDetail(detail: ParcelDetail): void {
-    this.title.textContent = TEXT.heading(detail.parcelNumber);
+    this.title.textContent = this.texts.text('panel.heading', { parcelNumber: detail.parcelNumber });
     this.title.hidden = false;
     this.message.textContent = '';
     this.facts.replaceChildren();
-    this.addFact(TEXT.cadastralArea, formatCadastralArea(detail.cadastralArea.name, detail.cadastralArea.code));
-    this.addFact(TEXT.municipality, detail.municipality.name);
-    this.addFact(TEXT.plotType, plotTypeName(detail.kind));
-    this.addFact(TEXT.landType, landTypeName(detail.landTypeCode));
+    this.addFact(
+      this.texts.text('panel.cadastralArea'),
+      formatCadastralArea(detail.cadastralArea.name, detail.cadastralArea.code),
+    );
+    this.addFact(this.texts.text('panel.municipality'), detail.municipality.name);
+    this.addFact(this.texts.text('panel.plotType'), plotTypeName(detail.kind, this.texts));
+    this.addFact(this.texts.text('panel.landType'), this.texts.landTypeName(detail.landTypeCode));
     if (detail.landUseCode !== null) {
-      this.addFact(TEXT.landUse, landUseName(detail.landUseCode));
+      this.addFact(this.texts.text('panel.landUse'), this.texts.landUseName(detail.landUseCode));
     }
-    this.addFact(TEXT.area, formatArea(detail.areaSquareMetres));
+    this.addFact(this.texts.text('panel.area'), formatArea(detail.areaSquareMetres, this.texts));
     this.viewerLink.href = detail.cadastreViewerUrl;
     this.viewerLink.hidden = false;
     this.setHidden(false);
