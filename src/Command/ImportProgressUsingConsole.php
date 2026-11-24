@@ -64,4 +64,9 @@ final readonly class ImportProgressUsingConsole implements ImportProgress
     {
         $this->output->writeLine(sprintf('Building the parcel store from %d parcels.', $parcelCount));
     }
+
+    public function searchIndexBuildStarted(int $parcelCount): void
+    {
+        $this->output->writeLine(sprintf('Building the search index from %d parcels.', $parcelCount));
+    }
 }

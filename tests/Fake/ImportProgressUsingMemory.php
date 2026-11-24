@@ -40,4 +40,9 @@ final class ImportProgressUsingMemory implements ImportProgress
     {
         $this->events[] = sprintf('parcel store from %d parcels', $parcelCount);
     }
+
+    public function searchIndexBuildStarted(int $parcelCount): void
+    {
+        $this->events[] = sprintf('search index from %d parcels', $parcelCount);
+    }
 }

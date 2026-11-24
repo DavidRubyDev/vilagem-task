@@ -27,6 +27,7 @@ final readonly class ImportParcelsUseCase
         private TilesetBuilder $builder,
         private TilesetInspector $inspector,
         private ParcelStoreBuilder $storeBuilder,
+        private SearchIndexBuilder $searchIndexBuilder,
         private ParcelDataPublisher $publisher,
         private Clock $clock,
         private TileSizeBudget $budget,
@@ -79,8 +80,10 @@ final readonly class ImportParcelsUseCase
         $this->requireWithinBudget($statistics);
         $progress->parcelStoreBuildStarted($totalParcels);
         $store = $this->storeBuilder->build($converted, $coverage);
+        $progress->searchIndexBuildStarted($totalParcels);
+        $index = $this->searchIndexBuilder->build($converted, $coverage);
         $version = TilesetVersion::fromTime($this->clock->now());
-        $this->publisher->publish($tileset, $store, $version, $exportDate);
+        $this->publisher->publish($tileset, $store, $index, $version, $exportDate);
 
         return new ImportParcelsOutput(
             $exportDate->toString(),

@@ -46,9 +46,10 @@ final class ImportParcelsCommandTest extends TestCase
         self::assertStringContainsString('Imported the RÚIAN export of 2026-10-31.', $result->stdout);
         self::assertStringContainsString('659541 Jičín: 22 parcels', $result->stdout);
         self::assertStringContainsString('740225 Robousy: 3 parcels', $result->stdout);
-        self::assertSame(1, preg_match('/^Published tileset and parcel store (\d{14}) with 25 parcels\.$/m', $result->stdout, $matches), $result->stdout);
+        self::assertSame(1, preg_match('/^Published tileset, parcel store and search index (\d{14}) with 25 parcels\.$/m', $result->stdout, $matches), $result->stdout);
         $version = $matches[1] ?? '';
         self::assertStringContainsString("Building the parcel store from 25 parcels.\n", $result->stdout);
+        self::assertStringContainsString("Building the search index from 25 parcels.\n", $result->stdout);
         self::assertStringNotContainsString('Warning:', $result->stderr);
         self::assertSame('2026-10-31', $this->metadata('parcel_map_export_date'));
         self::assertFileExists($this->dataDir->path . '/cache/ruian/20261031_OB_572659_UKSH.xml.zip');
@@ -58,6 +59,13 @@ final class ImportParcelsCommandTest extends TestCase
         self::assertSame(25, SqliteFile::scalar($store, 'SELECT COUNT(*) FROM parcels'));
         self::assertSame('2026-10-31', SqliteFile::scalar($store, "SELECT value FROM metadata WHERE name = 'parcel_map_export_date'"));
         self::assertSame($version, SqliteFile::scalar($store, "SELECT value FROM metadata WHERE name = 'parcel_map_version'"));
+
+        $index = $this->dataDir->path . '/search/' . $version . '.sqlite';
+        self::assertFileExists($index);
+        self::assertSame(25, SqliteFile::scalar($index, 'SELECT COUNT(*) FROM parcels'));
+        self::assertSame(2, SqliteFile::scalar($index, 'SELECT COUNT(*) FROM cadastral_areas'));
+        self::assertSame('2026-10-31', SqliteFile::scalar($index, "SELECT value FROM metadata WHERE name = 'parcel_map_export_date'"));
+        self::assertSame($version, SqliteFile::scalar($index, "SELECT value FROM metadata WHERE name = 'parcel_map_version'"));
     }
 
     #[Test]
@@ -75,6 +83,7 @@ final class ImportParcelsCommandTest extends TestCase
         $after = glob($this->dataDir->path . '/parcels/*.sqlite') ?: [];
         self::assertCount(2, $after);
         self::assertContains($stores[0], $after);
+        self::assertCount(2, glob($this->dataDir->path . '/search/*.sqlite') ?: []);
     }
 
     #[Test]
@@ -91,7 +100,7 @@ final class ImportParcelsCommandTest extends TestCase
             );
         }
         self::assertLessThan(
-            (int) strpos($result->stdout, 'Published tileset and parcel store'),
+            (int) strpos($result->stdout, 'Published tileset, parcel store and search index'),
             (int) strpos($result->stdout, '  zoom 16: '),
         );
         self::assertLessThan(
@@ -114,13 +123,13 @@ final class ImportParcelsCommandTest extends TestCase
             'Convert    2/2: municipality 572659, 2 cadastral areas, 25 parcels',
             'Building the tileset from 28 parcels.',
         ]);
-        self::assertMatchesRegularExpression('/^Published tileset and parcel store \d{14} with 28 parcels\.$/m', $result->stdout);
+        self::assertMatchesRegularExpression('/^Published tileset, parcel store and search index \d{14} with 28 parcels\.$/m', $result->stdout);
         self::assertGreaterThan(
             (int) strpos($result->stdout, 'Building the tileset'),
             (int) strpos($result->stdout, 'Building the parcel store from 28 parcels.'),
         );
         self::assertGreaterThan(
-            (int) strpos($result->stdout, 'Building the parcel store'),
+            (int) strpos($result->stdout, 'Building the search index'),
             (int) strpos($result->stdout, 'Published tileset'),
         );
 

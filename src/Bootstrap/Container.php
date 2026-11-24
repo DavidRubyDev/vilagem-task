@@ -33,6 +33,7 @@ use ParcelMap\Infrastructure\Import\ParcelConverterUsingOgr2ogr;
 use ParcelMap\Infrastructure\Import\ParcelDataPublisherUsingSqlite;
 use ParcelMap\Infrastructure\Import\ParcelStoreBuilderUsingSqlite;
 use ParcelMap\Infrastructure\Import\RuianExportDownloaderUsingHttp;
+use ParcelMap\Infrastructure\Import\SearchIndexBuilderUsingSqlite;
 use ParcelMap\Infrastructure\Import\TilesetBuilderUsingTippecanoe;
 use ParcelMap\Infrastructure\Import\TilesetInspectorUsingMbtiles;
 use ParcelMap\Infrastructure\Map\MapSettingsRepositoryUsingConstants;
@@ -70,7 +71,8 @@ final readonly class Container
                     new TilesetBuilderUsingTippecanoe($runner, $dataDir . '/build'),
                     new TilesetInspectorUsingMbtiles(),
                     new ParcelStoreBuilderUsingSqlite($dataDir . '/build'),
-                    new ParcelDataPublisherUsingSqlite($this->tilesetFile(), $this->parcelStoreDirectory()),
+                    new SearchIndexBuilderUsingSqlite($dataDir . '/build'),
+                    new ParcelDataPublisherUsingSqlite($this->tilesetFile(), $this->parcelStoreDirectory(), $this->searchIndexDirectory()),
                     new ClockUsingSystemTime(),
                     TileSizeBudget::smoothMap(),
                 ),
@@ -126,6 +128,11 @@ final readonly class Container
     private function parcelStoreDirectory(): string
     {
         return $this->path('PARCEL_MAP_DATA_DIR', self::DEFAULT_DATA_DIR) . '/parcels';
+    }
+
+    private function searchIndexDirectory(): string
+    {
+        return $this->path('PARCEL_MAP_DATA_DIR', self::DEFAULT_DATA_DIR) . '/search';
     }
 
     private function path(string $variable, string $default): string

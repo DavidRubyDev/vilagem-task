@@ -1,6 +1,6 @@
 # 009: Search bar
 
-- **Status:** approved
+- **Status:** in-progress
 - **Created:** 2026-11-24
 - **Branch:** task/009-search-bar
 - **Request:** "lets plan another task. A search bar. It should search by the real location as maps do. But also by the
@@ -1078,6 +1078,37 @@ arguments, can be unpublished), `PlaceConverterUsingMemory` (step 4).
 ## Implementation log
 
 Filled in by the implement agent, one entry per step.
+
+### Step 1: `feat(import): publish a search index with each tileset (#009)`
+
+Red runs (each seen failing before the production code):
+
+- Outer, `tests/Api/ImportParcelsCommandTest` (`it_imports_the_fixture_export_and_publishes_the_tileset`,
+  `it_keeps_the_previous_parcel_store_...`, `it_prints_the_tile_statistics_...`,
+  `it_reports_the_progress_of_the_downloads_and_conversions`): 4 failures, "Published tileset and parcel store ..."
+  did not match the new regex, and no `search/` directory existed ("actual size 0 matches expected size 2").
+- `SearchTextTest` (20 tests): `Class "ParcelMap\Domain\Search\SearchText" not found`.
+- Unit `ImportParcelsUseCaseTest`, `ImportProgressUsingConsoleTest`, `ImportParcelsCommandTest`: fatal, the new fakes
+  and the port did not exist yet (the suite died with "Premature end of PHP process").
+- `SearchIndexBuilderUsingSqliteTest` (14 tests): `Class ...SearchIndexBuilderUsingSqlite not found`.
+- `ParcelDataPublisherUsingSqliteTest`: fatal (`ArgumentCountError`, the publisher had no index parameter).
+
+Deliberately changed existing tests:
+
+- `tests/Api/ImportParcelsCommandTest`: the regexes for the last line now say "Published tileset, parcel store and
+  search index"; the ordering assertion "parcel store line before the published line" became "search index line before
+  the published line" (it is stricter: the index line follows the store line); the "keeps the previous store" test also
+  counts two index files.
+- `tests/Unit/Command/ImportParcelsCommandTest`: the same last line.
+- `tests/Unit/Application/Import/ImportParcelsUseCaseTest`: the publisher record gained the index path; the constructor
+  gains the builder fake; the progress events list gains `search index from 30 parcels`.
+- `tests/Integration/.../ParcelDataPublisherUsingSqliteTest`: every `publish()` call passes an index; the
+  constructor gets the third directory. New cases: index stamped and moved, index pruning, a failed index move removes
+  the placed store, an unreadable index.
+
+Decisions below the plan's level: `SearchIndexBuilderUsingSqlite` has its own small parcel-line parser (id, areaCode,
+kind, baseNumber, subdivision, outer ring) instead of sharing code with `ParcelStoreBuilderUsingSqlite`, which stays
+untouched; both reuse `InvalidParcelLine`. `SearchText::terms()` drops a part when it is one ASCII letter.
 
 ## Review
 

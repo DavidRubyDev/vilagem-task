@@ -26,7 +26,7 @@ final readonly class ImportParcelsCommand implements Command
 
     public function description(): string
     {
-        return 'Download the RÚIAN export and build the parcel tileset and parcel store.';
+        return 'Download the RÚIAN export and build the parcel tileset, parcel store and search index.';
     }
 
     public function run(array $arguments, ConsoleOutput $output): int
@@ -78,7 +78,7 @@ final readonly class ImportParcelsCommand implements Command
             ));
         }
         $output->writeLine(sprintf(
-            'Published tileset and parcel store %s with %d parcels.',
+            'Published tileset, parcel store and search index %s with %d parcels.',
             $result->tilesetVersion,
             $result->totalParcels,
         ));

@@ -26,6 +26,7 @@ use ParcelMap\Tests\Fake\ParcelConverterUsingMemory;
 use ParcelMap\Tests\Fake\ParcelDataPublisherUsingMemory;
 use ParcelMap\Tests\Fake\ParcelStoreBuilderUsingMemory;
 use ParcelMap\Tests\Fake\RuianExportDownloaderUsingMemory;
+use ParcelMap\Tests\Fake\SearchIndexBuilderUsingMemory;
 use ParcelMap\Tests\Fake\TilesetBuilderUsingMemory;
 use ParcelMap\Tests\Fake\TilesetInspectorUsingMemory;
 use ParcelMap\Tests\Unit\Command\Console\MemoryConsoleOutput;
@@ -63,7 +64,7 @@ final class ImportParcelsCommandTest extends TestCase
 
         self::assertSame(ExitCode::SUCCESS, $exitCode);
         self::assertSame([], $output->stderr);
-        self::assertSame('Published tileset and parcel store 20261120093000 with 5 parcels.', end($output->stdout));
+        self::assertSame('Published tileset, parcel store and search index 20261120093000 with 5 parcels.', end($output->stdout));
     }
 
     /**
@@ -81,6 +82,7 @@ final class ImportParcelsCommandTest extends TestCase
             new TilesetBuilderUsingMemory(),
             new TilesetInspectorUsingMemory(new TilesetStatistics(new ZoomTileStatistics(9, 4, 100_000, new TileCoordinate(9, 277, 172)))),
             new ParcelStoreBuilderUsingMemory(false, $unknownCodes),
+            new SearchIndexBuilderUsingMemory(),
             new ParcelDataPublisherUsingMemory(),
             new ClockUsingFixedTime(new DateTimeImmutable('2026-11-20 09:30:00', new DateTimeZone('UTC'))),
             new TileSizeBudget(150_000),
