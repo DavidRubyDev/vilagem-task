@@ -12,7 +12,11 @@ export function zoomHintVisible(zoom: number, panelOpen: boolean): boolean {
  * caller reports that the panel opened or closed, never on `move` or `render`, which fire continuously while the map
  * is panned.
  */
-export function showZoomHint(map: MapLibreMap, isPanelOpen: () => boolean, texts: Texts): { update(): void } {
+export function showZoomHint(
+  map: MapLibreMap,
+  isPanelOpen: () => boolean,
+  texts: Texts,
+): { update(): void; setTexts(texts: Texts): void } {
   const hint = document.createElement('p');
   hint.className = 'map-hint';
   hint.textContent = texts.text('map.zoomHint');
@@ -24,5 +28,8 @@ export function showZoomHint(map: MapLibreMap, isPanelOpen: () => boolean, texts
   update();
   map.on('load', update);
   map.on('zoomend', update);
-  return { update };
+  const setTexts = (next: Texts): void => {
+    hint.textContent = next.text('map.zoomHint');
+  };
+  return { update, setTexts };
 }

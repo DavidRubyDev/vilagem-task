@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { LAND_TYPE_COLOURS } from '../src/landTypes';
-import { availableLanguages, textsUrl, UnknownLanguage } from '../src/languageFiles';
+import { availableLanguages, flagUrl, textsUrl, UnknownLanguage } from '../src/languageFiles';
 import { languageFiles } from './support/texts';
 
+const flags = import.meta.glob<string>('../languages/*.svg', { query: '?raw', import: 'default', eager: true });
 const files = languageFiles();
 const cs = files['cs'] ?? {};
 
@@ -116,5 +117,28 @@ describe('textsUrl', () => {
 
   it('throws for a language without a texts file', () => {
     expect(() => textsUrl('de')).toThrow(UnknownLanguage);
+  });
+});
+
+describe('the flag files', () => {
+  const flagCodes = Object.keys(flags).map((path) => /([^/]+)\.svg$/.exec(path)?.[1]);
+
+  it('exist for exactly the languages with texts', () => {
+    expect([...flagCodes].sort()).toEqual(Object.keys(files).sort());
+  });
+
+  it.each(Object.entries(flags))('%s is an SVG with a viewBox', (_path, svg) => {
+    expect(svg.startsWith('<svg')).toBe(true);
+    expect(svg).toContain('viewBox=');
+  });
+});
+
+describe('flagUrl', () => {
+  it('points at the language flag', () => {
+    expect(flagUrl('en')).toContain('en.svg');
+  });
+
+  it('throws for a language without a flag file', () => {
+    expect(() => flagUrl('de')).toThrow(UnknownLanguage);
   });
 });

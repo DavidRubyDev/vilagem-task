@@ -24,10 +24,12 @@ export function legendEntries(texts: Texts): readonly LegendEntry[] {
 /** The land type key in the bottom-left corner of the map. Static: no map or DOM listeners. */
 export class LegendControl implements IControl {
   private root: HTMLElement | null = null;
+  private summary: HTMLElement | null = null;
+  private list: HTMLElement | null = null;
 
   constructor(
     private readonly open: boolean,
-    private readonly texts: Texts,
+    private texts: Texts,
   ) {}
 
   onAdd(): HTMLElement {
@@ -36,28 +38,40 @@ export class LegendControl implements IControl {
     details.open = this.open;
 
     const summary = document.createElement('summary');
-    summary.textContent = this.texts.text('legend.title');
-
     const list = document.createElement('ul');
     list.className = 'map-legend-entries';
-    for (const entry of legendEntries(this.texts)) {
-      const swatch = document.createElement('span');
-      swatch.className = 'map-legend-swatch';
-      swatch.setAttribute('aria-hidden', 'true');
-      swatch.style.backgroundColor = entry.colour;
-      swatch.style.opacity = String(PARCEL_FILL_OPACITY);
-      const item = document.createElement('li');
-      item.append(swatch, entry.name);
-      list.append(item);
-    }
 
     details.append(summary, list);
     this.root = details;
+    this.summary = summary;
+    this.list = list;
+    this.setTexts(this.texts);
     return details;
   }
 
   onRemove(): void {
     this.root?.remove();
     this.root = null;
+    this.summary = null;
+    this.list = null;
   }
+
+  /** Rewrites the summary and the rows; the <details> element keeps its open state. */
+  setTexts(texts: Texts): void {
+    this.texts = texts;
+    if (this.summary === null || this.list === null) return;
+    this.summary.textContent = texts.text('legend.title');
+    this.list.replaceChildren(...legendEntries(texts).map(legendRow));
+  }
+}
+
+function legendRow(entry: LegendEntry): HTMLElement {
+  const swatch = document.createElement('span');
+  swatch.className = 'map-legend-swatch';
+  swatch.setAttribute('aria-hidden', 'true');
+  swatch.style.backgroundColor = entry.colour;
+  swatch.style.opacity = String(PARCEL_FILL_OPACITY);
+  const item = document.createElement('li');
+  item.append(swatch, entry.name);
+  return item;
 }

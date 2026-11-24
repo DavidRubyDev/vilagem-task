@@ -7,6 +7,12 @@ const TEXT_FILES = import.meta.glob<string>('../languages/*.json', {
   eager: true,
 });
 
+const FLAG_FILES = import.meta.glob<string>('../languages/*.svg', {
+  query: '?url&no-inline',
+  import: 'default',
+  eager: true,
+});
+
 export class UnknownLanguage extends Error {}
 
 function urlsByLanguage(files: Readonly<Record<string, string>>): ReadonlyMap<string, string> {
@@ -19,6 +25,7 @@ function urlsByLanguage(files: Readonly<Record<string, string>>): ReadonlyMap<st
 }
 
 const TEXTS_URLS = urlsByLanguage(TEXT_FILES);
+const FLAG_URLS = urlsByLanguage(FLAG_FILES);
 
 /** Every language with a texts file, ordered by orderLanguages. */
 export function availableLanguages(): readonly string[] {
@@ -30,6 +37,15 @@ export function textsUrl(language: string): string {
   const url = TEXTS_URLS.get(language);
   if (url === undefined) {
     throw new UnknownLanguage(`There is no texts file for language ${language}.`);
+  }
+  return url;
+}
+
+/** The URL of the language's flag; throws UnknownLanguage for a language without a flag file. */
+export function flagUrl(language: string): string {
+  const url = FLAG_URLS.get(language);
+  if (url === undefined) {
+    throw new UnknownLanguage(`There is no flag file for language ${language}.`);
   }
   return url;
 }

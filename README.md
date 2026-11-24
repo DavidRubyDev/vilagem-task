@@ -31,7 +31,8 @@ make data                # once: download the ČÚZK parcels and build the tiles
 ```
 
 The interface is Czech by default. The messages quoted below are the English texts of the Czech-by-default
-interface.
+interface. Two flag buttons above the legend (Czech, English) switch the language; the language's name shows on
+hover. Switching re-renders every text in place: the page does not reload and the map and its tiles are untouched.
 
 Before `make data` the page shows only the OpenStreetMap base map and a notice, "Parcel data has not
 been imported yet. Run make data, then reload this page." After `make data`, reload the page: the parcels
@@ -288,6 +289,15 @@ A running log of decisions, surprises and what I would do with more time.
   the critical path of the first map paint. Land type and land use names are in the same files, keyed by the RÚIAN
   codes. The PHP built-in server sends no cache headers for static files, so the file is fetched on every page load
   (about 4 KB).
+- **Switching the language re-renders in place.** A `Localization` object holds the current texts and the languages
+  loaded so far (the other language is fetched on first use, then cached). Every component has a `setTexts`; the map,
+  its style, layers and sources are not touched, so no tile is requested again. MapLibre has no runtime locale
+  setter, so its own labels (zoom buttons, canvas) are set through the DOM.
+- **The flags are hand-written SVG files** (`frontend/languages/<code>.svg`, emitted next to the texts), because
+  Windows draws flag emoji as two letters. The attribution ("© OpenStreetMap contributors", "ČÚZK, 2026") is not
+  translated: it comes from the map configuration and changing it would mean changing a map source.
+- **The panel's height caps include the language switcher** (`calc(100% - 19.75rem)`, `24.25rem` up to 800 px), so
+  on a short window the panel shows a little less before it scrolls.
 - **The selected parcel is outlined by a GeoJSON overlay, not by feature-state or a filter.** The overlay is a
   one-feature source (`selected-parcel`) drawn from the boundary in the parcel details, as a white casing under a
   magenta line. Feature-state expressions would make the paint data of every parcel feature depend on the selection,
@@ -327,6 +337,8 @@ _To be filled in._
   today they are pinned by separate tests and a code-list change must update both by hand.
 - A generalised land-cover overview layer (parcels dissolved by land type) for low zooms, instead of leaving out
   small parcels there.
+- Serve `/build/languages/` with immutable caching in a production server: the file names are content-hashed, but
+  the PHP built-in server sends no cache headers.
 - Docker layer cache in CI (BuildKit GitHub Actions cache), to avoid rebuilding the PHP image
   in several jobs and pulling the Playwright image on every run.
 - Activate the ruleset once the repository is public.

@@ -975,6 +975,35 @@ What was done:
     constructor. It is first exercised by E2E in step 2.
   - `languageFiles.ts` parses the code from the glob path with `/([^/]+)\.[a-z]+$/`, which step 2 reuses for flags.
   - `showError` takes the `.map-error` element looked up at start-up.
+### Step 2: Switch the language in place
+
+Red runs (before production code):
+
+- E2E (`language.spec.ts` switcher block, `layout.spec.ts` English cases, run against the step 1 build): 12 failed,
+  20 passed. The 8 new `language.spec.ts` tests and the 4 new English layout cases failed because there was no
+  switcher: `getByRole('group', { name: 'Jazyk' })` not visible, `locator.click: Test timeout` waiting for the
+  `English` button. The step 1 tests of the same files and the 16 existing layout cases kept passing (with
+  `.map-language` already in `ELEMENTS`, no element matches yet).
+- Vitest: `localization.test.ts` failed with `Cannot find module '../src/localization'`; in `languageFiles.test.ts`
+  the flag tests failed (`flagUrl is not a function`, `expected [] to deeply equal ['cs', 'en']` for the missing
+  `.svg` files).
+
+What was done:
+
+- `cs.svg` and `en.svg` as in the task file; `flagUrl()` in `languageFiles.ts`; `Localization`;
+  `LanguageSwitcherControl`; `setTexts` on `ParcelPanel` (remembers its content as `none`, `loading`, `notFound`,
+  `error` or `detail`; `hide()` resets it to `none`, so a switch never reopens a closed panel), `LegendControl` and
+  the zoom hint; `main.ts` creates the `Localization` and registers one `onChange` listener per branch, with the
+  switcher added after the legend; panel caps and `.map-language` CSS.
+- Decisions below the plan's level:
+  - `Localization` has no `pending` map: a double click on the same new language starts two loads, and the second
+    result is not applied because the language is already current (`apply` ignores the current language).
+  - The `:hover` style (`#eee`, full opacity) applies to the not-pressed button only, so the pressed language keeps
+    its highlight under the mouse.
+  - The E2E "switches in place" test checks zoom buttons by name and `title`, and stores the canvas element on
+    `window` before the switch.
+- No existing test changed in this step; `ELEMENTS` of `layout.spec.ts` gained `.map-language`.
+
 
 ## Review
 

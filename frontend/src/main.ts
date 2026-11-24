@@ -4,9 +4,11 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import './app.css';
 import { applyDocumentTexts } from './documentTexts';
 import { fitPadding } from './fitPadding';
-import { DEFAULT_LANGUAGE } from './language';
-import { textsUrl } from './languageFiles';
+import { DEFAULT_LANGUAGE, languageName } from './language';
+import { availableLanguages, flagUrl, textsUrl } from './languageFiles';
+import { LanguageSwitcherControl } from './languageSwitcher';
 import { LegendControl } from './legend';
+import { Localization } from './localization';
 import { loadMapConfiguration } from './mapConfiguration';
 import { labelMapControls } from './mapLabels';
 import { MapNotice } from './mapNotice';
@@ -30,6 +32,13 @@ function showError(container: HTMLElement, message: HTMLElement, texts: Texts | 
 /** Collapsed on phones, where the open legend would cover a third of the screen. Read once, so no listener. */
 function newLegend(texts: Texts): LegendControl {
   return new LegendControl(!window.matchMedia('(max-width: 640px)').matches, texts);
+}
+
+function newLanguageSwitcher(localization: Localization): LanguageSwitcherControl {
+  const options = availableLanguages().map((code) => ({ code, name: languageName(code), flagUrl: flagUrl(code) }));
+  return new LanguageSwitcherControl(options, localization.current(), (code) => {
+    void localization.switchTo(code);
+  });
 }
 
 interface LinkedParcel {
@@ -103,16 +112,28 @@ async function start(): Promise<void> {
     const configuration = configurationResult.value;
     const loadedTexts = textsResult.value;
     applyDocumentTexts(document, loadedTexts);
+    const localization = new Localization(loadedTexts, (code) => loadTexts(fetchFn, textsUrl(code), code));
     const { parcels } = configuration;
     // Neither parcel data nor parcel details: the map has nothing to select, and a parcel in the URL is ignored.
     if (parcels === null || parcels.parcelUrlTemplate === null) {
-      new MapNotice(parcels === null ? 'notice.parcelsMissing' : 'notice.detailsMissing', loadedTexts);
+      const notice = new MapNotice(parcels === null ? 'notice.parcelsMissing' : 'notice.detailsMissing', loadedTexts);
       const bareMap = new Map(createMapOptions(configuration, container, window.location.origin));
       bareMap.addControl(new NavigationControl({ showCompass: false }), 'top-right');
       labelMapControls(bareMap, loadedTexts);
-      if (parcels !== null) {
-        bareMap.addControl(newLegend(loadedTexts), 'bottom-left');
+      const legend = parcels === null ? null : newLegend(loadedTexts);
+      if (legend !== null) {
+        bareMap.addControl(legend, 'bottom-left');
       }
+      // Added last: MapLibre puts a later bottom control above the earlier ones, so the switcher sits above the legend.
+      const switcher = newLanguageSwitcher(localization);
+      bareMap.addControl(switcher, 'bottom-left');
+      localization.onChange((next) => {
+        applyDocumentTexts(document, next);
+        labelMapControls(bareMap, next);
+        notice.setTexts(next);
+        legend?.setTexts(next);
+        switcher.setTexts(next);
+      });
       return;
     }
     const { parcelUrlTemplate } = parcels;
@@ -134,9 +155,21 @@ async function start(): Promise<void> {
     const map = new Map(createMapOptions(configuration, container, window.location.origin, linked?.initialBounds));
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
     labelMapControls(map, loadedTexts);
-    map.addControl(newLegend(loadedTexts), 'bottom-left');
+    const legend = newLegend(loadedTexts);
+    map.addControl(legend, 'bottom-left');
+    const switcher = newLanguageSwitcher(localization);
+    map.addControl(switcher, 'bottom-left');
     const selection = new ParcelSelection(map, panel, fetchFn, parcelUrlTemplate, window);
-    hintRef.current = showZoomHint(map, () => panel.isOpen(), loadedTexts);
+    const hint = showZoomHint(map, () => panel.isOpen(), loadedTexts);
+    hintRef.current = hint;
+    localization.onChange((next) => {
+      applyDocumentTexts(document, next);
+      labelMapControls(map, next);
+      panel.setTexts(next);
+      hint.setTexts(next);
+      legend.setTexts(next);
+      switcher.setTexts(next);
+    });
     if (linked !== null) {
       map.once('load', () => {
         selection.adopt(linked.detail);

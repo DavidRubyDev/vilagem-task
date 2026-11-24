@@ -331,6 +331,7 @@ Source-data term (Czech) → name used in code.
 | —                                     | Selected parcel      | The parcel shown in the side panel and outlined on the map (source `selected-parcel`); in the URL as `#parcel={id}`. |
 | —                                     | Parcel detail        | What the side panel shows about a parcel (`GET /api/parcels/{version}/{id}`). |
 | —                                     | Map configuration    | What the frontend needs to start the map: initial `MapView` + `BaseMap` (`GET /api/map-config`). |
-| —                                     | Language             | A language of the interface, identified by its ISO 639-1 code (`cs`, the default, and `en`); its texts are `frontend/languages/<code>.json`. |
+| —                                     | Language             | A language of the interface, identified by its ISO 639-1 code (`cs`, the default, and `en`); its texts are `frontend/languages/<code>.json` and its flag `<code>.svg`. |
 | —                                     | Texts                | The interface strings of one language, keyed by text keys such as `panel.heading`; fetched at run time, never bundled into the JS. |
+| —                                     | Language switcher    | The flag buttons above the legend (`LanguageSwitcherControl`); switching re-renders the texts in place, without reloading. |
 | —                                     | Legend               | The land type key in the bottom-left corner of the map (`LegendControl`), built from the frontend land type catalogue. |
