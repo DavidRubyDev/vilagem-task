@@ -18,6 +18,7 @@ use ParcelMap\Domain\Map\ZoomLevel;
 use ParcelMap\Tests\Fake\MapSettingsRepositoryUsingMemory;
 use ParcelMap\Tests\Fake\ParcelRepositoryUsingMemory;
 use ParcelMap\Tests\Fake\ParcelTilesetRepositoryUsingMemory;
+use ParcelMap\Tests\Fake\SearchIndexRepositoryUsingMemory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -36,7 +37,7 @@ final class GetMapConfigurationUseCaseTest extends TestCase
             ),
         );
 
-        $output = new GetMapConfigurationUseCase($settings, new ParcelTilesetRepositoryUsingMemory(null), new ParcelRepositoryUsingMemory(null))->execute();
+        $output = new GetMapConfigurationUseCase($settings, new ParcelTilesetRepositoryUsingMemory(null), new ParcelRepositoryUsingMemory(null), new SearchIndexRepositoryUsingMemory(null))->execute();
 
         self::assertSame(15.5, $output->initialView->centerLongitude);
         self::assertSame(50.25, $output->initialView->centerLatitude);
@@ -105,6 +106,47 @@ final class GetMapConfigurationUseCaseTest extends TestCase
         self::assertFalse($parcels->detailsAvailable);
     }
 
+    #[Test]
+    public function it_offers_search_when_the_details_and_the_search_index_of_the_current_version_are_published(): void
+    {
+        $version = new TilesetVersion('20261120093000');
+
+        $parcels = $this->useCase(
+            new ParcelTilesetRepositoryUsingMemory(self::tileset()),
+            new ParcelRepositoryUsingMemory($version),
+            new SearchIndexRepositoryUsingMemory($version),
+        )->execute()->parcels;
+
+        self::assertNotNull($parcels);
+        self::assertTrue($parcels->searchAvailable);
+    }
+
+    #[Test]
+    public function it_does_not_offer_search_without_a_search_index_of_the_current_version(): void
+    {
+        $parcels = $this->useCase(
+            new ParcelTilesetRepositoryUsingMemory(self::tileset()),
+            new ParcelRepositoryUsingMemory(new TilesetVersion('20261120093000')),
+            new SearchIndexRepositoryUsingMemory(new TilesetVersion('19990101000000')),
+        )->execute()->parcels;
+
+        self::assertNotNull($parcels);
+        self::assertFalse($parcels->searchAvailable);
+    }
+
+    #[Test]
+    public function it_does_not_offer_search_without_parcel_details_even_with_a_search_index(): void
+    {
+        $parcels = $this->useCase(
+            new ParcelTilesetRepositoryUsingMemory(self::tileset()),
+            new ParcelRepositoryUsingMemory(null),
+            new SearchIndexRepositoryUsingMemory(new TilesetVersion('20261120093000')),
+        )->execute()->parcels;
+
+        self::assertNotNull($parcels);
+        self::assertFalse($parcels->searchAvailable);
+    }
+
     private static function tileset(): ParcelTileset
     {
         return new ParcelTileset(
@@ -116,8 +158,11 @@ final class GetMapConfigurationUseCaseTest extends TestCase
         );
     }
 
-    private function useCase(ParcelTilesetRepositoryUsingMemory $tilesets, ?ParcelRepositoryUsingMemory $parcels = null): GetMapConfigurationUseCase
-    {
+    private function useCase(
+        ParcelTilesetRepositoryUsingMemory $tilesets,
+        ?ParcelRepositoryUsingMemory $parcels = null,
+        ?SearchIndexRepositoryUsingMemory $searchIndex = null,
+    ): GetMapConfigurationUseCase {
         return new GetMapConfigurationUseCase(
             new MapSettingsRepositoryUsingMemory(
                 new MapView(new Coordinates(longitude: 15.5, latitude: 50.25), new ZoomLevel(11.5)),
@@ -130,6 +175,7 @@ final class GetMapConfigurationUseCaseTest extends TestCase
             ),
             $tilesets,
             $parcels ?? new ParcelRepositoryUsingMemory(null),
+            $searchIndex ?? new SearchIndexRepositoryUsingMemory(null),
         );
     }
 }

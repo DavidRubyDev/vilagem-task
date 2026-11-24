@@ -328,6 +328,9 @@ Source-data term (Czech) → name used in code.
 | —                                     | `VectorTile`         | One gzip-compressed vector tile, or none (empty).              |
 | —                                     | `SearchIndex`        | The search index of one tileset version (`data/search/{version}.sqlite`): parcel numbers and places of the covered area. |
 | —                                     | `SearchText`         | Text normalised for search: lower case, no diacritics, only `a-z`, `0-9`, `/` and single spaces. |
+| —                                     | `SearchQuery`        | A parsed search text: parcel number, cadastral area code, name terms. |
+| —                                     | `ParcelNumberQuery`  | A parcel number as searched: base, optional subdivision, optional kind (`st.`). |
+| —                                     | `ParcelMatch`        | A parcel found by its number: id, number, cadastral area. |
 | —                                     | `Bounds`             | South-west and north-east `Coordinates` of a rectangle.        |
 | —                                     | `ParcelTileset`      | The published parcel tileset: version, export date, bounds, zoom range; `attribution()` gives the ČÚZK credit. |
 | —                                     | Selected parcel      | The parcel shown in the side panel and outlined on the map (source `selected-parcel`); in the URL as `#parcel={id}`. |

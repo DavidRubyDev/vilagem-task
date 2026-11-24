@@ -1110,6 +1110,51 @@ Decisions below the plan's level: `SearchIndexBuilderUsingSqlite` has its own sm
 kind, baseNumber, subdivision, outer ring) instead of sharing code with `ParcelStoreBuilderUsingSqlite`, which stays
 untouched; both reuse `InvalidParcelLine`. `SearchText::terms()` drops a part when it is one ASCII letter.
 
+### Step 2: `feat(search): find parcels by number (#009)`
+
+Red runs (each seen failing before the production code):
+
+- Outer, `tests/Api/SearchTest` + `MapConfigurationTest` (20 tests run, 16 failures): every `GET /api/search/...` answered
+  404 where 200, 400 or 405 was expected ("Failed asserting that 404 is identical to 200"), and the map configuration
+  had no `searchUrl`.
+- Unit: the whole suite died with missing classes (`SearchQuery`, `SearchMapUseCase`, ...); after the fakes existed
+  `RequestTest` failed with "Undefined property: Request::$queryParameters" (3 errors) and the use case, handler,
+  route, `Response::badRequest` and map configuration tests with missing classes/methods (79 errors, 13 failures in
+  total).
+- `SearchIndexRepositoryUsingSqliteTest` (17 tests): `Class ...SearchIndexRepositoryUsingSqlite not found`. One test
+  was first written wrongly: it expected "5 r%" to find nothing, but `SearchText` turns "%" into a separator, so the
+  letter "r" is ignored and the parcel is found. I corrected the test (renamed to
+  `it_strips_like_wildcards_from_the_text_before_matching`) and added the cases that really test wildcards.
+- `MapConfigurationTest::it_sends_no_search_url_when_the_search_index_of_the_current_version_is_missing` was written
+  after the production code (the unit tests of the same behaviour were red first), so it was never red. I checked that
+  it can fail: with the index copied into its temporary data dir it fails.
+- `tests/Perf/search.spec.ts` first used Playwright's request context and failed on every query with a p95 of 41 to
+  51 ms. Measured: PHP answers in 2 ms (PHP client in the app container), Node `fetch` in 3 ms, but Playwright's
+  request context and Chromium need about 40 ms for any response of the built-in server, even a 404 and also against
+  the dev app. The spec now uses Node's `fetch` (documented in the spec and README); p95 3.4 to 5.0 ms on the fixture.
+
+Deliberately changed existing tests and support code:
+
+- `GetMapConfigurationUseCaseTest`, `GetMapConfigurationHandlerTest`: the use case has a fourth constructor argument.
+- `MapConfigurationTest`: the expected `parcels` gains `searchUrl`.
+- `RequestTest`, `ResponseTest`: new cases only.
+- `tests/Support/LocalHttpServer::start()` gained an optional `$environment` (merged into the environment of the
+  server process); used by the new map-config case that serves a data dir without `search/`.
+- `FixtureTileset::VERSION` and `FIXTURE_VERSION` in `tests/E2E/support/fixture.ts` changed to `20261124141357`.
+
+Fixture data dir regenerated with the 006 procedure (temporary data dir in `var/`, fixture zip in its cache,
+`RUIAN_EXPORT_BASE_URL=http://127.0.0.1:9/`): new version `20261124141357`; the old parcel store was deleted, the new
+`parcels/`, `search/` files and the tileset copied. Checked: the tile data of all 22 tiles (md5 over zoom/x/y/data) and
+the bounds, zoom range and export date in the metadata are identical to the old tileset; only the version differs.
+
+Decisions below the plan's level: `SearchQuery` finds the parcel number first (the first token that is a valid
+number), then the `st` marker only when the token directly before it is `st`; a second number-like token is a name
+term. `SearchMapOutput::$places` is typed `list<never>` in this step (`PlaceResultOutput` arrives in step 4).
+`SearchMapUseCase` calls the repository only for a text with a parcel number, as the task says, so a word-only query
+against an unpublished index answers 200 with empty lists in this step (step 4's place search will throw
+`SearchNotAvailable`). The `near` pattern in the handler is the task's regex; range errors come from `Coordinates`.
+
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.

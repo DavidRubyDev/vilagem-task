@@ -9,6 +9,7 @@ use ParcelMap\Domain\Map\MapSettingsRepository;
 use ParcelMap\Domain\Map\ParcelDataNotImported;
 use ParcelMap\Domain\Map\ParcelTileset;
 use ParcelMap\Domain\Map\ParcelTilesetRepository;
+use ParcelMap\Domain\Search\SearchIndexRepository;
 
 final readonly class GetMapConfigurationUseCase
 {
@@ -16,6 +17,7 @@ final readonly class GetMapConfigurationUseCase
         private MapSettingsRepository $settings,
         private ParcelTilesetRepository $tilesets,
         private ParcelRepository $parcels,
+        private SearchIndexRepository $searchIndex,
     ) {}
 
     public function execute(): MapConfigurationOutput
@@ -50,6 +52,7 @@ final readonly class GetMapConfigurationUseCase
     private function layerOf(ParcelTileset $tileset): ParcelLayerOutput
     {
         $attribution = $tileset->attribution();
+        $detailsAvailable = $this->parcels->isPublished($tileset->version);
 
         return new ParcelLayerOutput(
             $tileset->version->value,
@@ -61,7 +64,8 @@ final readonly class GetMapConfigurationUseCase
             $tileset->bounds->northEast->latitude,
             $attribution->text,
             $attribution->url,
-            $this->parcels->isPublished($tileset->version),
+            $detailsAvailable,
+            $detailsAvailable && $this->searchIndex->isPublished($tileset->version),
         );
     }
 }

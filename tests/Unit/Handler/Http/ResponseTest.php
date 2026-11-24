@@ -50,6 +50,16 @@ final class ResponseTest extends TestCase
     }
 
     #[Test]
+    public function it_builds_the_bad_request_response(): void
+    {
+        $response = Response::badRequest();
+
+        self::assertSame(400, $response->status);
+        self::assertSame('application/json', $response->headers['Content-Type']);
+        self::assertSame('{"error":"bad_request"}', $response->body);
+    }
+
+    #[Test]
     public function it_adds_a_header_to_a_copy(): void
     {
         $response = Response::html('x');

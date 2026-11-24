@@ -64,24 +64,27 @@ The output of `ParcelConverterUsingOgr2ogr` for municipality 572659 with the are
 fixture zip (25 lines, WGS84, properties `id`, `landType`, `areaCode`, `kind`, `baseNumber`, `subdivision` and `landUse` (the last
 two only where a parcel has them), `area`), input for the tileset and parcel store builder tests.
 
-## `data/tiles/parcels.mbtiles` and `data/parcels/<version>.sqlite`
+## `data/tiles/parcels.mbtiles`, `data/parcels/<version>.sqlite` and `data/search/<version>.sqlite`
 
-The fixture tileset (about 40 KB) and parcel store (about 28 KB), used as the data dir of the test app
+The fixture tileset (about 40 KB), parcel store (about 28 KB) and search index (about 24 KB), used as the data dir of the test app
 (`PARCEL_MAP_DATA_DIR=tests/Fixtures/data` in `compose.test.yaml`). Produced by `bin/console parcels:import --export-date=2026-10-31` with
 `PARCEL_MAP_COVERAGE_FILE=tests/Fixtures/coverage/fixture.csv`, a temporary `PARCEL_MAP_DATA_DIR` whose
 `cache/ruian/` holds a copy of the fixture zip, and `RUIAN_EXPORT_BASE_URL=http://127.0.0.1:9/`; then
-`tiles/parcels.mbtiles` and `parcels/<version>.sqlite` of that data dir were copied here. Both were regenerated in
-task 006 with the current import options (the tiles are far below the budget, so bounds and tiles are the same as
-before). The tests use these facts as constants in `tests/Support/FixtureTileset.php` and
+`tiles/parcels.mbtiles`, `parcels/<version>.sqlite` and `search/<version>.sqlite` of that data dir were copied here.
+They were regenerated in task 006 (store) and in task 009 (the search index appears; the tiles are far below the
+budget and byte for byte the same tile data, bounds and zooms as before). The tests use these facts as constants in `tests/Support/FixtureTileset.php` and
 `tests/E2E/support/fixture.ts`:
 
-- version `20261123140206`, export date 2026-10-31, zooms 9 to 16;
+- version `20261124141357`, export date 2026-10-31, zooms 9 to 16;
 - bounds `15.350516,50.432327,15.403251,50.437799`;
 - tiles `12/2222/1381`, `13/4445/2762`, `14/8890/5525` exist; `14/8891/5525` is inside the bounds but empty;
 - the store holds the 25 parcels of the two fixture areas. `tests/Support/FixtureParcelStore.php` names the ones the
   tests use: 1753295604 (`st. 72`, Jičín, building, land type 13, no land use, 455 m², one ring of 32 positions,
   the first `[15.3509779, 50.4377444]`), 1761441604 (`1171`, land type 14, land use 17, 13,077 m², three rings) and
-  99225194010 (`867/121`, Robousy 740225, municipality Jičín, 725 m²).
+  99225194010 (`867/121`, Robousy 740225, municipality Jičín, 725 m²);
+- the search index holds the same 25 parcels (`parcels`: number and outer-ring bounds, e.g. st. 72 has west 15.3509216,
+  south 50.4372305, east 15.3511404, north 50.437745) and the two areas with their `search_words`
+  (`jicin jicin`, `robousy jicin`).
 
 ## `tests/Integration/Support/ruian-router.php`
 

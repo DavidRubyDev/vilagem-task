@@ -125,7 +125,21 @@ when there is none), area in m², the boundary as a GeoJSON Polygon, `cadastreVi
 the response is immutable for its version (`Cache-Control: public, max-age=31536000, immutable`). It answers `404`
 for an unknown id, an id that is not 1 to 15 digits, another version, a missing parcel store or no imported data.
 `GET /api/map-config` tells the frontend where to ask: `parcels.parcelUrlTemplate`, e.g.
-`/api/parcels/20261123140206/{id}`, or `null` when the parcel store of the current tileset is missing.
+`/api/parcels/20261124141357/{id}`, or `null` when the parcel store of the current tileset is missing.
+
+### Search
+
+`GET /api/search/{version}?q=<text>&near=<lon>,<lat>` answers `{"places": [], "parcels": [...]}` from the search
+index `data/search/{version}.sqlite` of that tileset version (`near` is the map centre; equal matches are ordered by
+distance from it). Typing is read the way people write parcel numbers: `72` finds land 72 and building plot st. 72,
+`st. 72` building plots only, `80/2` the subdivision, numbers match exactly (`80` does not suggest `80/2`); a word
+narrows the parcels to the cadastral areas whose name or municipality name has a word starting with it
+(`867/121 rob`), and a 6-digit code to one cadastral area (`867/121 740225`). Matching ignores case and diacritics.
+At most 8 parcels come back. Like tiles and parcel details the response is immutable for its version
+(`Cache-Control: public, max-age=31536000, immutable`); `400` for a missing or blank `q`, a text over 100
+characters or a malformed `near`, `404` for another version or no index, `405` for other methods.
+`GET /api/map-config` tells the frontend where to ask: `parcels.searchUrl`, or `null` when the search index of the
+current tileset is missing (data imported before the search was added: run `make data`).
 
 ### Frontend
 
@@ -183,7 +197,11 @@ The main quality criterion is that the map stays smooth with the whole district 
    long tasks and writes the report to `var/perf/district-perf.json`, but does not assert them: Docker's headless
    Chromium renders WebGL in software, so frame times say little about real hardware. Measured on 2026-11-20: the
    district view loads 9 tiles (263 kB), Jičín at zoom 12 loads 15 tiles (1.9 MB), tile responses take 13 to 56 ms.
-3. **A manual check in Chrome** on real hardware (performance panel while panning and zooming over the district
+3. **Search latency** (`tests/Perf/search.spec.ts`, part of `make perf`): every query of a fixed list is asked 20
+   times over HTTP and must have a p95 of at most 30 ms; the report goes to `var/perf/search-perf.json`. It uses
+   Node's fetch, because Playwright's request context and Chromium add about 40 ms to every response of PHP's
+   built-in server (even a 404) in the Docker setup.
+4. **A manual check in Chrome** on real hardware (performance panel while panning and zooming over the district
    at zoom 10 and over Jičín at zoom 12 to 16: no long tasks over 50 ms once the tiles have loaded).
 
 ## Continuous integration
@@ -258,6 +276,10 @@ A running log of decisions, surprises and what I would do with more time.
   draws what is in view, simplified for the current zoom.
 - **Whole district as the goal.** With pre-built vector tiles, covering the whole district
   costs about the same as covering four cadastral areas.
+- **Offline search of the covered area only.** The search runs on an index that the import builds from the RÚIAN
+  exports it already downloads, so no query leaves the server, tests need no network and a query takes a few
+  milliseconds. An external geocoder (query text would leave the server, API keys or an unreliable public instance)
+  and a Czech Republic-wide address search are left out on purpose.
 - **Plain PHP, hexagonal architecture.** No framework; the domain stays independent of storage
   and delivery, so the storage can change (e.g. to PostGIS) without touching the domain.
 - **Source: the RÚIAN VFR monthly municipality export.** One feature carries the parcel

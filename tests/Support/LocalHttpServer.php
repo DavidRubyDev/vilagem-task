@@ -22,13 +22,17 @@ final class LocalHttpServer
         $this->process = $process;
     }
 
-    public static function start(string $routerScript): self
+    /**
+     * @param array<string, string> $environment added to the environment of the server process
+     */
+    public static function start(string $routerScript, array $environment = []): self
     {
         $port = self::freePort();
         $process = proc_open(
             [PHP_BINARY, '-S', '127.0.0.1:' . $port, $routerScript],
             [0 => ['file', '/dev/null', 'r'], 1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']],
             $pipes,
+            env_vars: $environment === [] ? null : [...getenv(), ...$environment],
         );
         if (!is_resource($process)) {
             throw new RuntimeException('Cannot start the local HTTP server.');

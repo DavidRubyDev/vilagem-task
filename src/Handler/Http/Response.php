@@ -45,6 +45,11 @@ final readonly class Response
         return new self($this->status, [...$this->headers, $name => $value], $this->body);
     }
 
+    public static function badRequest(): self
+    {
+        return self::json(['error' => 'bad_request'], 400);
+    }
+
     public static function notFound(): self
     {
         return self::json(['error' => 'not_found'], 404);

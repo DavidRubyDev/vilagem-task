@@ -20,6 +20,7 @@ use ParcelMap\Handler\Http\Request;
 use ParcelMap\Tests\Fake\MapSettingsRepositoryUsingMemory;
 use ParcelMap\Tests\Fake\ParcelRepositoryUsingMemory;
 use ParcelMap\Tests\Fake\ParcelTilesetRepositoryUsingMemory;
+use ParcelMap\Tests\Fake\SearchIndexRepositoryUsingMemory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -46,10 +47,29 @@ final class GetMapConfigurationHandlerTest extends TestCase
         self::assertSame('/tiles/parcels/' . self::VERSION . '/{z}/{x}/{y}.pbf', $parcels['tileUrlTemplate']);
     }
 
+    #[Test]
+    public function it_tells_where_to_search(): void
+    {
+        $version = new TilesetVersion(self::VERSION);
+
+        $parcels = $this->parcels(new ParcelRepositoryUsingMemory($version), new SearchIndexRepositoryUsingMemory($version));
+
+        self::assertSame('/api/search/' . self::VERSION, $parcels['searchUrl']);
+    }
+
+    #[Test]
+    public function it_sends_no_search_url_when_the_search_index_is_not_imported(): void
+    {
+        $parcels = $this->parcels(new ParcelRepositoryUsingMemory(new TilesetVersion(self::VERSION)), new SearchIndexRepositoryUsingMemory(null));
+
+        self::assertArrayHasKey('searchUrl', $parcels);
+        self::assertNull($parcels['searchUrl']);
+    }
+
     /**
      * @return array<string, mixed>
      */
-    private function parcels(ParcelRepositoryUsingMemory $store): array
+    private function parcels(ParcelRepositoryUsingMemory $store, ?SearchIndexRepositoryUsingMemory $searchIndex = null): array
     {
         $tileset = new ParcelTileset(
             new TilesetVersion(self::VERSION),
@@ -65,6 +85,7 @@ final class GetMapConfigurationHandlerTest extends TestCase
             ),
             new ParcelTilesetRepositoryUsingMemory($tileset),
             $store,
+            $searchIndex ?? new SearchIndexRepositoryUsingMemory(null),
         ));
 
         $body = json_decode($handler->handle(new Request('GET', '/api/map-config'))->body, true, flags: JSON_THROW_ON_ERROR);
