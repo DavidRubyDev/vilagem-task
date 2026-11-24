@@ -2,37 +2,44 @@ import { Map, NavigationControl, setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import './app.css';
+import { applyDocumentTexts } from './documentTexts';
 import { fitPadding } from './fitPadding';
+import { chooseLanguage, languageName } from './language';
+import { availableLanguages, flagUrl, textsUrl } from './languageFiles';
+import { rememberLanguage, storedLanguage } from './languagePreference';
+import { LanguageSwitcherControl } from './languageSwitcher';
 import { LegendControl } from './legend';
+import { Localization } from './localization';
 import { loadMapConfiguration } from './mapConfiguration';
+import { labelMapControls } from './mapLabels';
+import { MapNotice } from './mapNotice';
 import { createMapOptions, type InitialBounds } from './mapOptions';
 import { loadParcelDetail, parcelDetailUrl, type ParcelDetail } from './parcelDetail';
 import { parcelIdFromHash } from './parcelHash';
 import { ParcelPanel } from './parcelPanel';
 import { ParcelSelection } from './parcelSelection';
-import { TEXT } from './text';
+import { loadTexts, type Texts } from './texts';
 import { showZoomHint } from './zoomHint';
 
-function showError(container: HTMLElement): void {
+/** The page ships a hidden Czech error; the loaded texts, when there are any, replace its wording. */
+function showError(container: HTMLElement, message: HTMLElement, texts: Texts | null): void {
   container.remove();
-  const message = document.createElement('p');
-  message.className = 'map-error';
-  message.setAttribute('role', 'alert');
-  message.textContent = 'The map could not be loaded. Please try again later.';
-  document.body.append(message);
-}
-
-function showNotice(text: string): void {
-  const notice = document.createElement('p');
-  notice.className = 'map-notice';
-  notice.setAttribute('role', 'status');
-  notice.textContent = text;
-  document.body.append(notice);
+  if (texts !== null) {
+    message.textContent = texts.text('map.error');
+  }
+  message.hidden = false;
 }
 
 /** Collapsed on phones, where the open legend would cover a third of the screen. Read once, so no listener. */
-function newLegend(): LegendControl {
-  return new LegendControl(!window.matchMedia('(max-width: 640px)').matches);
+function newLegend(texts: Texts): LegendControl {
+  return new LegendControl(!window.matchMedia('(max-width: 640px)').matches, texts);
+}
+
+function newLanguageSwitcher(localization: Localization): LanguageSwitcherControl {
+  const options = availableLanguages().map((code) => ({ code, name: languageName(code), flagUrl: flagUrl(code) }));
+  return new LanguageSwitcherControl(options, localization.current(), (code) => {
+    void localization.switchTo(code);
+  });
 }
 
 interface LinkedParcel {
@@ -76,26 +83,64 @@ async function openLinkedParcel(
 
 async function start(): Promise<void> {
   const container = document.getElementById('map');
-  if (container === null) {
-    throw new Error('The page has no #map element.');
+  const errorMessage = document.querySelector<HTMLElement>('.map-error');
+  if (container === null || errorMessage === null) {
+    throw new Error('The page has no #map or .map-error element.');
   }
+  let texts: Texts | null = null;
   try {
     setWorkerUrl(workerUrl);
     const fetchFn = window.fetch.bind(window);
-    const configuration = await loadMapConfiguration(fetchFn, '/api/map-config');
+    const language = chooseLanguage(
+      storedLanguage(() => window.localStorage),
+      availableLanguages(),
+    );
+    // The texts are a static file and the configuration a handler: they are requested together, not one after the other.
+    const [configurationResult, textsResult] = await Promise.allSettled([
+      loadMapConfiguration(fetchFn, '/api/map-config'),
+      loadTexts(fetchFn, textsUrl(language), language),
+    ]);
+    texts = textsResult.status === 'fulfilled' ? textsResult.value : null;
+    const fail = (reason: unknown): void => {
+      console.warn('The map could not be loaded.', reason);
+      showError(container, errorMessage, texts);
+    };
+    if (configurationResult.status === 'rejected') {
+      fail(configurationResult.reason);
+      return;
+    }
+    if (textsResult.status === 'rejected') {
+      fail(textsResult.reason);
+      return;
+    }
+    const configuration = configurationResult.value;
+    const loadedTexts = textsResult.value;
+    applyDocumentTexts(document, loadedTexts);
+    const localization = new Localization(loadedTexts, (code) => loadTexts(fetchFn, textsUrl(code), code));
+    localization.onChange((next) => {
+      rememberLanguage(() => window.localStorage, next.language);
+    });
     const { parcels } = configuration;
     // Neither parcel data nor parcel details: the map has nothing to select, and a parcel in the URL is ignored.
     if (parcels === null || parcels.parcelUrlTemplate === null) {
-      showNotice(
-        parcels === null
-          ? 'Parcel data has not been imported yet. Run make data, then reload this page.'
-          : TEXT.detailsNotice,
-      );
+      const notice = new MapNotice(parcels === null ? 'notice.parcelsMissing' : 'notice.detailsMissing', loadedTexts);
       const bareMap = new Map(createMapOptions(configuration, container, window.location.origin));
       bareMap.addControl(new NavigationControl({ showCompass: false }), 'top-right');
-      if (parcels !== null) {
-        bareMap.addControl(newLegend(), 'bottom-left');
+      labelMapControls(bareMap, loadedTexts);
+      const legend = parcels === null ? null : newLegend(loadedTexts);
+      if (legend !== null) {
+        bareMap.addControl(legend, 'bottom-left');
       }
+      // Added last: MapLibre puts a later bottom control above the earlier ones, so the switcher sits above the legend.
+      const switcher = newLanguageSwitcher(localization);
+      bareMap.addControl(switcher, 'bottom-left');
+      localization.onChange((next) => {
+        applyDocumentTexts(document, next);
+        labelMapControls(bareMap, next);
+        notice.setTexts(next);
+        legend?.setTexts(next);
+        switcher.setTexts(next);
+      });
       return;
     }
     const { parcelUrlTemplate } = parcels;
@@ -103,6 +148,7 @@ async function start(): Promise<void> {
     const hintRef: { current: { update(): void } | null } = { current: null };
 
     const panel = new ParcelPanel(
+      loadedTexts,
       () => {
         selection.clear();
       },
@@ -115,9 +161,22 @@ async function start(): Promise<void> {
 
     const map = new Map(createMapOptions(configuration, container, window.location.origin, linked?.initialBounds));
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
-    map.addControl(newLegend(), 'bottom-left');
+    labelMapControls(map, loadedTexts);
+    const legend = newLegend(loadedTexts);
+    map.addControl(legend, 'bottom-left');
+    const switcher = newLanguageSwitcher(localization);
+    map.addControl(switcher, 'bottom-left');
     const selection = new ParcelSelection(map, panel, fetchFn, parcelUrlTemplate, window);
-    hintRef.current = showZoomHint(map, () => panel.isOpen());
+    const hint = showZoomHint(map, () => panel.isOpen(), loadedTexts);
+    hintRef.current = hint;
+    localization.onChange((next) => {
+      applyDocumentTexts(document, next);
+      labelMapControls(map, next);
+      panel.setTexts(next);
+      hint.setTexts(next);
+      legend.setTexts(next);
+      switcher.setTexts(next);
+    });
     if (linked !== null) {
       map.once('load', () => {
         selection.adopt(linked.detail);
@@ -125,7 +184,7 @@ async function start(): Promise<void> {
     }
   } catch (error) {
     console.warn('The map could not be loaded.', error);
-    showError(container);
+    showError(container, errorMessage, texts);
   }
 }
 

@@ -2,17 +2,17 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './support/offlineTiles';
 
 const NAMES = [
-  'Arable land',
-  'Hop field',
-  'Vineyard',
-  'Garden',
-  'Orchard',
-  'Permanent grassland',
-  'Forest land',
-  'Water area',
-  'Built-up area and courtyard',
-  'Other area',
-  'Unknown land type',
+  'Orná půda',
+  'Chmelnice',
+  'Vinice',
+  'Zahrada',
+  'Ovocný sad',
+  'Trvalý travní porost',
+  'Lesní pozemek',
+  'Vodní plocha',
+  'Zastavěná plocha a nádvoří',
+  'Ostatní plocha',
+  'Neznámý druh pozemku',
 ];
 
 async function openWithoutDetails(page: Page): Promise<void> {
@@ -36,8 +36,9 @@ test.describe('on a desktop window', () => {
     const box = await legend.boundingBox();
     expect(box?.x).toBeLessThan(20);
     expect(720 - ((box?.y ?? 0) + (box?.height ?? 0))).toBeLessThan(20);
+    await expect(legend.locator('summary')).toHaveText('Druh pozemku');
     await expect(legend.locator('li')).toHaveText(NAMES);
-    await expect(legend.getByText('Permanent grassland')).toHaveCount(1);
+    await expect(legend.getByText('Trvalý travní porost')).toHaveCount(1);
   });
 
   test('shows the legend when the parcel details are not imported', async ({ page }) => {

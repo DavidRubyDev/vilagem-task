@@ -21,9 +21,9 @@ test('requests the tile of the next zoom level after zooming in', async ({ page 
   const response = page.waitForResponse(`**/tiles/parcels/${FIXTURE_VERSION}/14/8890/5525.pbf`);
 
   // A second click during the first zoom animation would not add a full level, so wait for zoom 13 to settle.
-  await page.getByRole('button', { name: 'Zoom in' }).click();
+  await page.getByRole('button', { name: 'Přiblížit' }).click();
   await zoom13;
-  await page.getByRole('button', { name: 'Zoom in' }).click();
+  await page.getByRole('button', { name: 'Přiblížit' }).click();
 
   expect((await response).status()).toBeLessThan(300);
 });

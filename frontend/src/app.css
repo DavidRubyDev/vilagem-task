@@ -9,6 +9,10 @@ body {
   inset: 0;
 }
 
+.map-error[hidden] {
+  display: none;
+}
+
 .map-error {
   position: absolute;
   top: 50%;
@@ -56,8 +60,8 @@ body {
   z-index: 2;
   box-sizing: border-box;
   width: 20rem;
-  /* Room for the open legend (up to 15 rem) in its corner, plus margins. */
-  max-height: calc(100% - 17.5rem);
+  /* Room for the open legend (up to 15 rem) and the language switcher above it, plus margins. */
+  max-height: calc(100% - 19.75rem);
   overflow: auto;
   padding: 1rem 1.25rem;
   font:
@@ -121,7 +125,7 @@ body {
 @media (max-width: 800px) {
   .parcel-panel {
     /* The legend is lifted by 4.75 rem here, see below. */
-    max-height: calc(100% - 22rem);
+    max-height: calc(100% - 24.25rem);
   }
 
   /* Lifts the legend above the row of the zoom hint, which stays at the bottom centre. */
@@ -208,4 +212,51 @@ body {
   width: 0.9rem;
   height: 0.9rem;
   border: 1px solid #3d3d3d;
+}
+
+.map-language {
+  display: flex;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.92);
+  border-radius: 6px;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.35);
+}
+
+.map-language button {
+  display: flex;
+  margin: 0;
+  padding: 0.25rem 0.4rem;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.map-language button img {
+  display: block;
+  width: 1.5rem;
+  height: 1rem;
+  /* Keeps the white of the Czech flag visible on the white background. */
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25);
+}
+
+.map-language button[aria-pressed='true'] {
+  background: #0b5cad;
+}
+
+.map-language button[aria-pressed='false'] img {
+  opacity: 0.75;
+}
+
+.map-language button[aria-pressed='false']:hover {
+  background: #eee;
+}
+
+.map-language button[aria-pressed='false']:hover img {
+  opacity: 1;
+}
+
+/* Inside, because the group clips its overflow. */
+.map-language button:focus-visible {
+  outline: 2px solid #0b5cad;
+  outline-offset: -2px;
 }

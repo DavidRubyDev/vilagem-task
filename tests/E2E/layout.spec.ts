@@ -11,6 +11,7 @@ const VIEWPORTS = [
 
 const ELEMENTS = [
   '.parcel-panel',
+  '.map-language',
   '.map-legend',
   '.maplibregl-ctrl-attrib',
   '.maplibregl-ctrl-top-right .maplibregl-ctrl-group',
@@ -41,7 +42,7 @@ for (const { name, width, height } of VIEWPORTS) {
 
     test('the open parcel panel fits its content and overlaps nothing', async ({ page }) => {
       await page.goto('/#parcel=1753295604');
-      await expect(page.getByRole('heading', { name: 'Parcel st. 72' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Parcela st. 72' })).toBeVisible();
       await expect(page.locator('.maplibregl-canvas')).toBeVisible();
       await openLegend(page);
 
@@ -52,10 +53,24 @@ for (const { name, width, height } of VIEWPORTS) {
       if (width === 1280) expect(panel?.height).toBeLessThan(400 - 12);
     });
 
+    test('the open parcel panel in English overlaps nothing', async ({ page }) => {
+      await page.goto('/#parcel=1753295604');
+      await expect(page.getByRole('heading', { name: 'Parcela st. 72' })).toBeVisible();
+      await expect(page.locator('.maplibregl-canvas')).toBeVisible();
+      await openLegend(page);
+
+      await page.getByRole('button', { name: 'English' }).click();
+
+      await expect(page.getByRole('heading', { name: 'Parcel st. 72' })).toBeVisible();
+      await expectNoOverlap(page, ELEMENTS);
+      const panel = await page.locator('.parcel-panel').boundingBox();
+      expect(panel?.height).toBeLessThan(height - 24);
+    });
+
     test('the not-found panel overlaps nothing', async ({ page, allowedConsoleErrors }) => {
       allowedConsoleErrors.push(/status of 404/);
       await page.goto('/#parcel=999');
-      await expect(page.getByText('This parcel was not found')).toBeVisible();
+      await expect(page.getByText('Tato parcela nebyla nalezena')).toBeVisible();
       await openLegend(page);
 
       await expectNoOverlap(page, ELEMENTS);

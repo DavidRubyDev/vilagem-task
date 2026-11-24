@@ -28,7 +28,7 @@ async function openAt(
 }
 
 function panelOf(page: Page): Locator {
-  return page.getByRole('complementary', { name: 'Parcel details' });
+  return page.getByRole('complementary', { name: 'Podrobnosti o parcele' });
 }
 
 /** A click before the tile is rendered finds no parcel, so it is retried until the panel opens. */
@@ -86,13 +86,13 @@ test('opens the panel of the clicked building parcel', async ({ page }) => {
 
   await request;
   const panel = panelOf(page);
-  await expect(panel.getByRole('heading')).toHaveText('Parcel st. 72');
+  await expect(panel.getByRole('heading')).toHaveText('Parcela st. 72');
   await expect(panel).toContainText('Jičín (659541)');
-  await expect(panel).toContainText('Building plot');
-  await expect(panel).toContainText('Built-up area and courtyard');
+  await expect(panel).toContainText('Stavební parcela');
+  await expect(panel).toContainText('Zastavěná plocha a nádvoří');
   await expect(panel).toContainText('455 m²');
-  await expect(panel.getByText('Municipality')).toBeVisible();
-  await expect(panel.getByText('Land use')).toHaveCount(0);
+  await expect(panel.getByText('Obec')).toBeVisible();
+  await expect(panel.getByText('Způsob využití')).toHaveCount(0);
 });
 
 test('links the parcel to the ČÚZK cadastre viewer, where the owners are', async ({ page }) => {
@@ -100,7 +100,7 @@ test('links the parcel to the ČÚZK cadastre viewer, where the owners are', asy
 
   await clickUntilPanelOpens(page);
 
-  const link = panelOf(page).getByRole('link', { name: 'Show owners in the ČÚZK cadastre viewer' });
+  const link = panelOf(page).getByRole('link', { name: 'Zobrazit vlastníky v Nahlížení do katastru nemovitostí' });
   await expect(link).toHaveAttribute(
     'href',
     'https://nahlizenidokn.cuzk.gov.cz/ZobrazObjekt.aspx?typ=parcela&id=1753295604',
@@ -115,19 +115,19 @@ test('shows the land use of a land parcel', async ({ page }) => {
   await clickUntilPanelOpens(page);
 
   const panel = panelOf(page);
-  await expect(panel.getByRole('heading')).toHaveText('Parcel 1171');
-  await expect(panel).toContainText('Land plot');
-  await expect(panel).toContainText('Other area');
-  await expect(panel.getByText('Land use')).toBeVisible();
-  await expect(panel).toContainText('Other road');
-  await expect(panel).toContainText('13,077 m²');
+  await expect(panel.getByRole('heading')).toHaveText('Parcela 1171');
+  await expect(panel).toContainText('Pozemková parcela');
+  await expect(panel).toContainText('Ostatní plocha');
+  await expect(panel.getByText('Způsob využití')).toBeVisible();
+  await expect(panel).toContainText('Ostatní komunikace');
+  await expect(panel).toContainText('13\u00a0077 m²');
 });
 
 test('closes with the close button', async ({ page }) => {
   await openAt(page, ST_72.longitude, ST_72.latitude, 18);
   await clickUntilPanelOpens(page);
 
-  await page.getByRole('button', { name: 'Close parcel details' }).click();
+  await page.getByRole('button', { name: 'Zavřít podrobnosti o parcele' }).click();
 
   await expect(panelOf(page)).toBeHidden();
 });
@@ -174,7 +174,7 @@ test('shows an error when the details cannot be loaded', async ({ page, allowedC
 
   await clickUntilPanelOpens(page);
 
-  await expect(panelOf(page)).toContainText('The parcel details could not be loaded. Please try again.');
+  await expect(panelOf(page)).toContainText('Podrobnosti o parcele se nepodařilo načíst. Zkuste to prosím znovu.');
 });
 
 test.describe('the selected parcel in the URL', () => {
@@ -198,7 +198,7 @@ test.describe('the selected parcel in the URL', () => {
 
     await detail;
     await tile;
-    await expect(panelOf(page).getByRole('heading')).toHaveText('Parcel st. 72');
+    await expect(panelOf(page).getByRole('heading')).toHaveText('Parcela st. 72');
     expect(requested).not.toContain(`/tiles/parcels/${FIXTURE_VERSION}/12/2222/1381.pbf`);
     await expect.poll(() => countHighlightPixels(page)).toBeGreaterThan(100);
   });
@@ -209,7 +209,7 @@ test.describe('the selected parcel in the URL', () => {
     await clickUntilPanelOpens(page);
 
     await expect.poll(() => page.url()).toMatch(new RegExp(`#parcel=${String(LAND_1171.id)}$`));
-    await page.getByRole('button', { name: 'Close parcel details' }).click();
+    await page.getByRole('button', { name: 'Zavřít podrobnosti o parcele' }).click();
     await expect.poll(() => page.url()).not.toContain('#');
   });
 
@@ -220,7 +220,7 @@ test.describe('the selected parcel in the URL', () => {
       window.location.hash = `#parcel=${String(id)}`;
     }, LAND_1171.id);
 
-    await expect(panelOf(page).getByRole('heading')).toHaveText('Parcel 1171');
+    await expect(panelOf(page).getByRole('heading')).toHaveText('Parcela 1171');
   });
 
   test('says so when the linked parcel does not exist, and stays on the default view', async ({
@@ -234,7 +234,7 @@ test.describe('the selected parcel in the URL', () => {
 
     await tile;
     await expect(panelOf(page)).toContainText(
-      'This parcel was not found. If the data has been updated, reload the page.',
+      'Tato parcela nebyla nalezena. Pokud byla data aktualizována, načtěte stránku znovu.',
     );
   });
 
@@ -248,8 +248,8 @@ test.describe('the selected parcel in the URL', () => {
 });
 
 test.describe('when selecting is not possible', () => {
-  const HINT = 'Zoom in to select a parcel.';
-  const NOTICE = 'Parcel details have not been imported yet. Run make data, then reload this page.';
+  const HINT = 'Pro výběr parcely přibližte mapu.';
+  const NOTICE = 'Podrobnosti o parcelách zatím nebyly importovány. Spusťte make data a pak stránku načtěte znovu.';
 
   async function openWithoutDetails(page: Page, path: string, zoom: number): Promise<void> {
     await page.route('**/api/map-config', async (route) => {
@@ -285,7 +285,7 @@ test.describe('when selecting is not possible', () => {
     await openAt(page, ST_72.longitude, ST_72.latitude, 13);
     await expect(page.getByText(HINT)).toBeVisible();
 
-    await page.getByRole('button', { name: 'Zoom in' }).click();
+    await page.getByRole('button', { name: 'Přiblížit' }).click();
 
     await expect(page.getByText(HINT)).toBeHidden();
   });
@@ -300,7 +300,7 @@ test.describe('when selecting is not possible', () => {
 
     await expect(page.getByText(HINT)).toBeHidden();
 
-    await page.getByRole('button', { name: 'Close' }).click();
+    await page.getByRole('button', { name: 'Zavřít' }).click();
     await expect(page.getByText(HINT)).toBeVisible();
   });
 
