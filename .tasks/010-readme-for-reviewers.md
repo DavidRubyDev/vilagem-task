@@ -1,6 +1,6 @@
 # 010: README for reviewers
 
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-11-24
 - **Branch:** task/010-readme-for-reviewers
 - **Request:** "Lets plan 010. The instructions for reviewer"
@@ -305,6 +305,17 @@ Filled in by the implement agent, one entry per step.
   including composer install); the README's `### Data` figures are adjusted in step 2.
 - Dev stack: stopped with `make down` before the measurements and left stopped.
 
+### Step 2: using the map and where to look
+
+- Added `## Where to look` (6 bullets) and `## Using the map` (things to try, then the language, notice, panel, URL hash,
+  zoom hint, legend and search box paragraphs moved from Running and Search). `## Running` is now `## How it runs`
+  with the compose and endpoint paragraph, without the image size.
+- `### Data`: the note on imports from before task 006 moved here; the timings now read: import about 2 minutes
+  (measured on 2026-11-24), rerun from the cache about 85 seconds; the "57 s before the places" parenthesis is gone.
+- Testing and QA names the flaky E2E test; the Architecture table rows for Handler and Command are current; Notes lost
+  the Surprises placeholder.
+- Deviation: Decisions and With more time share one "Where to look" bullet, as the task file lists them together.
+  No fact was dropped except those the task file names.
 
 ## Review
 

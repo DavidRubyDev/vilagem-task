@@ -36,19 +36,33 @@ docker compose up
 (bash) first, or use make: the containers run as uid 1000 otherwise and cannot write `vendor/` and `data/`. The
 `make` targets of "Testing and QA" list their plain commands.
 
-## Running
+## Where to look
 
-The interface is Czech by default. The messages quoted below are the English texts of the Czech-by-default
-interface. Two flag buttons above the legend (Czech, English) switch the language; the language's name shows on
-hover. Switching re-renders every text in place: the page does not reload and the map and its tiles are untouched.
-The chosen language is remembered in the browser (`localStorage`); without a stored choice the page is Czech,
-whatever the browser language.
+- [`CLAUDE.md`](CLAUDE.md): the binding rules for every agent (architecture, TDD, git, glossary).
+- [`.tasks/`](.tasks/): one task file per feature, 001 to 010: the request and the developer's answers verbatim, decisions, steps, test scenarios, implementation log and review rounds.
+- [Architecture](#architecture): hexagonal layers in `src/`, enforced by deptrac.
+- [Smoothness evidence](#smoothness-evidence): the main quality criterion and how it is checked.
+- [Decisions](#decisions) and [With more time](#with-more-time): the running log of choices and what is left.
+- [Development workflow](#development-workflow): plan, implement and review agents; one commit per step.
+
+## Using the map
+
+Things to try:
+
+- Zoom out to the whole district (zoom 10): it stays smooth.
+- From zoom 14, click a parcel to open its detail panel.
+- Search `Valdštejnovo náměstí 58`, `867/121 rob` or `st. 72`.
+- Switch the language with the flags above the legend.
+- Select a parcel and copy the URL; opening a `#parcel=<id>` link selects that parcel again.
+
+The interface is in Czech; the texts are quoted here in English. Two flag buttons above the legend (Czech, English)
+switch the language; the language's name shows on hover. Switching re-renders every text
+in place: the page does not reload and the map and its tiles are untouched. The chosen language is remembered in the browser
+(`localStorage`); without a stored choice the page is Czech, whatever the browser language.
 
 Before `make data` the page shows only the OpenStreetMap base map and a notice, "Parcel data has not
 been imported yet. Run make data, then reload this page." After `make data`, reload the page: the parcels
-appear over Jičín. If the data was imported by a version from before the parcel details (task 006), the page shows
-"Parcel details have not been imported yet. Run make data, then reload this page." and clicks select nothing: rerun
-`make data` to build the parcel store. From zoom 14, clicking a parcel opens a panel on the left with its number, plot type, cadastral
+appear over Jičín. From zoom 14, clicking a parcel opens a panel on the left with its number, plot type, cadastral
 area, municipality, land type, land use (when it has one) and area; the close button, Escape or a click on no
 parcel close it. The selected parcel is outlined on the map. Ownership is not in the open data (neither the owners
 nor the ownership sheet number), so the panel links to the parcel in the ČÚZK cadastre viewer
@@ -62,11 +76,20 @@ version, so it survives re-imports; an id that no longer exists shows "This parc
 A land type legend sits in the bottom-left corner of the map (open on wide screens, collapsed up to 640 px width; click
 "Land type" to toggle it). It lists the land type colours and "Unknown land type".
 
+In the browser the search box sits at the top left (the parcel panel below it), and shows the places and parcels found as you
+type (a request starts 200 ms after the last keystroke; a newer request aborts the one in flight). It is an ARIA
+combobox: Arrow Up/Down move through the results, Enter opens the active one (or the first), Escape closes the list
+(a second Escape closes the parcel panel). Picking a parcel selects it exactly as a link does: panel, highlight,
+`#parcel=` and the map fitted to it. Picking an address selects the parcel its building stands on; picking another place
+closes an open parcel panel and fits the map to the place (at most zoom 17; a place without bounds is eased to at zoom 17). The box adds no map listener and typing causes no tile request. Without a search
+index of the current version the box is not shown.
+
+## How it runs
+
 `docker compose up` runs a one-shot `node` service (`npm ci && npm run build`), then starts the
-PHP server. The first run pulls the Playwright image (about 2 GB), which is also used for all
-Node tooling. `GET /` is the map page, `GET /api/map-config` the map configuration (initial view, base
-map and, once data is imported, the `parcels` tile layer; `parcels` is `null` before), and every
-other path answers `404 {"error":"not_found"}`.
+PHP server. The Playwright image also serves all Node tooling. `GET /` is the map page, `GET /api/map-config` the map
+configuration (initial view, base map and, once data is imported, the `parcels` tile layer; `parcels` is `null` before),
+and every other path answers `404 {"error":"not_found"}`.
 
 ### Data
 
@@ -97,7 +120,7 @@ downloaded again, so a rerun is offline), `build/` the intermediate files, `tile
 published tileset, `parcels/{version}.sqlite` the published parcel store (about 46 MB for the district,
 zlib-compressed boundaries) and `search/{version}.sqlite` the published search index. `config/coverage.csv` lists the whole district: 240 cadastral areas of 111
 municipalities, 272,011 parcels. The first `make data` downloads 111 municipality files (54 MB per monthly
-export) and takes about 1 minute; a rerun from the cache about 45 seconds (with the search index and its places about 85 seconds; measured on 2026-11-24 from the cache: 57 s before the places, 85 s after, so +28 s). The search index of the district has 33,000 places and is 27 MB. The tileset is about 56 MB and
+export), and the import itself takes about 2 minutes (measured on 2026-11-24); a rerun from the cache takes about 85 seconds. The search index of the district has 33,000 places and is 27 MB. The tileset is about 56 MB and
 the intermediate GeoJSON in `build/` about 130 MB. The tile build needs about 1 to 2 GB of memory (Docker Desktop
 users: allow at least 4 GB). Smoothness gate: a vector tile is limited to 200 kB (gzip; at most about 20 tiles are visible on a 1920x1080
 screen, so a view stays under 4 MB). The limit is passed to tippecanoe, and after the build the import reads the
@@ -110,7 +133,11 @@ with "The RÚIAN export of … for municipality … is not published": rerun it 
 month before. Old cached months and build files are kept; delete them by hand when needed.
 
 The store and the search index of the previous tileset are kept next to the new ones, because requests in flight may
-still read them; older ones are deleted. An unknown land type or land use code (one outside the published ČÚZK code list) does not fail
+still read them; older ones are deleted. If the data was imported by a version from before the parcel details (task 006), the page shows "Parcel details have not
+been imported yet. Run make data, then reload this page." and clicks select nothing: rerun `make data` to build the parcel
+store.
+
+An unknown land type or land use code (one outside the published ČÚZK code list) does not fail
 the import: it is stored, and the import prints a warning per code on stderr.
 
 The data is licensed CC BY 4.0; the required credit is "ČÚZK, {year of the export}". Conditions:
@@ -156,14 +183,6 @@ characters or a malformed `near`, `404` for another version or no index, `405` f
 `GET /api/map-config` tells the frontend where to ask: `parcels.searchUrl`, or `null` when the search index of the
 current tileset is missing (data imported before the search was added: run `make data`).
 
-In the browser the search box sits at the top left (the parcel panel below it), and shows the places and parcels found as you
-type (a request starts 200 ms after the last keystroke; a newer request aborts the one in flight). It is an ARIA
-combobox: Arrow Up/Down move through the results, Enter opens the active one (or the first), Escape closes the list
-(a second Escape closes the parcel panel). Picking a parcel selects it exactly as a link does: panel, highlight,
-`#parcel=` and the map fitted to it. Picking an address selects the parcel its building stands on; picking another place
-closes an open parcel panel and fits the map to the place (at most zoom 17; a place without bounds is eased to at zoom 17). The box adds no map listener and typing causes no tile request. Without a search
-index of the current version the box is not shown.
-
 ### Frontend
 
 TypeScript, built with Vite, MapLibre GL JS from npm (bundled, no CDN). Edit `frontend/`, then run
@@ -206,6 +225,9 @@ Run `composer install` first (`make install-php`); the `make` check groups do it
 The API and E2E tests run against their own app: a separate compose project (`parcel-map-test`,
 `compose.test.yaml`) with no published port and the fixture data in `tests/Fixtures/data`, so
 `make check` never restarts or changes the app of `make up`. `make down` stops both projects.
+
+Known issue: the E2E test `tests/E2E/parcel-detail.spec.ts` "ignores the parcel of the URL" sometimes times out waiting
+for the map canvas; rerun `make test-e2e` (or `make check`).
 
 ### Smoothness evidence
 
@@ -256,8 +278,8 @@ Hexagonal architecture with DDD, written in plain PHP (no framework):
 | `Domain`         | Parcels, cadastral areas and their rules. No dependencies.          |
 | `Application`    | Use cases and the ports they need.                                  |
 | `Infrastructure` | Outbound adapters: data storage, ČÚZK data download, geo tooling.   |
-| `Handler`        | Inbound HTTP adapters (map configuration, later tiles and parcel detail). |
-| `Command`        | Inbound CLI adapters (data download and import).                    |
+| `Handler`        | Inbound HTTP adapters (map configuration, parcel tiles, parcel details, search). |
+| `Command`        | Inbound CLI adapters (parcel import, coverage list generation).      |
 
 The data is downloaded from ČÚZK and preprocessed ahead of time. It is not fetched live at
 request time, because live ČÚZK services cannot serve a whole district smoothly (see Notes).
@@ -288,7 +310,7 @@ Tests: unit, integration, API (real HTTP and CLI) and frontend (unit + browser E
 
 ## Notes
 
-A running log of decisions, surprises and what I would do with more time.
+A running log of decisions and what I would do with more time.
 
 ### Decisions
 
@@ -374,10 +396,6 @@ A running log of decisions, surprises and what I would do with more time.
 - **E2E reaches the app as `parcel-map`, not `app`.** Chromium treats the single-label host `app`
   as the HSTS-preloaded `.app` TLD and upgrades it to HTTPS.
 - **PHP-CS-Fixer runs with `setUnsupportedPhpVersionAllowed(true)`** until it supports PHP 8.6.
-
-### Surprises
-
-_To be filled in._
 
 ### With more time
 
