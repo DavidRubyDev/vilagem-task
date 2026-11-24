@@ -1,6 +1,6 @@
 # 010: README for reviewers
 
-- **Status:** approved
+- **Status:** in-progress
 - **Created:** 2026-11-24
 - **Branch:** task/010-readme-for-reviewers
 - **Request:** "Lets plan 010. The instructions for reviewer"
@@ -284,6 +284,27 @@ None.
 ## Implementation log
 
 Filled in by the implement agent, one entry per step.
+
+### Step 1: quick start at first sight
+
+- Red (2026-11-24): a fresh clone of `main` (65dee8b), `make data`: the image builds, then
+  `Failed opening required '/app/vendor/autoload.php'` in `bin/console` line 9, exit 255.
+- Done: `Makefile` `data: build install-php`; CLAUDE.md Commands line; `docs/screenshot.png` (unchanged, 934,840 bytes);
+  README top (intro, screenshot, quick start, without make); old status block and Prerequisites replaced.
+- Green, make path (fresh clone of the branch, dev stack stopped, empty `data/`): `make data` 2 min 21 s (composer
+  install, ČÚZK download of 111 files, import; image build cached); cold `docker compose build --no-cache app` 1 min
+  26 s before it. First-run total about 3 min 50 s, rounded to 4 minutes in the README. `make up` until the server
+  lines appeared: 23 s (Playwright image cached on this machine, so no pull time; the README gives its 2.6 GB size).
+  Ready line, verbatim: `Development Server (http://0.0.0.0:8000) started` (preceded by `app-1   | [20] [... 2026] PHP 8.6.0RC7`).
+  `GET /api/map-config` had `parcels` set; `GET /api/search/{version}?q=Jicin` answered places (Jičín first).
+- Green, without make (second fresh clone, `data/cache/` copied): the three commands word for word worked; map-config
+  had `parcels`. Both clones and their containers removed.
+- `make check` on the branch with the dev stack stopped: green, 1 min 21 s (110 E2E tests passed; the flaky E2E test
+  did not fail), rounded to 2 minutes.
+- The import part of `make data` (from the first download line to the end) is about 2 minutes (2 min 21 s total
+  including composer install); the README's `### Data` figures are adjusted in step 2.
+- Dev stack: stopped with `make down` before the measurements and left stopped.
+
 
 ## Review
 

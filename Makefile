@@ -28,7 +28,7 @@ space := $(empty) $(empty)
 build:
 	$(COMPOSE) build app
 
-data: build
+data: build install-php
 	$(PHP) bin/console parcels:import
 
 coverage: build

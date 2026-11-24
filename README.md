@@ -1,34 +1,42 @@
 # Jičín Parcel Map
 
-A web application that shows land parcels of the Jičín district (Czech Republic) on a map.
-Clicking a parcel shows its details. The application stays smooth even when the whole
-district is in view.
+A web map of all 272,011 land parcels of the Jičín district (Czech Republic), built from ČÚZK open data.
+Click a parcel for its details; search places, addresses and parcel numbers. It stays smooth with the whole
+district in view. Built as an interview task for Viagem a.s.
 
-Built as an interview task for Viagem a.s.
+![The map with parcel 233 in Studeňany selected: detail panel, search box, land type legend and language flags](docs/screenshot.png)
 
-> **Status:** the map page works: http://localhost:8000 shows an OpenStreetMap base map centred
-> on Jičín (zoom 12) with the OSM attribution. `GET /api/map-config` serves the map
-> configuration. `make data` downloads the ČÚZK parcels of the whole Jičín district (240 cadastral areas,
-> 272,011 parcels) and builds a vector tileset from them; the map then shows the parcels over OSM, filled by
-> land type (outlines from zoom 14) with the credit "ČÚZK, 2026". From zoom 14, clicking a parcel opens a side panel
-> with its details. The interface is in Czech by default.
-> The application is built in the tasks in [`.tasks/`](.tasks/). This README is updated as features land.
+_The interface is in Czech, its default; the flags above the legend switch it to English._
 
-## Prerequisites
+## Quick start
 
-- Docker 24+ with Docker Compose v2
-- GNU make (optional; it only wraps the `docker compose` commands shown below)
+Requirements: Docker 24+ with Docker Compose v2 or later (Docker Desktop: at least 4 GB of memory), GNU make, internet
+access (ČÚZK data, OpenStreetMap tiles, Docker images) and about 5 GB of disk. Nothing else on the host: PHP 8.6,
+Composer, Node and the geo tools run in containers.
 
-Nothing else is required on the host. PHP 8.6, Composer and all other tooling run inside the
-container.
+```bash
+make data    # once, about 4 minutes: builds the image, downloads the ČÚZK data (54 MB), builds the map data
+make up      # serves http://localhost:8000; the first run also pulls the Node image (2.6 GB on disk) and builds the frontend, about 1 minute
+```
 
-## Running
+Open http://localhost:8000 once the log shows `Development Server (http://0.0.0.0:8000) started`. Ctrl+C stops the app; `make down` removes the containers.
+Run `make data` again later to take a newer monthly export (reruns read the download cache). Run every test and check
+with `make check` (about 2 minutes; it uses its own app with fixture data on no published port, so it needs no
+import and does not touch the app of `make up`). Times were measured on 2026-11-24.
+
+### Without make
 
 ```bash
 docker compose build
-docker compose up        # installs dependencies, builds the frontend, serves http://localhost:8000
-make data                # once: download the ČÚZK parcels and build the tileset (see Data)
+docker compose run --rm --no-deps app sh -c "composer install --no-interaction && bin/console parcels:import"
+docker compose up
 ```
+
+`docker compose down` removes the containers. On Linux, if your user is not uid 1000, run `export UID GID=$(id -g)`
+(bash) first, or use make: the containers run as uid 1000 otherwise and cannot write `vendor/` and `data/`. The
+`make` targets of "Testing and QA" list their plain commands.
+
+## Running
 
 The interface is Czech by default. The messages quoted below are the English texts of the Czech-by-default
 interface. Two flag buttons above the legend (Czech, English) switch the language; the language's name shows on
