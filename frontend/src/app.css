@@ -53,15 +53,16 @@ body {
 
 .parcel-panel {
   position: absolute;
-  top: 0.75rem;
+  /* Below the search box (0.75 rem margin + 2.75 rem box) and a 0.75 rem gap, the same as the outer margin. */
+  top: 4.25rem;
   left: 0.75rem;
   /* Fits its content and scrolls inside once the window is too small. */
   bottom: auto;
   z-index: 2;
   box-sizing: border-box;
   width: 20rem;
-  /* Room for the open legend (up to 15 rem) and the language switcher above it, plus margins. */
-  max-height: calc(100% - 19.75rem);
+  /* Room for the open legend (up to 15 rem) and the language switcher above it, plus margins, and the top offset. */
+  max-height: calc(100% - 23.25rem);
   overflow: auto;
   padding: 1rem 1.25rem;
   font:
@@ -123,23 +124,128 @@ body {
 }
 
 @media (max-width: 800px) {
-  .parcel-panel {
-    /* The legend is lifted by 4.75 rem here, see below. */
-    max-height: calc(100% - 24.25rem);
-  }
-
   /* Lifts the legend above the row of the zoom hint, which stays at the bottom centre. */
   .maplibregl-ctrl-bottom-left {
     bottom: 4.75rem;
   }
 }
 
+@media (min-width: 641px) and (max-width: 800px) {
+  /* The hint is hidden while the panel is open, so the lift is not needed and the panel gets the room back. */
+  body.parcel-panel-open .maplibregl-ctrl-bottom-left {
+    bottom: 0;
+  }
+}
+
 @media (max-width: 640px) {
   .parcel-panel {
+    /* The lift stays here (it also keeps the open legend off the attribution), so the panel loses its 4.75 rem. */
+    max-height: calc(100% - 27.75rem);
     /* Leaves the zoom buttons of the map free. */
     right: 3.5rem;
     width: auto;
   }
+}
+
+.map-search {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  /* Above the panel (2): the open list overlays it. */
+  z-index: 3;
+  box-sizing: border-box;
+  width: 20rem;
+  font:
+    0.9rem/1.4 system-ui,
+    sans-serif;
+  color: #222;
+}
+
+@media (max-width: 640px) {
+  .map-search {
+    /* Leaves the zoom buttons of the map free, as the panel does. After the base rule, which sets the width. */
+    right: 3.5rem;
+    width: auto;
+  }
+}
+
+.map-search-input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 2.75rem;
+  margin: 0;
+  padding: 0 1.25rem;
+  /* 16 px, because a smaller font makes iOS zoom the page when the box gets the focus. */
+  font: inherit;
+  font-size: 1rem;
+  color: inherit;
+  background: #fff;
+  border: 0;
+  border-radius: 6px;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.35);
+}
+
+.map-search-input[aria-expanded='true'] {
+  border-radius: 6px 6px 0 0;
+}
+
+.map-search-input:focus-visible {
+  outline: 2px solid #0b5cad;
+  outline-offset: -2px;
+}
+
+.map-search-list,
+.map-search-status {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  margin: 0;
+  background: #fff;
+  border-top: 1px solid #ddd;
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.35);
+}
+
+.map-search-list {
+  /* At most 16 options and two headings; stays inside the viewport below the box (0.75 rem + 2.75 rem + margin). */
+  max-height: min(24rem, calc(100vh - 5rem));
+  overflow: auto;
+}
+
+.map-search-list[hidden],
+.map-search-status[hidden] {
+  display: none;
+}
+
+.map-search-status {
+  padding: 0.6rem 1.25rem;
+}
+
+.map-search-group {
+  padding: 0.5rem 1.25rem 0.2rem;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: #666;
+}
+
+.map-search-option {
+  display: flex;
+  flex-direction: column;
+  padding: 0.4rem 1.25rem;
+  cursor: pointer;
+}
+
+.map-search-option:hover,
+.map-search-option-active {
+  background: #eef4fb;
+}
+
+.map-search-option-context {
+  font-size: 0.8rem;
+  color: #666;
 }
 
 .parcel-panel-viewer {

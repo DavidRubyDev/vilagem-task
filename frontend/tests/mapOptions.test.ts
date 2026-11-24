@@ -6,6 +6,7 @@ import { COMPLETE_PARCELS_MIN_ZOOM, createMapOptions, PARCEL_FILL_OPACITY } from
 const parcels: ParcelLayerConfiguration = {
   tileUrlTemplate: '/tiles/parcels/v1/{z}/{x}/{y}.pbf',
   parcelUrlTemplate: '/api/parcels/v1/{id}',
+  searchUrl: '/api/search/v1',
   minZoom: 9,
   maxZoom: 16,
   bounds: { west: 15.1, south: 50.2, east: 15.3, north: 50.4 },

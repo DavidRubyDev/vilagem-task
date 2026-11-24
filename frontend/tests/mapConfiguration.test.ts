@@ -12,6 +12,7 @@ const validBody = {
   parcels: {
     tileUrlTemplate: '/tiles/parcels/20261120093000/{z}/{x}/{y}.pbf',
     parcelUrlTemplate: '/api/parcels/20261120093000/{id}',
+    searchUrl: '/api/search/20261120093000',
     minZoom: 9,
     maxZoom: 16,
     bounds: { west: 15.328422, south: 50.395744, east: 15.427924, north: 50.459793 },
@@ -52,6 +53,14 @@ describe('loadMapConfiguration', () => {
     const configuration = await loadMapConfiguration(() => Promise.resolve(jsonResponse(body)), '/api/map-config');
 
     expect(configuration.parcels?.parcelUrlTemplate).toBeNull();
+  });
+
+  it('accepts parcel data without a search index', async () => {
+    const body = withParcels({ searchUrl: null });
+
+    const configuration = await loadMapConfiguration(() => Promise.resolve(jsonResponse(body)), '/api/map-config');
+
+    expect(configuration.parcels?.searchUrl).toBeNull();
   });
 
   it('accepts a configuration without parcel data', async () => {
@@ -124,6 +133,18 @@ describe('loadMapConfiguration', () => {
 
     it('the parcel url template has no {id}', async () => {
       await rejectsWith(() => Promise.resolve(jsonResponse(withParcels({ parcelUrlTemplate: '/api/parcels/v1/' }))));
+    });
+
+    it('the search url is missing', async () => {
+      await rejectsWith(() => Promise.resolve(jsonResponse(withParcels({ searchUrl: undefined }))));
+    });
+
+    it('the search url is relative without a leading slash', async () => {
+      await rejectsWith(() => Promise.resolve(jsonResponse(withParcels({ searchUrl: 'api/search/v1' }))));
+    });
+
+    it('the search url is not a string', async () => {
+      await rejectsWith(() => Promise.resolve(jsonResponse(withParcels({ searchUrl: 5 }))));
     });
 
     it('the parcel url template is relative without a leading slash', async () => {

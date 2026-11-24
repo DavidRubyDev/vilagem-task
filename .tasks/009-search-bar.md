@@ -1154,6 +1154,43 @@ term. `SearchMapOutput::$places` is typed `list<never>` in this step (`PlaceResu
 against an unpublished index answers 200 with empty lists in this step (step 4's place search will throw
 `SearchNotAvailable`). The `near` pattern in the handler is the task's regex; range errors come from `Coordinates`.
 
+### Step 3: `feat(map): search parcels by number (#009)`
+
+Red runs (each seen failing before the production code):
+
+- Outer, `tests/E2E/search.spec.ts` (+ `no-parcel-data.spec.ts`): 16 of 19 search tests failed with
+  `expect(locator).toBeVisible() failed ... element(s) not found` on the combobox "Hledat na mapě" (the box did not
+  exist; one more timed out in `fill`). The three "no search box" tests (`searchUrl: null`, no parcel data, no parcel
+  details) passed before the feature, as they must: they guard the opposite case and could not be red first.
+- Vitest: `searchQuery`, `debounce`, `searchResults`, `searchOptions` test files failed for the missing modules; 3
+  `mapConfiguration` tests failed because `searchUrl` was not validated (e.g. `searchUrl: 5` was accepted).
+- `layout.spec.ts`: the new `.map-search` element joined the no-overlap checks; at 360x640 the first CSS made the box
+  overlap the zoom buttons ("`.map-search [12, 12, 332, 56]` overlaps `.maplibregl-ctrl-top-right ...`") because the
+  base rule of `.map-search` came after its `max-width: 640px` rule in the stylesheet and won. Fixed by moving the
+  media rule behind the base rule; all 36 layout cases pass.
+- `SearchBox` and `MapSearch` need a DOM and cannot be unit-tested under Vitest's `node` environment; the E2E tests
+  cover them.
+
+Deliberately changed existing tests and support code:
+
+- `frontend/tests/mapConfiguration.test.ts`, `mapOptions.test.ts`: the valid parcel layer gains `searchUrl`.
+- `tests/E2E/parcel-detail.spec.ts`: the helper `countHighlightPixels` moved unchanged to
+  `tests/E2E/support/highlight.ts`, so that `search.spec.ts` can use it.
+- `tests/E2E/layout.spec.ts`: `.map-search` joins `ELEMENTS`; new cases per viewport (list open over the open panel, in
+  both languages, the "nothing found" message, whole content visible where it fits); at 641 px the panel must be at
+  least 100 px high (it is about 108 px).
+- `tests/E2E/no-parcel-data.spec.ts`: no search box in the "no data" case, and a new case for missing details.
+
+Decisions below the plan's level:
+
+- `SearchBox.setTexts(texts, groups = null)`: the box cannot rebuild the groups from texts, so `MapSearch` keeps the
+  last results and passes freshly built groups; the box re-renders its labels, its status line and (with groups) the
+  list. A language switch resets the active option.
+- `searchResults.places` is `readonly unknown[]` in this step (validated as an array only); step 5 types it.
+- Texts use the 16 px font for the input (iOS zooms into smaller inputs); the rest follows the panel's font.
+- The list opens again with Arrow Down/Up when it was closed by Escape and results exist.
+- `shouldSearch` counts code points (the server counts characters, not bytes or UTF-16 units).
+
 
 ## Review
 
