@@ -12,7 +12,18 @@ const REPORT_FILE = `${REPORT_DIRECTORY}/search-perf.json`;
 const MAP_CENTRE = '15.352,50.437';
 const APP_URL = process.env['APP_URL'] ?? 'http://parcel-map:8000';
 
+const PLACE_QUERIES: readonly string[] = [
+  'ji',
+  'jicin',
+  'nova paka',
+  'husova',
+  'husova 1',
+  'robousy 1',
+  'nadrazni',
+  'na',
+];
 const PARCEL_QUERIES: readonly string[] = ['80/2', 'st. 72', '1171', '867/121 robousy'];
+const QUERIES: readonly string[] = [...PLACE_QUERIES, ...PARCEL_QUERIES];
 
 interface QueryReport {
   p50: number;
@@ -39,7 +50,7 @@ function round(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
-for (const query of PARCEL_QUERIES) {
+for (const query of QUERIES) {
   test(`answers "${query}" within ${String(MAX_P95_MS)} ms at the 95th percentile`, async () => {
     const config = await fetch(`${APP_URL}/api/map-config`);
     const body = (await config.json()) as { parcels: { searchUrl: string | null } | null };

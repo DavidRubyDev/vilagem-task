@@ -14,6 +14,8 @@ use ParcelMap\Domain\Map\ParcelTilesetUnreadable;
 use ParcelMap\Domain\Map\TilesetVersion;
 use ParcelMap\Domain\Search\InvalidSearchQuery;
 use ParcelMap\Domain\Search\ParcelMatch;
+use ParcelMap\Domain\Search\Place;
+use ParcelMap\Domain\Search\PlaceKind;
 use ParcelMap\Domain\Search\SearchIndexNotPublished;
 use ParcelMap\Domain\Search\SearchIndexRepository;
 use ParcelMap\Domain\Search\SearchIndexUnreadable;
@@ -21,6 +23,7 @@ use ParcelMap\Domain\Search\SearchQuery;
 
 final readonly class SearchMapUseCase
 {
+    private const int PLACE_LIMIT = 8;
     private const int PARCEL_LIMIT = 8;
 
     public function __construct(
@@ -45,12 +48,16 @@ final readonly class SearchMapUseCase
         $near = $this->near($input);
 
         try {
+            $places = $query->searchesPlaces() ? $this->index->findPlaces($version, $query, $near, self::PLACE_LIMIT) : [];
             $parcels = $query->searchesParcels() ? $this->index->findParcels($version, $query, $near, self::PARCEL_LIMIT) : [];
         } catch (SearchIndexNotPublished) {
             throw SearchNotAvailable::indexNotPublished($version->value);
         }
 
-        return new SearchMapOutput([], array_map($this->parcelOutput(...), $parcels));
+        return new SearchMapOutput(
+            array_map($this->placeOutput(...), $places),
+            array_map($this->parcelOutput(...), $parcels),
+        );
     }
 
     private function currentVersion(string $requested): TilesetVersion
@@ -87,6 +94,31 @@ final readonly class SearchMapUseCase
         } catch (InvalidCoordinates $exception) {
             throw InvalidSearchRequest::invalidNear($exception->getMessage());
         }
+    }
+
+    private function placeOutput(Place $place): PlaceResultOutput
+    {
+        $bounds = $place->bounds;
+
+        return new PlaceResultOutput(
+            match ($place->kind) {
+                PlaceKind::Municipality => 'municipality',
+                PlaceKind::CadastralArea => 'cadastralArea',
+                PlaceKind::MunicipalityPart => 'municipalityPart',
+                PlaceKind::Street => 'street',
+                PlaceKind::Address => 'address',
+            },
+            $place->code,
+            $place->name,
+            $place->context,
+            $place->center->longitude,
+            $place->center->latitude,
+            $bounds?->southWest->longitude,
+            $bounds?->southWest->latitude,
+            $bounds?->northEast->longitude,
+            $bounds?->northEast->latitude,
+            $place->parcel?->value,
+        );
     }
 
     private function parcelOutput(ParcelMatch $match): ParcelResultOutput

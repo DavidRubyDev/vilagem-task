@@ -8,6 +8,8 @@ use InvalidArgumentException;
 use JsonException;
 use ParcelMap\Application\Import\BuiltSearchIndex;
 use ParcelMap\Application\Import\ConvertedParcels;
+use ParcelMap\Application\Import\ConvertedPlaces;
+use ParcelMap\Application\Import\IndexedPlaceCounts;
 use ParcelMap\Application\Import\SearchIndexBuilder;
 use ParcelMap\Application\Import\SearchIndexBuildFailed;
 use ParcelMap\Domain\Cadastre\CadastralArea;
@@ -18,6 +20,8 @@ use ParcelMap\Domain\Cadastre\ParcelId;
 use ParcelMap\Domain\Cadastre\ParcelKind;
 use ParcelMap\Domain\Cadastre\ParcelNumber;
 use ParcelMap\Domain\Map\Coordinates;
+use ParcelMap\Domain\Search\Place;
+use ParcelMap\Domain\Search\PlaceKind;
 use ParcelMap\Domain\Search\SearchText;
 use PDO;
 use PDOException;
@@ -36,7 +40,7 @@ final readonly class SearchIndexBuilderUsingSqlite implements SearchIndexBuilder
 
     public function __construct(private string $workDir) {}
 
-    public function build(array $parcels, Coverage $coverage): BuiltSearchIndex
+    public function build(array $parcels, array $places, Coverage $coverage): BuiltSearchIndex
     {
         if (!is_dir($this->workDir) && !@mkdir($this->workDir, 0o777, true) && !is_dir($this->workDir)) {
             throw SearchIndexBuildFailed::because('cannot create ' . $this->workDir . '.');
@@ -47,7 +51,7 @@ final readonly class SearchIndexBuilderUsingSqlite implements SearchIndexBuilder
         }
 
         try {
-            $this->write($path, $parcels, $coverage);
+            $counts = $this->write($path, $parcels, $places, $coverage);
         } catch (Throwable $exception) {
             @unlink($path);
 
@@ -56,13 +60,14 @@ final readonly class SearchIndexBuilderUsingSqlite implements SearchIndexBuilder
                 : SearchIndexBuildFailed::because(sprintf('cannot write %s: %s', $path, $exception->getMessage()));
         }
 
-        return new BuiltSearchIndex($path);
+        return new BuiltSearchIndex($path, $counts);
     }
 
     /**
      * @param non-empty-list<ConvertedParcels> $parcels
+     * @param non-empty-list<ConvertedPlaces> $places
      */
-    private function write(string $path, array $parcels, Coverage $coverage): void
+    private function write(string $path, array $parcels, array $places, Coverage $coverage): IndexedPlaceCounts
     {
         $pdo = new Sqlite('sqlite:' . $path, options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         // A build file that is not yet published is simply rebuilt if the import dies, so no journal and no fsync.
@@ -82,6 +87,100 @@ final readonly class SearchIndexBuilderUsingSqlite implements SearchIndexBuilder
         $pdo->commit();
 
         $pdo->exec('CREATE INDEX parcels_by_number ON parcels (base_number, subdivision, kind)');
+
+        return $this->writePlaces($pdo, $places, $coverage);
+    }
+
+    /**
+     * @param non-empty-list<ConvertedPlaces> $converted
+     */
+    private function writePlaces(PDO $pdo, array $converted, Coverage $coverage): IndexedPlaceCounts
+    {
+        $pdo->exec(
+            'CREATE TABLE places (
+                id INTEGER PRIMARY KEY,
+                kind INTEGER NOT NULL,
+                code INTEGER NOT NULL,
+                municipality_code INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                context TEXT NOT NULL,
+                search_key TEXT NOT NULL,
+                center_longitude REAL NOT NULL,
+                center_latitude REAL NOT NULL,
+                west REAL, south REAL, east REAL, north REAL,
+                parcel_id INTEGER,
+                UNIQUE (kind, code)
+            )',
+        );
+        $pdo->exec("CREATE VIRTUAL TABLE places_fts USING fts5(text, content='', detail=none, prefix='1 2 3', tokenize='unicode61')");
+
+        $areaBounds = $this->areaBounds($pdo);
+        $reader = new PlaceFileReader();
+        $all = [];
+        foreach ($converted as $file) {
+            array_push($all, ...$reader->read($pdo, $file, $coverage, $areaBounds));
+        }
+
+        $insert = $pdo->prepare(
+            'INSERT INTO places (kind, code, municipality_code, name, context, search_key, center_longitude, center_latitude,'
+            . ' west, south, east, north, parcel_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        );
+        $insertText = $pdo->prepare('INSERT INTO places_fts (rowid, text) VALUES (?, ?)');
+        $counts = array_fill_keys(array_map(static fn(PlaceKind $kind): int => $kind->value, PlaceKind::cases()), 0);
+        $pdo->beginTransaction();
+        foreach ($all as $place) {
+            $this->insertPlace($pdo, $insert, $insertText, $place);
+            ++$counts[$place->kind->value];
+        }
+        $pdo->commit();
+        $pdo->exec("INSERT INTO places_fts (places_fts) VALUES ('optimize')");
+
+        return new IndexedPlaceCounts(
+            $counts[PlaceKind::Municipality->value],
+            $counts[PlaceKind::CadastralArea->value],
+            $counts[PlaceKind::MunicipalityPart->value],
+            $counts[PlaceKind::Street->value],
+            $counts[PlaceKind::Address->value],
+        );
+    }
+
+    private function insertPlace(PDO $pdo, PDOStatement $insert, PDOStatement $insertText, Place $place): void
+    {
+        $bounds = $place->bounds;
+        $insert->execute([
+            $place->kind->value,
+            $place->code,
+            $place->municipality->value,
+            $place->name,
+            $place->context,
+            $place->key(),
+            $place->center->longitude,
+            $place->center->latitude,
+            $bounds?->southWest->longitude,
+            $bounds?->southWest->latitude,
+            $bounds?->northEast->longitude,
+            $bounds?->northEast->latitude,
+            $place->parcel?->value,
+        ]);
+        $insertText->execute([(int) $pdo->lastInsertId(), SearchText::of($place->name . ' ' . $place->context)->key()]);
+    }
+
+    /**
+     * @return array<int, array{float, float, float, float}>
+     */
+    private function areaBounds(PDO $pdo): array
+    {
+        $rows = $pdo->query(
+            'SELECT cadastral_area_code, MIN(west), MIN(south), MAX(east), MAX(north) FROM parcels GROUP BY cadastral_area_code',
+        );
+        $bounds = [];
+        /** @var list<list<int|float|string|null>> $fetched */
+        $fetched = $rows === false ? [] : $rows->fetchAll(PDO::FETCH_NUM);
+        foreach ($fetched as $row) {
+            $bounds[(int) $row[0]] = [(float) $row[1], (float) $row[2], (float) $row[3], (float) $row[4]];
+        }
+
+        return $bounds;
     }
 
     private function createSchema(PDO $pdo): void

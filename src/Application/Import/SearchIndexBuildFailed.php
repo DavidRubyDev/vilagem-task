@@ -15,4 +15,9 @@ final class SearchIndexBuildFailed extends ImportFailed
     {
         return new self(sprintf('%s line %d: %s', $path, $line, $reason));
     }
+
+    public static function invalidPlace(string $path, string $kind, int $code, string $reason): self
+    {
+        return new self(sprintf('%s: %s %d: %s', $path, $kind, $code, $reason));
+    }
 }

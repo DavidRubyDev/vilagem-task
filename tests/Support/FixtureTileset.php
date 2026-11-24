@@ -9,7 +9,7 @@ namespace ParcelMap\Tests\Support;
  */
 final class FixtureTileset
 {
-    public const string VERSION = '20261124141357';
+    public const string VERSION = '20261124150349';
     public const string EXPORT_DATE = '2026-10-31';
     public const float WEST = 15.350516;
     public const float SOUTH = 50.432327;

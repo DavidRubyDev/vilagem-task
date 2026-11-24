@@ -23,13 +23,17 @@ final readonly class SearchQuery
     private const array IGNORED_WORDS = ['pc', 'parc'];
     private const string BUILDING_MARKER = 'st';
 
+    private const int MAX_PLACE_TERMS = 8;
+
     /**
      * @param list<string> $nameTerms
+     * @param list<string> $placeTerms
      */
     private function __construct(
         private ?ParcelNumberQuery $parcelNumber,
         private ?CadastralAreaCode $cadastralAreaCode,
         private array $nameTerms,
+        private array $placeTerms,
     ) {}
 
     /**
@@ -56,15 +60,20 @@ final readonly class SearchQuery
             : self::asParcelNumber($tokens[$numberIndex], $markerIndex === null ? null : ParcelKind::Building);
         [$areaIndex, $areaCode] = self::areaCode($tokens);
 
-        $terms = [];
+        $nameTerms = [];
+        $placeTerms = [];
         foreach ($tokens as $index => $token) {
-            if ($index === $numberIndex || $index === $markerIndex || $index === $areaIndex || in_array($token, self::IGNORED_WORDS, true)) {
+            if ($index === $markerIndex || in_array($token, self::IGNORED_WORDS, true)) {
                 continue;
             }
-            array_push($terms, ...SearchText::of($token)->terms());
+            $terms = SearchText::of($token)->terms();
+            array_push($placeTerms, ...$terms);
+            if ($index !== $numberIndex && $index !== $areaIndex) {
+                array_push($nameTerms, ...$terms);
+            }
         }
 
-        return new self($parcelNumber, $areaCode, $terms);
+        return new self($parcelNumber, $areaCode, $nameTerms, array_slice($placeTerms, 0, self::MAX_PLACE_TERMS));
     }
 
     public function parcelNumber(): ?ParcelNumberQuery
@@ -88,6 +97,31 @@ final readonly class SearchQuery
     public function searchesParcels(): bool
     {
         return $this->parcelNumber !== null;
+    }
+
+    /**
+     * @return list<string> every word and number of the text: each must start a word of the name or the context of a place
+     */
+    public function placeTerms(): array
+    {
+        return $this->placeTerms;
+    }
+
+    public function placeKey(): string
+    {
+        return implode(' ', $this->placeTerms);
+    }
+
+    /** Places need a word: a bare number is a parcel number, not a place. */
+    public function searchesPlaces(): bool
+    {
+        foreach ($this->placeTerms as $term) {
+            if (strlen($term) >= 2 && preg_match('~[a-z]~', $term) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

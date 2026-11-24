@@ -6,6 +6,7 @@ namespace ParcelMap\Handler;
 
 use ParcelMap\Application\Search\InvalidSearchRequest;
 use ParcelMap\Application\Search\ParcelResultOutput;
+use ParcelMap\Application\Search\PlaceResultOutput;
 use ParcelMap\Application\Search\SearchMapInput;
 use ParcelMap\Application\Search\SearchMapUseCase;
 use ParcelMap\Application\Search\SearchNotAvailable;
@@ -47,7 +48,23 @@ final readonly class SearchMapHandler implements RequestHandler
 
         // The results are immutable for their tileset version.
         return Response::json([
-            'places' => $output->places,
+            'places' => array_map(
+                static fn(PlaceResultOutput $place): array => [
+                    'kind' => $place->kind,
+                    'code' => $place->code,
+                    'name' => $place->name,
+                    'context' => $place->context,
+                    'center' => ['longitude' => $place->centerLongitude, 'latitude' => $place->centerLatitude],
+                    'bounds' => $place->west === null ? null : [
+                        'west' => $place->west,
+                        'south' => $place->south,
+                        'east' => $place->east,
+                        'north' => $place->north,
+                    ],
+                    'parcelId' => $place->parcelId,
+                ],
+                $output->places,
+            ),
             'parcels' => array_map(
                 static fn(ParcelResultOutput $parcel): array => [
                     'id' => $parcel->id,

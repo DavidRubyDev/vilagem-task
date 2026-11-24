@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ParcelMap\Tests\Unit\Application\Search;
 
 use ParcelMap\Application\Search\InvalidSearchRequest;
+use ParcelMap\Application\Search\PlaceResultOutput;
 use ParcelMap\Application\Search\SearchMapInput;
 use ParcelMap\Application\Search\SearchMapUseCase;
 use ParcelMap\Application\Search\SearchNotAvailable;
@@ -21,7 +22,12 @@ use ParcelMap\Domain\Map\Coordinates;
 use ParcelMap\Domain\Map\ParcelTileset;
 use ParcelMap\Domain\Map\ParcelTilesetUnreadable;
 use ParcelMap\Domain\Map\TilesetVersion;
+use ParcelMap\Domain\Search\Address;
+use ParcelMap\Domain\Search\HouseNumber;
+use ParcelMap\Domain\Search\HouseNumberKind;
 use ParcelMap\Domain\Search\ParcelMatch;
+use ParcelMap\Domain\Search\Place;
+use ParcelMap\Domain\Search\PlaceKind;
 use ParcelMap\Domain\Search\SearchIndexUnreadable;
 use ParcelMap\Tests\Fake\ParcelTilesetRepositoryUsingMemory;
 use ParcelMap\Tests\Fake\SearchIndexRepositoryUsingMemory;
@@ -86,13 +92,119 @@ final class SearchMapUseCaseTest extends TestCase
     #[Test]
     public function it_does_not_search_parcels_for_a_text_without_a_parcel_number(): void
     {
-        $index = new SearchIndexRepositoryUsingMemory(new TilesetVersion(self::VERSION), self::parcelMatches());
+        $index = new SearchIndexRepositoryUsingMemory(new TilesetVersion(self::VERSION), self::parcelMatches(), self::places());
 
         $output = $this->useCase($index)->execute(new SearchMapInput(self::VERSION, 'jicin', null, null));
 
         self::assertSame([], $output->parcels);
-        self::assertSame([], $output->places);
         self::assertSame([], $index->parcelCalls);
+        self::assertCount(1, $index->placeCalls);
+    }
+
+    #[Test]
+    public function it_does_not_search_places_for_a_text_that_is_only_a_parcel_number(): void
+    {
+        $index = new SearchIndexRepositoryUsingMemory(new TilesetVersion(self::VERSION), self::parcelMatches(), self::places());
+
+        $output = $this->useCase($index)->execute(new SearchMapInput(self::VERSION, 'st. 72', null, null));
+
+        self::assertSame([], $output->places);
+        self::assertSame([], $index->placeCalls);
+        self::assertCount(1, $index->parcelCalls);
+    }
+
+    #[Test]
+    public function it_searches_both_for_a_word_and_a_number(): void
+    {
+        $index = new SearchIndexRepositoryUsingMemory(new TilesetVersion(self::VERSION), self::parcelMatches(), self::places());
+
+        $this->useCase($index)->execute(new SearchMapInput(self::VERSION, 'Robousy 72', 15.35, 50.43));
+
+        self::assertCount(1, $index->parcelCalls);
+        self::assertCount(1, $index->placeCalls);
+        self::assertSame('robousy 72', $index->placeCalls[0]['query']->placeKey());
+        self::assertEquals(new Coordinates(15.35, 50.43), $index->placeCalls[0]['near']);
+        self::assertSame(8, $index->placeCalls[0]['limit']);
+        self::assertSame(self::VERSION, $index->placeCalls[0]['version']);
+    }
+
+    #[Test]
+    public function it_maps_an_address_with_its_parcel_and_no_bounds(): void
+    {
+        $index = new SearchIndexRepositoryUsingMemory(new TilesetVersion(self::VERSION), [], self::places());
+
+        $output = $this->useCase($index)->execute(new SearchMapInput(self::VERSION, 'Valdštejnovo náměstí', null, null));
+
+        $address = $output->places[1];
+        self::assertSame('address', $address->kind);
+        self::assertSame(25344951, $address->code);
+        self::assertSame('Valdštejnovo náměstí 58', $address->name);
+        self::assertSame('Staré Město, Jičín', $address->context);
+        self::assertSame(15.351066, $address->centerLongitude);
+        self::assertSame(50.4373768, $address->centerLatitude);
+        self::assertNull($address->west);
+        self::assertNull($address->south);
+        self::assertNull($address->east);
+        self::assertNull($address->north);
+        self::assertSame(1753295604, $address->parcelId);
+    }
+
+    #[Test]
+    public function it_maps_a_municipality_with_its_bounds_and_the_kind_names(): void
+    {
+        $index = new SearchIndexRepositoryUsingMemory(new TilesetVersion(self::VERSION), [], self::places());
+
+        $output = $this->useCase($index)->execute(new SearchMapInput(self::VERSION, 'Valdštejnovo náměstí', null, null));
+
+        $municipality = $output->places[0];
+        self::assertSame('municipality', $municipality->kind);
+        self::assertSame(572659, $municipality->code);
+        self::assertSame('Jičín', $municipality->name);
+        self::assertSame('', $municipality->context);
+        self::assertSame([15.0, 50.0, 15.2, 50.2], [$municipality->west, $municipality->south, $municipality->east, $municipality->north]);
+        self::assertNull($municipality->parcelId);
+    }
+
+    #[Test]
+    public function it_names_the_kind_of_every_place(): void
+    {
+        $places = [];
+        foreach (PlaceKind::cases() as $kind) {
+            $places[] = new Place($kind, 1, new MunicipalityCode(572659), 'Husova', 'Jičín', new Coordinates(15.1, 50.1), null, null);
+        }
+        $places[4] = self::places()[1];
+        $index = new SearchIndexRepositoryUsingMemory(new TilesetVersion(self::VERSION), [], $places);
+
+        $output = $this->useCase($index)->execute(new SearchMapInput(self::VERSION, 'husova', null, null));
+
+        self::assertSame(
+            ['municipality', 'cadastralArea', 'municipalityPart', 'street', 'address'],
+            array_map(static fn(PlaceResultOutput $place): string => $place->kind, $output->places),
+        );
+    }
+
+    #[Test]
+    public function it_returns_no_more_than_the_limit_of_places(): void
+    {
+        $places = [];
+        foreach (range(1, 10) as $code) {
+            $places[] = new Place(PlaceKind::Street, $code, new MunicipalityCode(572659), 'Husova ' . $code, 'Jičín', new Coordinates(15.1, 50.1), null, null);
+        }
+        $index = new SearchIndexRepositoryUsingMemory(new TilesetVersion(self::VERSION), [], $places);
+
+        $output = $this->useCase($index)->execute(new SearchMapInput(self::VERSION, 'husova', null, null));
+
+        self::assertCount(8, $output->places);
+    }
+
+    #[Test]
+    public function it_is_not_available_for_a_place_search_when_the_index_is_not_published(): void
+    {
+        $useCase = new SearchMapUseCase($this->tilesets(), new SearchIndexRepositoryUsingMemory(null));
+
+        $this->expectException(SearchNotAvailable::class);
+
+        $useCase->execute(new SearchMapInput(self::VERSION, 'jicin', null, null));
     }
 
     #[Test]
@@ -233,6 +345,34 @@ final class SearchMapUseCaseTest extends TestCase
         return [
             self::parcelMatch(1753295604, ParcelKind::Building, 72, null),
             self::parcelMatch(99225194010, ParcelKind::Land, 867, 121),
+        ];
+    }
+
+    /**
+     * @return list<Place>
+     */
+    private static function places(): array
+    {
+        $address = new Address(
+            'Valdštejnovo náměstí',
+            'Staré Město',
+            'Jičín',
+            new HouseNumber(HouseNumberKind::Descriptive, 58, null, null),
+            new Coordinates(15.351066, 50.4373768),
+        );
+
+        return [
+            new Place(
+                PlaceKind::Municipality,
+                572659,
+                new MunicipalityCode(572659),
+                'Jičín',
+                '',
+                new Coordinates(15.1, 50.1),
+                new Bounds(new Coordinates(15.0, 50.0), new Coordinates(15.2, 50.2)),
+                null,
+            ),
+            Place::fromAddress(25344951, new MunicipalityCode(572659), $address, new ParcelId(1753295604)),
         ];
     }
 

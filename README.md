@@ -70,7 +70,9 @@ Run `make data` once (and again whenever you want a newer export). It runs
    files are dated on the last day of a month and appear the next day, so without
    `--export-date` the import takes the latest one and falls back once to the month before);
 2. converts the parcels of the listed cadastral areas to WGS84 with GDAL (`ogr2ogr`), reading each
-   municipality file once into `data/build/municipalities/{municipality}.geojsonl`;
+   municipality file once into `data/build/municipalities/{municipality}.geojsonl`, and reads its parts of the
+   municipality, streets, buildings and address points in a second GDAL run into
+   `data/build/places/{municipality}.sqlite` (the search index builder joins them);
 3. builds one vector tileset with tippecanoe and checks it against the tile size budget;
 4. builds the parcel store, a SQLite file of parcel details (number, area, land type, land use, boundary), and
    the search index, a SQLite file of parcel numbers with their bounds, and publishes both together with the
@@ -87,7 +89,7 @@ downloaded again, so a rerun is offline), `build/` the intermediate files, `tile
 published tileset, `parcels/{version}.sqlite` the published parcel store (about 46 MB for the district,
 zlib-compressed boundaries) and `search/{version}.sqlite` the published search index. `config/coverage.csv` lists the whole district: 240 cadastral areas of 111
 municipalities, 272,011 parcels. The first `make data` downloads 111 municipality files (54 MB per monthly
-export) and takes about 1 minute; a rerun from the cache about 45 seconds. The tileset is about 56 MB and
+export) and takes about 1 minute; a rerun from the cache about 45 seconds (with the search index and its places about 85 seconds; measured on 2026-11-24 from the cache: 57 s before the places, 85 s after, so +28 s). The search index of the district has 33,000 places and is 27 MB. The tileset is about 56 MB and
 the intermediate GeoJSON in `build/` about 130 MB. The tile build needs about 1 to 2 GB of memory (Docker Desktop
 users: allow at least 4 GB). Smoothness gate: a vector tile is limited to 200 kB (gzip; at most about 20 tiles are visible on a 1920x1080
 screen, so a view stays under 4 MB). The limit is passed to tippecanoe, and after the build the import reads the
@@ -125,17 +127,22 @@ when there is none), area in m², the boundary as a GeoJSON Polygon, `cadastreVi
 the response is immutable for its version (`Cache-Control: public, max-age=31536000, immutable`). It answers `404`
 for an unknown id, an id that is not 1 to 15 digits, another version, a missing parcel store or no imported data.
 `GET /api/map-config` tells the frontend where to ask: `parcels.parcelUrlTemplate`, e.g.
-`/api/parcels/20261124141357/{id}`, or `null` when the parcel store of the current tileset is missing.
+`/api/parcels/20261124150349/{id}`, or `null` when the parcel store of the current tileset is missing.
 
 ### Search
 
-`GET /api/search/{version}?q=<text>&near=<lon>,<lat>` answers `{"places": [], "parcels": [...]}` from the search
+`GET /api/search/{version}?q=<text>&near=<lon>,<lat>` answers `{"places": [...], "parcels": [...]}` from the search
 index `data/search/{version}.sqlite` of that tileset version (`near` is the map centre; equal matches are ordered by
 distance from it). Typing is read the way people write parcel numbers: `72` finds land 72 and building plot st. 72,
 `st. 72` building plots only, `80/2` the subdivision, numbers match exactly (`80` does not suggest `80/2`); a word
 narrows the parcels to the cadastral areas whose name or municipality name has a word starting with it
 (`867/121 rob`), and a 6-digit code to one cadastral area (`867/121 740225`). Matching ignores case and diacritics.
-At most 8 parcels come back. Like tiles and parcel details the response is immutable for its version
+Places (municipalities, cadastral areas, parts of municipalities, streets and addresses such as
+`Valdštejnovo náměstí 58`) are found when the text has a word of two letters or more: every word or number must start a
+word of the place's name or context ("Staré Město, Jičín"); the exact name comes first, then names starting with the text,
+then the kind and the distance from `near`. A municipality, a cadastral area and a part of the same name are one place
+(the biggest kind). An address is indexed when its building stands on a covered parcel, and carries that parcel's id.
+At most 8 places and 8 parcels come back. Like tiles and parcel details the response is immutable for its version
 (`Cache-Control: public, max-age=31536000, immutable`); `400` for a missing or blank `q`, a text over 100
 characters or a malformed `near`, `404` for another version or no index, `405` for other methods.
 `GET /api/map-config` tells the frontend where to ask: `parcels.searchUrl`, or `null` when the search index of the
@@ -365,6 +372,14 @@ _To be filled in._
 
 ### With more time
 
+- A search of the whole Czech Republic from the ČÚZK address CSV
+  (`https://vdp.cuzk.gov.cz/vymenny_format/csv/<date>_OB_ADR_csv.zip`: 63 MB zipped, about 2.95 million address points,
+  CC BY 4.0, monthly). Measured while planning: a synthetic index of 2.97 million places builds in 18 s and takes 369 MB;
+  queries stay under 25 ms at p95 when addresses sit in their own full-text table and are searched only when the
+  query has a number. Outside the covered area it would find places only and move the map there.
+- An external geocoder with points of interest (query text would leave the server; Nominatim forbids autocomplete,
+  Mapy.com needs an API key and its branding, a self-hosted Photon needs Java and a 1 GB Czech dump).
+- Typo tolerance in the search (none today: "jicn" finds nothing).
 - Generate the frontend code catalogues and the PHP known-code lists of land types and land uses from one source;
   today they are pinned by separate tests and a code-list change must update both by hand.
 - A generalised land-cover overview layer (parcels dissolved by land type) for low zooms, instead of leaving out

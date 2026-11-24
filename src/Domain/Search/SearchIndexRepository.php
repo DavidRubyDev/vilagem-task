@@ -20,4 +20,14 @@ interface SearchIndexRepository
      * @throws SearchIndexUnreadable
      */
     public function findParcels(TilesetVersion $version, SearchQuery $query, ?Coordinates $near, int $limit): array;
+
+    /**
+     * Places whose name or context starts with every place term of the query: the exact name first, then names
+     * starting with the text, then by kind and distance from $near; [] when the query searches no places.
+     *
+     * @return list<Place>
+     * @throws SearchIndexNotPublished
+     * @throws SearchIndexUnreadable
+     */
+    public function findPlaces(TilesetVersion $version, SearchQuery $query, ?Coordinates $near, int $limit): array;
 }

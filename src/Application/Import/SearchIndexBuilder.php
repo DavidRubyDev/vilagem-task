@@ -9,10 +9,12 @@ use ParcelMap\Domain\Cadastre\Coverage;
 interface SearchIndexBuilder
 {
     /**
-     * Builds the search index of all converted parcels; area and municipality names come from the coverage.
+     * Builds the search index of all converted parcels and of the places of every municipality; area and
+     * municipality names come from the coverage.
      *
      * @param non-empty-list<ConvertedParcels> $parcels
+     * @param non-empty-list<ConvertedPlaces> $places one per municipality, in coverage order
      * @throws SearchIndexBuildFailed
      */
-    public function build(array $parcels, Coverage $coverage): BuiltSearchIndex;
+    public function build(array $parcels, array $places, Coverage $coverage): BuiltSearchIndex;
 }

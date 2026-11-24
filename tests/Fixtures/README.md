@@ -16,7 +16,15 @@ the whole `vf:Hlavicka`, then `<vf:Data><vf:Parcely>` with only:
   64343200010, 64343201010 (20 building plots, 2 land plots, land types 13 and 14, one with a hole);
 - the first 3 parcels of cadastral area 740225 in file order: 95522753010, 99225194010, 100751793010.
 
-Every other collection (Obce, KatastralniUzemi, Ulice, StavebniObjekty, ...) is dropped. The zip entry is
+Task 009 re-trimmed the file from the cached real export (a one-off script, not committed; whole elements are kept, the
+parcels are byte for byte the same, so the converted parcels, tiles and bounds did not change). In source order it
+also keeps in `<vf:Data>`: `<vf:CastiObci>` with only the parts CO.410217 (Staré Město) and CO.140228 (Robousy);
+`<vf:Ulice>` with only the streets UL.164143 (17. listopadu, no kept address), UL.164232 (Čelakovského), UL.164372
+(Valdštejnovo náměstí) and UL.164844 (Palackého); `<vf:StavebniObjekty>` with the 20 buildings of the 21 address points
+that stand on a fixture parcel plus building SO.17361141; `<vf:AdresniMista>` with those 21 address points (for example
+25344951 Valdštejnovo náměstí 58 on parcel 1753295604, st. 72, and 85970085 Robousy 239 on parcel 95522753010) plus
+AD.17482674 (Robousy 1, on parcel 1860073604, which is not in the fixture: the case "not covered, not indexed"). Every
+other collection (Obce, KatastralniUzemi, Zsj, ...) is dropped. The zip entry is
 `20261031_OB_572659_UKSH.xml`. Data: ČÚZK, 2026, CC BY 4.0.
 
 ## `ruian/20261031_OB_572675_UKSH.xml.zip`
@@ -75,14 +83,16 @@ They were regenerated in task 006 (store) and in task 009 (the search index appe
 budget and byte for byte the same tile data, bounds and zooms as before). The tests use these facts as constants in `tests/Support/FixtureTileset.php` and
 `tests/E2E/support/fixture.ts`:
 
-- version `20261124141357`, export date 2026-10-31, zooms 9 to 16;
+- version `20261124150349`, export date 2026-10-31, zooms 9 to 16;
 - bounds `15.350516,50.432327,15.403251,50.437799`;
 - tiles `12/2222/1381`, `13/4445/2762`, `14/8890/5525` exist; `14/8891/5525` is inside the bounds but empty;
 - the store holds the 25 parcels of the two fixture areas. `tests/Support/FixtureParcelStore.php` names the ones the
   tests use: 1753295604 (`st. 72`, Jičín, building, land type 13, no land use, 455 m², one ring of 32 positions,
   the first `[15.3509779, 50.4377444]`), 1761441604 (`1171`, land type 14, land use 17, 13,077 m², three rings) and
   99225194010 (`867/121`, Robousy 740225, municipality Jičín, 725 m²);
-- the search index holds the same 25 parcels (`parcels`: number and outer-ring bounds, e.g. st. 72 has west 15.3509216,
+- the search index holds 27 places (1 municipality Jičín, 1 cadastral area Robousy, 1 part Staré Město, 3 streets, 21
+  addresses; the cadastral area Jičín, the part Robousy, the street 17. listopadu and the address Robousy 1 are not
+  indexed) and the same 25 parcels (`parcels`: number and outer-ring bounds, e.g. st. 72 has west 15.3509216,
   south 50.4372305, east 15.3511404, north 50.437745) and the two areas with their `search_words`
   (`jicin jicin`, `robousy jicin`).
 

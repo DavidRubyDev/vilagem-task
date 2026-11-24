@@ -7,7 +7,7 @@ namespace ParcelMap\Application\Search;
 final readonly class SearchMapOutput
 {
     /**
-     * @param list<never> $places always empty until places are indexed
+     * @param list<PlaceResultOutput> $places in ranked order
      * @param list<ParcelResultOutput> $parcels in ranked order
      */
     public function __construct(

@@ -1191,6 +1191,58 @@ Decisions below the plan's level:
 - The list opens again with Arrow Down/Up when it was closed by Escape and results exist.
 - `shouldSearch` counts code points (the server counts characters, not bytes or UTF-16 units).
 
+### Step 4: `feat(search): find places and addresses (#009)`
+
+Red runs:
+
+- Outer, `tests/Api/SearchTest` and `ImportParcelsCommandTest` (run before any step 4 production code, on the
+  re-trimmed zip but the old index): 11 failures, e.g. `Failed asserting that null is identical to 'municipality'`
+  (`places` was always empty), "Indexed places:" and "... and the places of 1 municipality." missing in the import
+  output, `actual size 0 matches expected size 1` for `robousy 239`.
+- Unit: the suite died with `ImportProgressUsingMemory::searchIndexBuildStarted() must be compatible with ...` and
+  missing classes (`Place`, `HouseNumber`, `PlaceConverter`, ...), before their implementation.
+- `PlaceConverterUsingOgr2ogrTest`, `SearchIndexBuilderUsingSqliteTest` (place part) and
+  `SearchIndexRepositoryUsingSqliteTest` (place part): written before their classes, but I did not run them red (the
+  run was interrupted by an API usage limit and I resumed with the production code); they depend on classes that did
+  not exist, so they could not have passed. They all passed on the first run of the finished code.
+- `it_orders_equal_matches_by_the_distance_from_near` (API) was wrong at first (it assumed the order of the addresses
+  does not change with `near`; it does, as the plan says); I corrected the test deliberately.
+
+Fixture re-trim: the Jičín zip was re-trimmed from the cached real export with a one-off script run with
+`python3 -I` in the scratchpad, as the task file specifies. Extracted counts matched the task file exactly: 2 parts,
+4 streets, 20 buildings, 22 addresses. The parcel conversion output is byte for byte equal to
+`tests/Fixtures/geojson/572659.geojsonl` (`cmp`), and the tileset has the same 22 tiles (md5 over the tile data) and
+bounds. The fixture data dir was regenerated (version `20261124150349`; the old version 20261124141357 was removed from
+the repo) and `FixtureTileset::VERSION` / `FIXTURE_VERSION` changed again.
+
+Deliberately changed existing tests and support code:
+
+- `tests/Api/ImportParcelsCommandTest`: the step 1 progress-line assertion is now "... from 25 parcels and the places of
+  1 municipality." (and the plural for two municipalities); new `Indexed places:` assertions and a new ordering test.
+- Unit `ImportParcelsUseCaseTest`, `ImportParcelsCommandTest`, `ImportProgressUsingConsoleTest`: constructor/signature
+  changes (`PlaceConverter`, `searchIndexBuildStarted($parcels, $municipalities)`), the events list.
+- `SearchIndexBuilderUsingSqliteTest`: every `build()` call gained the places argument (an empty place file where a test
+  is about parcels); `SearchIndexRepositoryUsingSqliteTest::repositoryWith` likewise; `ParcelDataPublisherUsingSqliteTest`:
+  `BuiltSearchIndex` now carries counts.
+- `SearchIndexRepositoryUsingMemory`, `SearchIndexBuilderUsingMemory` (fakes) extended; new `PlaceConverterUsingMemory`
+  and `tests/Support/PlaceFile` (writes a place file for the integration tests).
+
+Real-data acceptance (own data dir `var/real`, the cached exports copied; dev app untouched; `parcel-map-real` compose
+project removed afterwards):
+
+- Import from the cache: 57 s at 96da2e4 (before the places) and 85 s now, so +28 s (limit +40 s).
+- Index: 26.8 MB (limit 40 MB; 22.6 MB before the places). `Indexed places: municipalities 111, cadastral areas 158,
+  parts of municipalities 90, streets 657, addresses 31822.`
+- `make perf` search spec (12 queries, 20 requests each, Node fetch): p95 3.5 to 8.9 ms (`ji` 8.9, `jicin` 8.3,
+  `nova paka` 7.0, `husova` 4.5, `husova 1` 6.0, `robousy 1` 5.5, `nadrazni` 3.8, `na` 5.4, `80/2` 4.1, `st. 72` 4.1,
+  `1171` 3.5, `867/121 robousy` 4.4), budget 30 ms.
+
+Decisions below the plan's level: `PlaceFileReader` (Infrastructure, role name) reads one place file into places so
+the builder stays small; it attaches the file, reads, detaches, and the builder inserts everything in one
+transaction. A cadastral area or municipality without parcels is not indexed (no centre). A part or street with one
+point, or a street that is a straight vertical/horizontal line, is stored without bounds (centre only), as planned.
+Real counts differ slightly from the planning prototype (31,822 addresses as measured there).
+
 
 ## Review
 

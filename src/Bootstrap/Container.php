@@ -35,6 +35,7 @@ use ParcelMap\Infrastructure\Http\ZipFileDownloader;
 use ParcelMap\Infrastructure\Import\ParcelConverterUsingOgr2ogr;
 use ParcelMap\Infrastructure\Import\ParcelDataPublisherUsingSqlite;
 use ParcelMap\Infrastructure\Import\ParcelStoreBuilderUsingSqlite;
+use ParcelMap\Infrastructure\Import\PlaceConverterUsingOgr2ogr;
 use ParcelMap\Infrastructure\Import\RuianExportDownloaderUsingHttp;
 use ParcelMap\Infrastructure\Import\SearchIndexBuilderUsingSqlite;
 use ParcelMap\Infrastructure\Import\TilesetBuilderUsingTippecanoe;
@@ -72,6 +73,7 @@ final readonly class Container
                     $coverage,
                     new RuianExportDownloaderUsingHttp($zipDownloader, $ruianBaseUrl, $dataDir . '/cache/ruian'),
                     new ParcelConverterUsingOgr2ogr($runner, $dataDir . '/build'),
+                    new PlaceConverterUsingOgr2ogr($runner, $dataDir . '/build'),
                     new TilesetBuilderUsingTippecanoe($runner, $dataDir . '/build'),
                     new TilesetInspectorUsingMbtiles(),
                     new ParcelStoreBuilderUsingSqlite($dataDir . '/build'),

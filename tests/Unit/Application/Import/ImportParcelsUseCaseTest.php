@@ -34,6 +34,7 @@ use ParcelMap\Tests\Fake\ClockUsingFixedTime;
 use ParcelMap\Tests\Fake\CoverageRepositoryUsingMemory;
 use ParcelMap\Tests\Fake\ImportProgressUsingMemory;
 use ParcelMap\Tests\Fake\ParcelConverterUsingMemory;
+use ParcelMap\Tests\Fake\PlaceConverterUsingMemory;
 use ParcelMap\Tests\Fake\ParcelDataPublisherUsingMemory;
 use ParcelMap\Tests\Fake\ParcelStoreBuilderUsingMemory;
 use ParcelMap\Tests\Fake\RuianExportDownloaderUsingMemory;
@@ -47,6 +48,7 @@ final class ImportParcelsUseCaseTest extends TestCase
 {
     private RuianExportDownloaderUsingMemory $downloader;
     private ParcelConverterUsingMemory $converter;
+    private PlaceConverterUsingMemory $placeConverter;
     private TilesetBuilderUsingMemory $builder;
     private ParcelStoreBuilderUsingMemory $storeBuilder;
     private SearchIndexBuilderUsingMemory $searchIndexBuilder;
@@ -78,8 +80,16 @@ final class ImportParcelsUseCaseTest extends TestCase
         );
         self::assertEquals(self::coverage(), $this->storeBuilder->coverage);
         self::assertSame(
+            ['572659 from memory://572659/2026-10-31', '222222 from memory://222222/2026-10-31'],
+            $this->placeConverter->conversions,
+        );
+        self::assertSame(
             ['memory://municipalities/572659', 'memory://municipalities/222222'],
             $this->searchIndexBuilder->builtFrom,
+        );
+        self::assertSame(
+            ['memory://places/572659', 'memory://places/222222'],
+            $this->searchIndexBuilder->placesBuiltFrom,
         );
         self::assertEquals(self::coverage(), $this->searchIndexBuilder->coverage);
         self::assertSame(
@@ -92,6 +102,32 @@ final class ImportParcelsUseCaseTest extends TestCase
         self::assertSame([659541, 740225, 111111], array_map(static fn($a): int => $a->code, $output->areas));
         self::assertSame(['Jičín', 'Robousy', 'Other'], array_map(static fn($a): string => $a->name, $output->areas));
         self::assertSame([22, 3, 5], array_map(static fn($a): int => $a->parcelCount, $output->areas));
+    }
+
+    #[Test]
+    public function it_reports_the_places_that_were_indexed(): void
+    {
+        $output = $this->useCase(publishedDates: ['2026-10-31'])->execute(new ImportParcelsInput('2026-10-31'), $this->progress);
+
+        self::assertSame(2, $output->indexedPlaces->municipalities);
+        self::assertSame(3, $output->indexedPlaces->cadastralAreas);
+        self::assertSame(4, $output->indexedPlaces->municipalityParts);
+        self::assertSame(5, $output->indexedPlaces->streets);
+        self::assertSame(6, $output->indexedPlaces->addresses);
+    }
+
+    #[Test]
+    public function it_stops_without_publishing_when_the_place_converter_fails(): void
+    {
+        $useCase = $this->useCase(publishedDates: ['2026-10-31'], failingPlaceConverter: true);
+
+        try {
+            $useCase->execute(new ImportParcelsInput('2026-10-31'), $this->progress);
+            self::fail('Expected ConversionFailed.');
+        } catch (ConversionFailed) {
+            self::assertSame([], $this->publisher->published);
+            self::assertSame([], $this->searchIndexBuilder->builtFrom);
+        }
     }
 
     #[Test]
@@ -252,7 +288,7 @@ final class ImportParcelsUseCaseTest extends TestCase
             self::assertSame([], $this->storeBuilder->builtFrom);
             self::assertSame([], $this->searchIndexBuilder->builtFrom);
             self::assertNotContains('parcel store from 30 parcels', $this->progress->events);
-            self::assertNotContains('search index from 30 parcels', $this->progress->events);
+            self::assertNotContains('search index from 30 parcels and 2 municipalities', $this->progress->events);
             self::assertSame([], $this->publisher->published);
         }
     }
@@ -338,7 +374,7 @@ final class ImportParcelsUseCaseTest extends TestCase
                 'converted 222222 2/2 1 areas, 5 parcels',
                 'build from 30 parcels',
                 'parcel store from 30 parcels',
-                'search index from 30 parcels',
+                'search index from 30 parcels and 2 municipalities',
             ],
             $this->progress->events,
         );
@@ -394,12 +430,14 @@ final class ImportParcelsUseCaseTest extends TestCase
         bool $failingPublisher = false,
         bool $failingStoreBuilder = false,
         bool $failingSearchIndexBuilder = false,
+        bool $failingPlaceConverter = false,
         TilesetStatistics|TilesetInspectionFailed|null $statistics = null,
         array $unknownCodes = [],
     ): ImportParcelsUseCase {
         $this->downloader = new RuianExportDownloaderUsingMemory($publishedDates, $cachedMunicipalities);
         $this->progress = new ImportProgressUsingMemory();
         $this->converter = new ParcelConverterUsingMemory([659541 => 22, 740225 => 3, 111111 => 5], $failingConverter);
+        $this->placeConverter = new PlaceConverterUsingMemory($failingPlaceConverter);
         $this->builder = new TilesetBuilderUsingMemory($failingBuilder);
         $this->storeBuilder = new ParcelStoreBuilderUsingMemory($failingStoreBuilder, $unknownCodes);
         $this->searchIndexBuilder = new SearchIndexBuilderUsingMemory($failingSearchIndexBuilder);
@@ -409,6 +447,7 @@ final class ImportParcelsUseCaseTest extends TestCase
             new CoverageRepositoryUsingMemory($coverage ?? self::coverage()),
             $this->downloader,
             $this->converter,
+            $this->placeConverter,
             $this->builder,
             new TilesetInspectorUsingMemory($statistics ?? self::withinBudget()),
             $this->storeBuilder,

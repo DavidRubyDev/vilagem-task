@@ -12,9 +12,12 @@ use ParcelMap\Domain\Cadastre\MunicipalityCode;
 use ParcelMap\Domain\Cadastre\ParcelId;
 use ParcelMap\Domain\Cadastre\ParcelKind;
 use ParcelMap\Domain\Cadastre\ParcelNumber;
+use ParcelMap\Domain\Map\Bounds;
 use ParcelMap\Domain\Map\Coordinates;
 use ParcelMap\Domain\Map\TilesetVersion;
 use ParcelMap\Domain\Search\ParcelMatch;
+use ParcelMap\Domain\Search\Place;
+use ParcelMap\Domain\Search\PlaceKind;
 use ParcelMap\Domain\Search\SearchIndexNotPublished;
 use ParcelMap\Domain\Search\SearchIndexRepository;
 use ParcelMap\Domain\Search\SearchIndexUnreadable;
@@ -51,6 +54,23 @@ final readonly class SearchIndexRepositoryUsingSqlite implements SearchIndexRepo
             $rows = $this->parcelRows($file, $query, $number->baseNumber, $number->subdivision, $number->kind === ParcelKind::Building, $near, $limit);
 
             return array_map($this->parcelMatch(...), $rows);
+        } catch (PDOException|InvalidArgumentException $exception) {
+            throw SearchIndexUnreadable::because($exception->getMessage());
+        }
+    }
+
+    public function findPlaces(TilesetVersion $version, SearchQuery $query, ?Coordinates $near, int $limit): array
+    {
+        if (!$query->searchesPlaces()) {
+            return [];
+        }
+        $file = $this->file($version);
+        if (!is_file($file)) {
+            throw SearchIndexNotPublished::forVersion($version->value);
+        }
+
+        try {
+            return array_map($this->place(...), $this->placeRows($file, $query, $near, $limit));
         } catch (PDOException|InvalidArgumentException $exception) {
             throw SearchIndexUnreadable::because($exception->getMessage());
         }
@@ -105,6 +125,85 @@ final readonly class SearchIndexRepositoryUsingSqlite implements SearchIndexRepo
         $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
 
         return $rows;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function placeRows(string $file, SearchQuery $query, ?Coordinates $near, int $limit): array
+    {
+        // Every term holds [a-z0-9] only (SearchQuery), so quoting it needs no escaping.
+        $match = implode(' AND ', array_map(static fn(string $term): string => '"' . $term . '"*', $query->placeTerms()));
+        $parameters = [':match' => $match, ':key' => $query->placeKey(), ':limit' => $limit];
+        $distance = '';
+        if ($near !== null) {
+            // Squared distance, the longitude scaled to the latitude of the map centre.
+            $distance = '(p.center_longitude - :lon) * (p.center_longitude - :lon) * :k'
+                . ' + (p.center_latitude - :lat) * (p.center_latitude - :lat), ';
+            $parameters[':lon'] = $near->longitude;
+            $parameters[':lat'] = $near->latitude;
+            $parameters[':k'] = cos(deg2rad($near->latitude)) ** 2;
+        }
+
+        $statement = $this->connect($file)->prepare(
+            'SELECT p.kind, p.code, p.municipality_code, p.name, p.context, p.center_longitude, p.center_latitude,'
+            . ' p.west, p.south, p.east, p.north, p.parcel_id'
+            . ' FROM places_fts f JOIN places p ON p.id = f.rowid'
+            . ' WHERE places_fts MATCH :match'
+            . ' ORDER BY (p.search_key = :key) DESC, (substr(p.search_key, 1, length(:key)) = :key) DESC, p.kind, '
+            . $distance . 'p.search_key, p.id'
+            . ' LIMIT :limit',
+        );
+        $statement->execute($parameters);
+
+        /** @var list<array<string, mixed>> $rows */
+        $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        return $rows;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function place(array $row): Place
+    {
+        $west = self::optionalFloat($row, 'west');
+        $south = self::optionalFloat($row, 'south');
+        $east = self::optionalFloat($row, 'east');
+        $north = self::optionalFloat($row, 'north');
+        $bounds = $west === null || $south === null || $east === null || $north === null
+            ? null
+            : new Bounds(new Coordinates($west, $south), new Coordinates($east, $north));
+        $parcel = ($row['parcel_id'] ?? null) === null ? null : new ParcelId(self::integer($row, 'parcel_id'));
+
+        return new Place(
+            PlaceKind::from(self::integer($row, 'kind')),
+            self::integer($row, 'code'),
+            new MunicipalityCode(self::integer($row, 'municipality_code')),
+            self::string($row, 'name'),
+            self::string($row, 'context'),
+            new Coordinates(self::float($row, 'center_longitude'), self::float($row, 'center_latitude')),
+            $bounds,
+            $parcel,
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private static function float(array $row, string $column): float
+    {
+        $value = $row[$column] ?? null;
+
+        return is_float($value) || is_int($value) ? (float) $value : throw new InvalidArgumentException(sprintf('the column "%s" is not a number.', $column));
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private static function optionalFloat(array $row, string $column): ?float
+    {
+        return ($row[$column] ?? null) === null ? null : self::float($row, $column);
     }
 
     private function connect(string $file): Sqlite

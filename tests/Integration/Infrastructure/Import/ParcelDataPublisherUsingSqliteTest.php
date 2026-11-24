@@ -7,6 +7,7 @@ namespace ParcelMap\Tests\Integration\Infrastructure\Import;
 use ParcelMap\Application\Import\BuiltParcelStore;
 use ParcelMap\Application\Import\BuiltSearchIndex;
 use ParcelMap\Application\Import\BuiltTileset;
+use ParcelMap\Application\Import\IndexedPlaceCounts;
 use ParcelMap\Application\Import\ParcelDataPublishFailed;
 use ParcelMap\Domain\Cadastre\ExportDate;
 use ParcelMap\Domain\Map\TilesetVersion;
@@ -115,7 +116,7 @@ final class ParcelDataPublisherUsingSqliteTest extends TestCase
         file_put_contents($path, 'this is not sqlite, but long enough to be looked at as a database header');
 
         try {
-            $this->publisher()->publish($this->builtTileset('d.mbtiles', 'd'), $this->builtStore('d.sqlite'), new BuiltSearchIndex($path), new TilesetVersion('v1'), ExportDate::fromString('2026-10-31'));
+            $this->publisher()->publish($this->builtTileset('d.mbtiles', 'd'), $this->builtStore('d.sqlite'), new BuiltSearchIndex($path, new IndexedPlaceCounts(0, 0, 0, 0, 0)), new TilesetVersion('v1'), ExportDate::fromString('2026-10-31'));
             self::fail('Expected ParcelDataPublishFailed.');
         } catch (ParcelDataPublishFailed) {
             self::assertFileDoesNotExist($this->tilesetFile());
@@ -264,6 +265,6 @@ final class ParcelDataPublisherUsingSqliteTest extends TestCase
         $pdo = new PDO('sqlite:' . $path);
         $pdo->exec('CREATE TABLE metadata (name TEXT PRIMARY KEY, value TEXT NOT NULL)');
 
-        return new BuiltSearchIndex($path);
+        return new BuiltSearchIndex($path, new IndexedPlaceCounts(0, 0, 0, 0, 0));
     }
 }
