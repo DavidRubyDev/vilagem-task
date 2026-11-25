@@ -503,6 +503,18 @@ Filled in by the implement agent, one entry per step.
   tests green (the gap: the invalid body was rejected by the shape check). With the new test: red ("the status is
   500"). Code restored, 20 green.
 
+### Step 6: `test(map): fit the map to the parcel of a changed hash (#011)`
+
+- New E2E test "fits the map to the parcel of a changed hash" in the group "the selected parcel in the URL": opens the
+  default view, waits for the zoom-12 tile, asserts that no zoom-16 tile has been requested, sets
+  `#parcel=1753295604` and waits for the zoom-16 tile `16/35562/22101.pbf`. Passes on the real code (1.4 s).
+- Mutations (working tree only; each rebuilt `var/e2e/build` with `npm run build` in the test project, then ran
+  `-g "changed hash"`; "selects the parcel of a changed hash" is the existing test):
+  - M1 `{ fit: true }` -> `{ fit: false }` in `ParcelSelection.onHashChange()`: the existing test stays green, the new
+    test fails (waits 30 s for the tile, test timeout).
+  - M2 empty `fitTo()` body: the existing test stays green, the new test fails the same way.
+  - Code restored and the build redone; both tests green.
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.
