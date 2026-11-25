@@ -485,6 +485,15 @@ Filled in by the implement agent, one entry per step.
   - M4 handler JSON, `municipality.name` takes the area name: old green, new red (handler test).
   - Code restored after each (`git checkout`).
 
+### Step 4: `test(parcel): pin the 15-digit limit of a parcel id in the URL (#011)`
+
+- `GetParcelDetailHandlerTest`: the in-memory store now also holds parcels `123456789012345` and `1234567890123456`
+  (valid `ParcelId`s, below 2^53); new test `it_answers_the_details_of_a_parcel_with_a_fifteen_digit_id` (200).
+- Mutations (working tree only): baseline 9 tests green.
+  - M1 remove `|| strlen($id) > self::MAX_DIGITS`: red, the "sixteen digits" bad id answers 200.
+  - M2 `MAX_DIGITS = 14`: red, the new 15-digit test answers 404.
+  - Handler restored after each. The API case "id with 16 digits" is unchanged.
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.

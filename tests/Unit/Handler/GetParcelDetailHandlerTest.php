@@ -52,6 +52,14 @@ final class GetParcelDetailHandlerTest extends TestCase
     }
 
     #[Test]
+    public function it_answers_the_details_of_a_parcel_with_a_fifteen_digit_id(): void
+    {
+        $response = $this->handler()->handle($this->request('123456789012345'));
+
+        self::assertSame(200, $response->status);
+    }
+
+    #[Test]
     public function it_answers_404_for_an_unknown_parcel(): void
     {
         self::assertSame(404, $this->handler()->handle($this->request('999'))->status);
@@ -118,6 +126,9 @@ final class GetParcelDetailHandlerTest extends TestCase
             new ParcelRepositoryUsingMemory(new TilesetVersion(self::VERSION), [
                 self::parcel(1753295604, ParcelKind::Building, 72, null, 659541, 'Jičín'),
                 self::parcel(99225194010, ParcelKind::Land, 867, 121, 740225, 'Robousy'),
+                // Stored, so that the sixteen-digit bad id can only be rejected by the length limit.
+                self::parcel(123456789012345, ParcelKind::Land, 1, null, 659541, 'Jičín'),
+                self::parcel(1234567890123456, ParcelKind::Land, 2, null, 659541, 'Jičín'),
             ]),
         ));
     }
