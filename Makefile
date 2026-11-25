@@ -21,7 +21,7 @@ comma := ,
 empty :=
 space := $(empty) $(empty)
 
-.PHONY: build data coverage perf install-php install-node assets watch up-app up down cs cs-fix phpstan deptrac format \
+.PHONY: build data coverage perf install-php install-node assets watch e2e-dirs e2e-assets up-app up down cs cs-fix phpstan deptrac format \
 	test-unit test-integration test-api test-frontend test-e2e typecheck lint-frontend lint-ci test-hooks \
 	php-qa php-tests check qa test ci-targets $(CHECK_TARGETS)
 
@@ -46,7 +46,15 @@ assets: install-node
 watch:
 	$(NODE) npm run watch
 
-up-app:
+# Docker would create missing bind-mount sources owned by root.
+e2e-dirs:
+	mkdir -p var/e2e/node_modules var/e2e/build
+
+# The test project's own node_modules and frontend build (compose.test.yaml), independent of assets and watch.
+e2e-assets: e2e-dirs
+	$(TEST_COMPOSE) run --rm --no-deps node sh -c 'npm ci --no-audit --no-fund && npm run build'
+
+up-app: e2e-dirs
 	$(TEST_COMPOSE) up -d --wait --no-deps app
 
 up:
@@ -90,7 +98,7 @@ format: cs-fix
 test-frontend:
 	$(NODE) npm test
 
-test-e2e: up-app
+test-e2e: e2e-assets up-app
 	$(TEST_COMPOSE) run --rm --no-deps node npm run e2e
 
 # Measures the running app (make up) with real data (make data) in a browser; not part of check.
@@ -109,7 +117,7 @@ php-tests: install-php test-unit test-integration test-api
 
 frontend-checks: install-node typecheck lint-frontend test-frontend
 
-e2e: install-php assets up-app test-e2e
+e2e: install-php test-e2e
 
 check: $(CHECK_TARGETS)
 

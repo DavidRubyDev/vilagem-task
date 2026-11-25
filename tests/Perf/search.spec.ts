@@ -3,8 +3,8 @@ import { expect, test } from '@playwright/test';
 
 // The search must answer while the user types, so every query of the fixed list has to be fast over HTTP with the
 // whole district imported. The requests are made with Node's fetch, not with Playwright's request context or the
-// browser: measured on 2026-11-24, both add about 40 ms to every response of PHP's built-in server (even to a 404),
-// while Node's fetch needs about 3 ms for a search.
+// browser, so the measurement is the server and the network only (about 3 ms for a search), without the host lookup
+// of the request context.
 const MAX_P95_MS = 30;
 const REQUESTS_PER_QUERY = 20;
 const REPORT_DIRECTORY = 'var/perf';

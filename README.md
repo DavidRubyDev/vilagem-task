@@ -215,7 +215,8 @@ title and the fallback error of `frontend/index.html` repeat the Czech texts and
 | `make format`     | `PHP vendor/bin/php-cs-fixer fix`, `NODE npm run format`                      | Format PHP and frontend code                  |
 | `make test-frontend` | `NODE npm test`                                                            | Vitest unit tests                             |
 | `make perf`       | `NODE npm run perf`                                                           | Browser measurement of the district views against the app of `make up` with real data (`make data` first); not part of `make check` |
-| `make test-e2e`   | starts the test app, then `npm run e2e` in the test project                   | Playwright E2E (needs `make assets` first)    |
+| `make test-e2e`   | `make e2e-assets`, starts the test app, then `npm run e2e` in the test project | Playwright E2E                                |
+| `make e2e-assets` | `npm ci` and `npm run build` in the test project, into `var/e2e/`             | The E2E tests' own `node_modules` and frontend build |
 | `make assets`     | `NODE npm ci`, `NODE npm run build`                                           | Build the frontend into `public/build/`       |
 | `make watch`      | `NODE npm run watch`                                                          | Rebuild the frontend on change                |
 | `make lint-ci`    | `docker run --rm -v "$PWD":/repo -w /repo rhysd/actionlint:1.7.12 .github/workflows/ci.yml` | Lint the GitHub workflow        |
@@ -224,10 +225,9 @@ Run `composer install` first (`make install-php`); the `make` check groups do it
 
 The API and E2E tests run against their own app: a separate compose project (`parcel-map-test`,
 `compose.test.yaml`) with no published port and the fixture data in `tests/Fixtures/data`, so
-`make check` never restarts or changes the app of `make up`. `make down` stops both projects.
-
-Known issue: the E2E test `tests/E2E/parcel-detail.spec.ts` "ignores the parcel of the URL" sometimes times out waiting
-for the map canvas; rerun `make test-e2e` (or `make check`).
+`make check` never restarts or changes the app of `make up`. The test project also has its own `node_modules` and
+frontend build in `var/e2e/` (`make e2e-assets`), so `make assets`, `make watch` or the dev stack cannot break a
+running E2E test. `make down` stops both projects.
 
 ### Smoothness evidence
 
@@ -244,8 +244,8 @@ The main quality criterion is that the map stays smooth with the whole district 
    district view loads 9 tiles (263 kB), Jičín at zoom 12 loads 15 tiles (1.9 MB), tile responses take 13 to 56 ms.
 3. **Search latency** (`tests/Perf/search.spec.ts`, part of `make perf`): every query of a fixed list is asked 20
    times over HTTP and must have a p95 of at most 30 ms; the report goes to `var/perf/search-perf.json`. It uses
-   Node's fetch, because Playwright's request context and Chromium add about 40 ms to every response of PHP's
-   built-in server (even a 404) in the Docker setup.
+   Node's fetch, which measures only the server and the network (about 3 ms for a search), without Playwright's
+   request context and its host lookup.
 4. **A manual check in Chrome** on real hardware (performance panel while panning and zooming over the district
    at zoom 10 and over Jičín at zoom 12 to 16: no long tasks over 50 ms once the tiles have loaded).
 
@@ -395,6 +395,9 @@ A running log of decisions and what I would do with more time.
   request that leaves the app fails the test (the OSM tile policy forbids automated traffic).
 - **E2E reaches the app as `parcel-map`, not `app`.** Chromium treats the single-label host `app`
   as the HSTS-preloaded `.app` TLD and upgrades it to HTTPS.
+- **The Node container has no DNS search domains** (`dns_search: .` in `compose.yaml`). Playwright's request context
+  looks a host up for IPv6 as well as IPv4 and waits for both; `parcel-map` has no IPv6 address, and with the host's
+  search domains that lookup went to the host's DNS servers and took up to 10 s, which made E2E tests fail at random.
 - **PHP-CS-Fixer runs with `setUnsupportedPhpVersionAllowed(true)`** until it supports PHP 8.6.
 
 ### With more time

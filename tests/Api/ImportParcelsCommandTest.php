@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ParcelMap\Tests\Api;
 
 use ParcelMap\Tests\Support\LocalHttpServer;
+use ParcelMap\Tests\Support\ProgramSearchPath;
 use ParcelMap\Tests\Support\SqliteFile;
 use ParcelMap\Tests\Support\TemporaryDirectory;
 use PDO;
@@ -211,6 +212,17 @@ final class ImportParcelsCommandTest extends TestCase
     }
 
     #[Test]
+    public function it_fails_when_ogr2ogr_cannot_be_started_and_publishes_nothing(): void
+    {
+        $result = $this->import(['parcels:import', '--export-date=2026-10-31'], environment: ['PATH' => ProgramSearchPath::NO_PROGRAMS]);
+
+        self::assertSame(1, $result->exitCode);
+        self::assertStringContainsString('Import failed: Cannot start "ogr2ogr":', $result->stderr);
+        self::assertStringNotContainsString('Unexpected error', $result->stderr);
+        self::assertFileDoesNotExist($this->dataDir->path . '/tiles/parcels.mbtiles');
+    }
+
+    #[Test]
     public function it_fails_when_the_export_is_not_published(): void
     {
         $result = $this->import(['parcels:import', '--export-date=2026-09-30']);
@@ -248,10 +260,12 @@ final class ImportParcelsCommandTest extends TestCase
     /**
      * @param list<string> $arguments
      * @param string $coverageFile a file of tests/Fixtures/coverage/
+     * @param array<string, string> $environment
      */
-    private function import(array $arguments, string $coverageFile = 'fixture.csv'): ConsoleResult
+    private function import(array $arguments, string $coverageFile = 'fixture.csv', array $environment = []): ConsoleResult
     {
         return ConsoleRunner::run($arguments, [
+            ...$environment,
             'PARCEL_MAP_DATA_DIR' => $this->dataDir->path,
             'PARCEL_MAP_COVERAGE_FILE' => 'tests/Fixtures/coverage/' . $coverageFile,
             'RUIAN_EXPORT_BASE_URL' => $this->server?->baseUrl() ?? 'http://127.0.0.1:9/',

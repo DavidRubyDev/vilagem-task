@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ParcelMap\Tests\Api;
 
 use ParcelMap\Tests\Support\LocalHttpServer;
+use ParcelMap\Tests\Support\ProgramSearchPath;
 use ParcelMap\Tests\Support\TemporaryDirectory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -85,6 +86,17 @@ final class GenerateCoverageCommandTest extends TestCase
     }
 
     #[Test]
+    public function it_fails_when_ogr2ogr_cannot_be_started_and_writes_nothing(): void
+    {
+        $result = $this->generate(['--district=3604', '--export-date=2026-10-31'], ['PATH' => ProgramSearchPath::NO_PROGRAMS]);
+
+        self::assertSame(1, $result->exitCode);
+        self::assertStringContainsString('Coverage generation failed: Cannot start "ogr2ogr":', $result->stderr);
+        self::assertStringNotContainsString('Unexpected error', $result->stderr);
+        self::assertFileDoesNotExist($this->coverageFile());
+    }
+
+    #[Test]
     public function it_prints_the_usage_when_the_district_is_missing(): void
     {
         $result = $this->generate([]);
@@ -132,10 +144,12 @@ final class GenerateCoverageCommandTest extends TestCase
 
     /**
      * @param list<string> $arguments
+     * @param array<string, string> $environment
      */
-    private function generate(array $arguments): ConsoleResult
+    private function generate(array $arguments, array $environment = []): ConsoleResult
     {
         return ConsoleRunner::run(['coverage:generate', ...$arguments], [
+            ...$environment,
             'PARCEL_MAP_DATA_DIR' => $this->directory->path,
             'PARCEL_MAP_COVERAGE_FILE' => $this->coverageFile(),
             'RUIAN_EXPORT_BASE_URL' => $this->server->baseUrl(),

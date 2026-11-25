@@ -14,6 +14,7 @@ use ParcelMap\Domain\Cadastre\Municipality;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
 use ParcelMap\Infrastructure\Import\ParcelConverterUsingOgr2ogr;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
+use ParcelMap\Tests\Support\ProgramSearchPath;
 use ParcelMap\Tests\Support\TemporaryDirectory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -27,6 +28,7 @@ final class ParcelConverterUsingOgr2ogrTest extends TestCase
     ];
 
     private TemporaryDirectory $work;
+    private ?ProgramSearchPath $searchPath = null;
 
     protected function setUp(): void
     {
@@ -35,6 +37,7 @@ final class ParcelConverterUsingOgr2ogrTest extends TestCase
 
     protected function tearDown(): void
     {
+        $this->searchPath?->restore();
         $this->work->remove();
     }
 
@@ -135,6 +138,21 @@ final class ParcelConverterUsingOgr2ogrTest extends TestCase
         } catch (ConversionFailed) {
             self::assertSame([], glob($this->work->path . '/municipalities/*'));
         }
+    }
+
+    #[Test]
+    public function it_reports_that_ogr2ogr_cannot_be_started_and_leaves_no_file(): void
+    {
+        $this->searchPath = ProgramSearchPath::hideAllPrograms();
+
+        try {
+            $this->converter()->convert($this->fixtureExport(), [self::area(659541, 'Jičín')]);
+            self::fail('Expected ConversionFailed.');
+        } catch (ConversionFailed $exception) {
+            self::assertStringContainsString('Cannot start "ogr2ogr"', $exception->getMessage());
+        }
+
+        self::assertSame([], glob($this->work->path . '/municipalities/*'));
     }
 
     private function converter(): ParcelConverterUsingOgr2ogr

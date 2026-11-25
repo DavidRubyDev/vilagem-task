@@ -11,6 +11,7 @@ use ParcelMap\Domain\Cadastre\MunicipalityCode;
 use ParcelMap\Infrastructure\Import\PlaceConverterUsingOgr2ogr;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
 use ParcelMap\Tests\Support\SqliteFile;
+use ParcelMap\Tests\Support\ProgramSearchPath;
 use ParcelMap\Tests\Support\TemporaryDirectory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -18,6 +19,7 @@ use PHPUnit\Framework\TestCase;
 final class PlaceConverterUsingOgr2ogrTest extends TestCase
 {
     private TemporaryDirectory $work;
+    private ?ProgramSearchPath $searchPath = null;
 
     protected function setUp(): void
     {
@@ -26,6 +28,7 @@ final class PlaceConverterUsingOgr2ogrTest extends TestCase
 
     protected function tearDown(): void
     {
+        $this->searchPath?->restore();
         $this->work->remove();
     }
 
@@ -123,6 +126,21 @@ final class PlaceConverterUsingOgr2ogrTest extends TestCase
             self::assertStringContainsString($path, $exception->getMessage());
             self::assertSame([], glob($this->work->path . '/places/*'));
         }
+    }
+
+    #[Test]
+    public function it_reports_that_ogr2ogr_cannot_be_started_and_leaves_no_file(): void
+    {
+        $this->searchPath = ProgramSearchPath::hideAllPrograms();
+
+        try {
+            $this->converter()->convert(self::export(572659, 'OB_572659'));
+            self::fail('Expected ConversionFailed.');
+        } catch (ConversionFailed $exception) {
+            self::assertStringContainsString('Cannot start "ogr2ogr"', $exception->getMessage());
+        }
+
+        self::assertSame([], glob($this->work->path . '/places/*'));
     }
 
     private function converter(): PlaceConverterUsingOgr2ogr

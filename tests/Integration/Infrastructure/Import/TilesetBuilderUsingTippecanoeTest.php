@@ -12,6 +12,7 @@ use ParcelMap\Domain\Cadastre\MunicipalityCode;
 use ParcelMap\Domain\Map\TileSizeBudget;
 use ParcelMap\Infrastructure\Import\TilesetBuilderUsingTippecanoe;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
+use ParcelMap\Tests\Support\ProgramSearchPath;
 use ParcelMap\Tests\Support\TemporaryDirectory;
 use ParcelMap\Tests\Support\MbtilesMetadata;
 use PDO;
@@ -22,6 +23,7 @@ use PHPUnit\Framework\TestCase;
 final class TilesetBuilderUsingTippecanoeTest extends TestCase
 {
     private TemporaryDirectory $work;
+    private ?ProgramSearchPath $searchPath = null;
 
     protected function setUp(): void
     {
@@ -30,6 +32,7 @@ final class TilesetBuilderUsingTippecanoeTest extends TestCase
 
     protected function tearDown(): void
     {
+        $this->searchPath?->restore();
         $this->work->remove();
     }
 
@@ -141,6 +144,18 @@ final class TilesetBuilderUsingTippecanoeTest extends TestCase
         $this->expectException(TileBuildFailed::class);
 
         $this->builder()->build([new ConvertedParcels(new MunicipalityCode(572659), $path, [new AreaParcelCount(new CadastralAreaCode(659541), 1)])], TileSizeBudget::smoothMap());
+    }
+
+    #[Test]
+    public function it_reports_that_tippecanoe_cannot_be_started(): void
+    {
+        $parcels = $this->fixtureParcels();
+        $this->searchPath = ProgramSearchPath::hideAllPrograms();
+
+        $this->expectException(TileBuildFailed::class);
+        $this->expectExceptionMessage('Cannot start "tippecanoe"');
+
+        $this->builder()->build([$parcels], TileSizeBudget::smoothMap());
     }
 
     private function builder(): TilesetBuilderUsingTippecanoe

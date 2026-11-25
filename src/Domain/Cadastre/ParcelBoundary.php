@@ -47,6 +47,21 @@ final readonly class ParcelBoundary
         return $this->rings;
     }
 
+    public function equals(self $other): bool
+    {
+        if (count($this->rings) !== count($other->rings)) {
+            return false;
+        }
+
+        foreach ($this->rings as $index => $ring) {
+            if (!self::sameRing($ring, $other->rings[$index])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /** The rectangle around the outer ring; holes lie inside it. */
     public function bounds(): Bounds
     {
@@ -57,5 +72,24 @@ final readonly class ParcelBoundary
             new Coordinates(min($longitudes), min($latitudes)),
             new Coordinates(max($longitudes), max($latitudes)),
         );
+    }
+
+    /**
+     * @param non-empty-list<Coordinates> $ring
+     * @param non-empty-list<Coordinates> $other
+     */
+    private static function sameRing(array $ring, array $other): bool
+    {
+        if (count($ring) !== count($other)) {
+            return false;
+        }
+
+        foreach ($ring as $index => $position) {
+            if (!$position->equals($other[$index])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

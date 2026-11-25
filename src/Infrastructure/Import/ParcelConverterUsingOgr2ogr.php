@@ -12,6 +12,7 @@ use ParcelMap\Application\Import\ConvertedParcels;
 use ParcelMap\Application\Import\DownloadedExport;
 use ParcelMap\Application\Import\ParcelConverter;
 use ParcelMap\Domain\Cadastre\CadastralArea;
+use ParcelMap\Infrastructure\Process\ProcessNotStarted;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
 
 /**
@@ -37,22 +38,26 @@ final readonly class ParcelConverterUsingOgr2ogr implements ParcelConverter
         }
         $output = sprintf('%s/%d.geojsonl', $directory, $export->municipality->value);
 
-        $result = $this->runner->run([
-            'ogr2ogr',
-            '-f', 'GeoJSONSeq',
-            $output,
-            sprintf('/vsizip/%s/%s', $export->path, basename($export->path, '.zip')),
-            '-sql', sprintf(
-                'SELECT Id AS id, DruhPozemkuKod AS landType, KatastralniUzemiKod AS areaCode, DruhCislovaniKod AS kind, '
-                . 'KmenoveCislo AS baseNumber, PododdeleniCisla AS subdivision, ZpusobyVyuzitiPozemku AS landUse, '
-                . 'VymeraParcely AS area, OriginalniHranice '
-                . 'FROM Parcely WHERE KatastralniUzemiKod IN (%s)',
-                implode(', ', array_map(static fn(CadastralArea $area): int => $area->code->value, $areas)),
-            ),
-            '-dialect', 'OGRSQL',
-            '-t_srs', 'EPSG:4326',
-            '-lco', 'COORDINATE_PRECISION=7',
-        ]);
+        try {
+            $result = $this->runner->run([
+                'ogr2ogr',
+                '-f', 'GeoJSONSeq',
+                $output,
+                sprintf('/vsizip/%s/%s', $export->path, basename($export->path, '.zip')),
+                '-sql', sprintf(
+                    'SELECT Id AS id, DruhPozemkuKod AS landType, KatastralniUzemiKod AS areaCode, DruhCislovaniKod AS kind, '
+                    . 'KmenoveCislo AS baseNumber, PododdeleniCisla AS subdivision, ZpusobyVyuzitiPozemku AS landUse, '
+                    . 'VymeraParcely AS area, OriginalniHranice '
+                    . 'FROM Parcely WHERE KatastralniUzemiKod IN (%s)',
+                    implode(', ', array_map(static fn(CadastralArea $area): int => $area->code->value, $areas)),
+                ),
+                '-dialect', 'OGRSQL',
+                '-t_srs', 'EPSG:4326',
+                '-lco', 'COORDINATE_PRECISION=7',
+            ]);
+        } catch (ProcessNotStarted $exception) {
+            throw ConversionFailed::because($exception->getMessage());
+        }
         if ($result->exitCode !== 0) {
             @unlink($output);
 

@@ -11,6 +11,7 @@ use ParcelMap\Domain\Cadastre\DistrictCode;
 use ParcelMap\Domain\Cadastre\ExportDate;
 use ParcelMap\Infrastructure\Coverage\DistrictAreaExtractorUsingOgr2ogr;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
+use ParcelMap\Tests\Support\ProgramSearchPath;
 use ParcelMap\Tests\Support\TemporaryDirectory;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -18,6 +19,7 @@ use PHPUnit\Framework\TestCase;
 final class DistrictAreaExtractorUsingOgr2ogrTest extends TestCase
 {
     private TemporaryDirectory $directory;
+    private ?ProgramSearchPath $searchPath = null;
 
     protected function setUp(): void
     {
@@ -26,6 +28,7 @@ final class DistrictAreaExtractorUsingOgr2ogrTest extends TestCase
 
     protected function tearDown(): void
     {
+        $this->searchPath?->restore();
         $this->directory->remove();
     }
 
@@ -75,6 +78,17 @@ final class DistrictAreaExtractorUsingOgr2ogrTest extends TestCase
         $this->expectException(StructureReadFailed::class);
 
         $this->extractor()->extract(new DownloadedStructure(ExportDate::fromString('2026-10-31'), $path, false), new DistrictCode(3604));
+    }
+
+    #[Test]
+    public function it_reports_that_ogr2ogr_cannot_be_started(): void
+    {
+        $this->searchPath = ProgramSearchPath::hideAllPrograms();
+
+        $this->expectException(StructureReadFailed::class);
+        $this->expectExceptionMessage('Cannot start "ogr2ogr"');
+
+        $this->extract(3604);
     }
 
     /**

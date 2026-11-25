@@ -72,6 +72,17 @@ final class GetParcelDetailUseCaseTest extends TestCase
     }
 
     #[Test]
+    public function it_maps_the_cadastral_area_and_the_municipality_separately(): void
+    {
+        $output = $this->useCase()->execute(new ParcelDetailInput(self::VERSION, 99225194010));
+
+        self::assertSame(740225, $output->cadastralAreaCode);
+        self::assertSame('Robousy', $output->cadastralAreaName);
+        self::assertSame(572659, $output->municipalityCode);
+        self::assertSame('Jičín', $output->municipalityName);
+    }
+
+    #[Test]
     public function it_rejects_when_no_data_is_imported(): void
     {
         $useCase = new GetParcelDetailUseCase(new ParcelTilesetRepositoryUsingMemory(null), new ParcelRepositoryUsingMemory(null));
@@ -143,7 +154,7 @@ final class GetParcelDetailUseCaseTest extends TestCase
                 new TilesetVersion(self::VERSION),
                 [
                     self::parcel(1753295604, ParcelKind::Building, 72, null, 13, null, 455),
-                    self::parcel(99225194010, ParcelKind::Land, 867, 121, 14, 26, 725),
+                    self::parcel(99225194010, ParcelKind::Land, 867, 121, 14, 26, 725, 740225, 'Robousy'),
                 ],
             ),
         );
@@ -160,13 +171,13 @@ final class GetParcelDetailUseCaseTest extends TestCase
         ));
     }
 
-    private static function parcel(int $id, ParcelKind $kind, int $base, ?int $subdivision, int $landType, ?int $landUse, int $area): Parcel
+    private static function parcel(int $id, ParcelKind $kind, int $base, ?int $subdivision, int $landType, ?int $landUse, int $area, int $areaCode = 659541, string $areaName = 'Jičín'): Parcel
     {
         $start = new Coordinates(15.35, 50.43);
 
         return new Parcel(
             new ParcelId($id),
-            new CadastralArea(new CadastralAreaCode(659541), 'Jičín', new Municipality(new MunicipalityCode(572659), 'Jičín')),
+            new CadastralArea(new CadastralAreaCode($areaCode), $areaName, new Municipality(new MunicipalityCode(572659), 'Jičín')),
             new ParcelNumber($kind, $base, $subdivision),
             new LandType($landType),
             $landUse === null ? null : new LandUse($landUse),

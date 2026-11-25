@@ -197,6 +197,20 @@ test.describe('the selected parcel in the URL', () => {
     await expect(panelOf(page).getByRole('heading')).toHaveText('Parcela 1171');
   });
 
+  test('fits the map to the parcel of a changed hash', async ({ page }) => {
+    const defaultViewTile = page.waitForResponse(`**/tiles/parcels/${FIXTURE_VERSION}/12/2222/1381.pbf`);
+    await openAt(page, null, null, null);
+    await defaultViewTile;
+    expect(requested.filter((path) => path.startsWith(`/tiles/parcels/${FIXTURE_VERSION}/16/`))).toEqual([]);
+    const fittedTile = page.waitForResponse(`**/tiles/parcels/${FIXTURE_VERSION}/16/35562/22101.pbf`);
+
+    await page.evaluate((id) => {
+      window.location.hash = `#parcel=${String(id)}`;
+    }, ST_72.id);
+
+    await fittedTile;
+  });
+
   test('says so when the linked parcel does not exist, and stays on the default view', async ({
     page,
     allowedConsoleErrors,

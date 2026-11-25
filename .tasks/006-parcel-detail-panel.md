@@ -1449,6 +1449,8 @@ expected reason, except the three ineffective ones listed at the end.
 3. `parcelDetail.test.ts` "the status is 500": without the `!response.ok` check the test still passes, because the
    JSON error body fails the shape check and also throws `ParcelDetailError`. The status branch is masked.
 
+Task 011 strengthens the tests of items 1 to 3 and the `hashchange` fit (`.tasks/011-backlog-hardening.md`).
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.
@@ -1458,3 +1460,11 @@ Filled in during the review loop (implement agent), one entry per round with fin
 1. Confirmed. `src/Infrastructure/Import/ParcelStoreBuilderUsingSqlite.php:238` and `tests/Integration/Infrastructure/Import/ParcelStoreBuilderUsingSqliteTest.php:242`, Code rules (`mixed`): both `mixed` parameters now have an `@param mixed` line that says why. Fixed in `feat(import): publish a parcel store with each tileset (#006)`.
 2. Confirmed. `frontend/src/parcelSelection.ts:17` and `CLAUDE.md:328`, DDD rules (Glossary in the same change): the "Selected parcel" row is added in `feat(map): show the details of a clicked parcel in a side panel (#006)` ("shown in the side panel"), extended in `feat(map): highlight the selected parcel (#006)` and `feat(map): keep the selected parcel in the URL (#006)` (`#parcel={id}`). Fixed in those three commits.
 3. Confirmed. `tests/Fake/UnreadableParcelRepositoryUsingMemory.php:14`, Naming: the fake is removed and `ParcelRepositoryUsingMemory` has an `unreadable` flag that makes `get()` throw `ParcelStoreUnreadable`; its parcels now come as a list argument, because a variadic could not be followed by the flag. Fixed in `feat(map): explain when parcels cannot be selected (#006)`.
+
+### Round 2: base 4ac6152, head 531cf2e, 2026-11-25
+
+Run by the main session for task 011 (`.tasks/011-backlog-hardening.md`), after the merge of task 006.
+
+1. Confirmed. `src/Domain/Cadastre/ParcelBoundary.php:11`, DDD rules ("Value objects are `final readonly` and compared by value (`equals()`)"): `ParcelBoundary` had no `equals()`, unlike the other value objects of `834d71a feat(import): publish a parcel store with each tileset (#006)`. The fix compares ring count, ring lengths and every position with `Coordinates::equals()`. The developer: "the review is correct. Lets fix this". Fixed on branch `refactor/011-backlog-hardening` in `refactor(parcel): compare parcel boundaries by value (#011)`.
+
+No rejected or superseded findings.

@@ -13,6 +13,7 @@ use ParcelMap\Domain\Cadastre\CadastralAreaCode;
 use ParcelMap\Domain\Cadastre\DistrictCode;
 use ParcelMap\Domain\Cadastre\Municipality;
 use ParcelMap\Domain\Cadastre\MunicipalityCode;
+use ParcelMap\Infrastructure\Process\ProcessNotStarted;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
 
 /**
@@ -62,14 +63,18 @@ final readonly class DistrictAreaExtractorUsingOgr2ogr implements DistrictAreaEx
      */
     private function query(DownloadedStructure $structure, string $sql, array $header): array
     {
-        $result = $this->runner->run([
-            'ogr2ogr',
-            '-f', 'CSV',
-            '/vsistdout/',
-            sprintf('/vsizip/%s/%s', $structure->path, basename($structure->path, '.zip')),
-            '-dialect', 'OGRSQL',
-            '-sql', $sql,
-        ]);
+        try {
+            $result = $this->runner->run([
+                'ogr2ogr',
+                '-f', 'CSV',
+                '/vsistdout/',
+                sprintf('/vsizip/%s/%s', $structure->path, basename($structure->path, '.zip')),
+                '-dialect', 'OGRSQL',
+                '-sql', $sql,
+            ]);
+        } catch (ProcessNotStarted $exception) {
+            throw StructureReadFailed::because($exception->getMessage());
+        }
         if ($result->exitCode !== 0) {
             throw StructureReadFailed::because(sprintf('ogr2ogr failed for %s: %s', $structure->path, trim($result->stderr)));
         }
