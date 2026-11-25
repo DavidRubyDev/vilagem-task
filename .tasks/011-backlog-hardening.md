@@ -408,10 +408,10 @@ because the raw `ProcessNotStarted` reaches the test:
 - [x] `make test-e2e` builds into `var/e2e/` and does not read `node_modules/` or `public/build/` of the working tree;
       the scripted reproduction of step 2 is red before and green after (logged).
 - [x] CLAUDE.md Commands section and the README targets table match the Makefile.
-- [ ] Every mutation of steps 3–6 fails its new or strengthened test, and each is logged with its result.
-- [ ] `adopt` mutation A fails the existing link test (or implement stopped and reported); mutation B is logged.
+- [x] Every mutation of steps 3–6 fails its new or strengthened test, and each is logged with its result.
+- [x] `adopt` mutation A fails the existing link test (or implement stopped and reported); mutation B is logged.
 - [x] `ParcelBoundary` has `equals()`, covered by the five unit scenarios of step 7.
-- [ ] `.tasks/006-parcel-detail-panel.md` records review round 2 with the confirmed finding and its fixing commit.
+- [x] `.tasks/006-parcel-detail-panel.md` records review round 2 with the confirmed finding and its fixing commit.
 - [ ] `git grep ProcessNotStarted -- src` outside `src/Infrastructure/Process/` lists only the four adapters (import
       and catch).
 - [ ] With ogr2ogr missing, both commands print the one-line failure shown above, exit code 1, no stack trace.
@@ -521,6 +521,19 @@ Filled in by the implement agent, one entry per step.
 - Green: `ParcelBoundary::equals(self $other): bool` compares ring count, ring lengths and every position with
   `Coordinates::equals()`, in order (private helper `sameRing()`). The "ring has more positions" case is asserted in
   both directions, the "extra hole" case too. No production caller, no other change.
+
+### Step 8: `docs(tasks): record review round 2 of task 006 (#011)`
+
+- `.tasks/006-parcel-detail-panel.md`: "Round 2" added to `## Review` (the one confirmed finding and its fixing commit),
+  and a pointer to task 011 under "Ineffective tests found".
+- `adopt` mutation check (Decision 7), run against the existing E2E test "opens a link to a parcel fitted to it,
+  without loading the default view first" (each run rebuilt `var/e2e/build`; baseline green):
+  - Mutation A, the `map.once('load', ...)` block that calls `selection.adopt(linked.detail)` removed from `main.ts`:
+    the test fails, `expect.poll(() => countHighlightPixels(page)).toBeGreaterThan(100)` receives 0. As the plan
+    expected, so the plan holds and no new test is needed.
+  - Mutation B, `selection.adopt(linked.detail)` called at once instead of on `load`: the test also fails (5.2 s, the same
+    highlight assertion).
+  - `main.ts` restored and the build redone; the test is green again. No production change committed.
 
 ## Review
 
