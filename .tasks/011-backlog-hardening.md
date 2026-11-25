@@ -410,7 +410,7 @@ because the raw `ProcessNotStarted` reaches the test:
 - [x] CLAUDE.md Commands section and the README targets table match the Makefile.
 - [ ] Every mutation of steps 3–6 fails its new or strengthened test, and each is logged with its result.
 - [ ] `adopt` mutation A fails the existing link test (or implement stopped and reported); mutation B is logged.
-- [ ] `ParcelBoundary` has `equals()`, covered by the five unit scenarios of step 7.
+- [x] `ParcelBoundary` has `equals()`, covered by the five unit scenarios of step 7.
 - [ ] `.tasks/006-parcel-detail-panel.md` records review round 2 with the confirmed finding and its fixing commit.
 - [ ] `git grep ProcessNotStarted -- src` outside `src/Infrastructure/Process/` lists only the four adapters (import
       and catch).
@@ -514,6 +514,13 @@ Filled in by the implement agent, one entry per step.
     test fails (waits 30 s for the tile, test timeout).
   - M2 empty `fitTo()` body: the existing test stays green, the new test fails the same way.
   - Code restored and the build redone; both tests green.
+
+### Step 7: `refactor(parcel): compare parcel boundaries by value (#011)`
+
+- Red: the five new cases in `ParcelBoundaryTest` failed (`Call to undefined method ... equals()`).
+- Green: `ParcelBoundary::equals(self $other): bool` compares ring count, ring lengths and every position with
+  `Coordinates::equals()`, in order (private helper `sameRing()`). The "ring has more positions" case is asserted in
+  both directions, the "extra hole" case too. No production caller, no other change.
 
 ## Review
 

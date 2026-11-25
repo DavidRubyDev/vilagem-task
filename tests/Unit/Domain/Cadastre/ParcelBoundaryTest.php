@@ -64,6 +64,63 @@ final class ParcelBoundaryTest extends TestCase
         self::assertSame(50.8, $bounds->northEast->latitude);
     }
 
+    #[Test]
+    public function it_equals_a_boundary_built_separately_from_the_same_rings(): void
+    {
+        self::assertTrue(self::withHole()->equals(self::withHole()));
+    }
+
+    #[Test]
+    public function it_differs_from_a_boundary_in_which_a_position_differs(): void
+    {
+        $hole = [self::at(1.2, 1.2), self::at(1.4, 1.2), self::at(1.4, 1.5), self::at(1.2, 1.2)];
+
+        self::assertFalse(self::withHole()->equals(ParcelBoundary::fromRings([self::square(), $hole])));
+    }
+
+    #[Test]
+    public function it_differs_from_a_boundary_with_an_extra_hole(): void
+    {
+        $other = [self::at(1.6, 1.6), self::at(1.8, 1.6), self::at(1.8, 1.8), self::at(1.6, 1.6)];
+
+        self::assertFalse(self::withHole()->equals(ParcelBoundary::fromRings([self::square(), self::hole(), $other])));
+        self::assertFalse(ParcelBoundary::fromRings([self::square(), self::hole(), $other])->equals(self::withHole()));
+    }
+
+    #[Test]
+    public function it_differs_from_a_boundary_whose_ring_has_more_positions_but_starts_with_the_same_ones(): void
+    {
+        $longer = [self::at(1, 1), self::at(2, 1), self::at(2, 2), self::at(1.5, 2.5), self::at(1, 1)];
+
+        self::assertFalse(
+            ParcelBoundary::fromRings([[self::at(1, 1), self::at(2, 1), self::at(2, 2), self::at(1, 1)]])
+                ->equals(ParcelBoundary::fromRings([$longer])),
+        );
+        self::assertFalse(
+            ParcelBoundary::fromRings([$longer])
+                ->equals(ParcelBoundary::fromRings([[self::at(1, 1), self::at(2, 1), self::at(2, 2), self::at(1, 1)]])),
+        );
+    }
+
+    #[Test]
+    public function it_differs_from_a_boundary_with_the_same_rings_in_another_order(): void
+    {
+        self::assertFalse(self::withHole()->equals(ParcelBoundary::fromRings([self::hole(), self::square()])));
+    }
+
+    private static function withHole(): ParcelBoundary
+    {
+        return ParcelBoundary::fromRings([self::square(), self::hole()]);
+    }
+
+    /**
+     * @return list<Coordinates>
+     */
+    private static function hole(): array
+    {
+        return [self::at(1.2, 1.2), self::at(1.4, 1.2), self::at(1.4, 1.4), self::at(1.2, 1.2)];
+    }
+
     /**
      * @return list<Coordinates>
      */
