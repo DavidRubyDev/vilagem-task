@@ -1,6 +1,6 @@
 # 011: Backlog hardening: stable E2E runs, stronger parcel tests, programs that cannot start
 
-- **Status:** approved
+- **Status:** in-progress
 - **Created:** 2026-11-25
 - **Branch:** `refactor/011-backlog-hardening`
 - **Request:** "merged. Lets do all the backlog stuff", then "lets plan 011, 012 and 013 as one refactor/fix task".
@@ -400,10 +400,10 @@ because the raw `ProcessNotStarted` reaches the test:
 
 ## Acceptance criteria
 
-- [ ] `tests/E2E/environment.spec.ts` fails before the `compose.yaml` change and passes after it (both logged).
-- [ ] The full E2E suite with `--repeat-each=10` passes in the test project after step 1 (logged with count and
+- [x] `tests/E2E/environment.spec.ts` fails before the `compose.yaml` change and passes after it (both logged; red with simulated search domains).
+- [x] The full E2E suite with `--repeat-each=10` passes in the test project after step 1 (logged with count and
       duration).
-- [ ] The README no longer names a flaky E2E test, and no longer claims that Playwright's request context and
+- [x] The README no longer names a flaky E2E test, and no longer claims that Playwright's request context and
       Chromium add about 40 ms; `tests/Perf/search.spec.ts` says the same.
 - [ ] `make test-e2e` builds into `var/e2e/` and does not read `node_modules/` or `public/build/` of the working tree;
       the scripted reproduction of step 2 is red before and green after (logged).
@@ -441,6 +441,21 @@ because the raw `ProcessNotStarted` reaches the test:
 ## Implementation log
 
 Filled in by the implement agent, one entry per step.
+
+### Step 1: `test(e2e): look the app up without the host's DNS search domains (#011)`
+
+- Red: `tests/E2E/environment.spec.ts` passes on the current network, because the host's `/etc/resolv.conf` has no
+  `search` line today (the developer is on a different network than on 2026-11-24; the node container's resolv.conf
+  had only `nameserver 127.0.0.11` and `options ndots:0`). The plan's risk "on a network without search domains it
+  would pass before the fix too" applies. Red was therefore shown by simulating the host's search domains with a
+  temporary compose override (`dns_search: [westcom.local, home]` on `node`, kept outside the repo): the test failed
+  with `IPv6 lookup of parcel-map took 8019 ms`, 5 of 5 runs failed with `--repeat-each=5`.
+- Green: `dns_search: .` on the `node` service in `compose.yaml` (with the reason as a comment); on the real network
+  the test passes in about 30 ms (5 of 5). README: removed the "Known issue" paragraph, added the design-notes bullet,
+  rewrote Smoothness evidence item 3; `tests/Perf/search.spec.ts` header comment corrected.
+- Verification: full suite in the test project, `--repeat-each=10`: 1110 passed (111 tests x 10), 3.9 minutes, 0 failed.
+  (This network has no search domains, so this run could not show the flake itself; the 2026-11-24 measurements in
+  the plan did.)
 
 ## Review
 

@@ -12,6 +12,10 @@ services:
       CI: '${CI:-}'
     init: true
     ipc: host
+    # Playwright's request context looks hosts up for IPv6 as well and waits for it. The single-label container name
+    # has no IPv6 address, and the host's search domains sent that lookup to the host's DNS servers, which took up to
+    # 10 s. Without search domains the lookup fails at once.
+    dns_search: .
     command: ['sh', '-c', 'npm ci --no-audit --no-fund && npm run build']
 
   app:
