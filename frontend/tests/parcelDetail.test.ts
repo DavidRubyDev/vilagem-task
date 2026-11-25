@@ -83,7 +83,7 @@ describe('loadParcelDetail', () => {
     };
 
     it('the status is 500', async () => {
-      await rejects(() => Promise.resolve(jsonResponse({ error: 'internal_error' }, 500)));
+      await rejects(() => Promise.resolve(jsonResponse(validBody, 500)));
     });
 
     it('the request fails', async () => {

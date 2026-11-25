@@ -494,6 +494,15 @@ Filled in by the implement agent, one entry per step.
   - M2 `MAX_DIGITS = 14`: red, the new 15-digit test answers 404.
   - Handler restored after each. The API case "id with 16 digits" is unchanged.
 
+### Step 5: `test(map): reject a failed parcel detail response whatever its body (#011)`
+
+- `frontend/tests/parcelDetail.test.ts`, "the status is 500": the response is now `jsonResponse(validBody, 500)`
+  instead of `{ error: 'internal_error' }`, so only the status check can reject it. This is a deliberate change of an
+  existing test; it gets stronger, nothing is loosened.
+- Mutation (working tree only): remove the `if (!response.ok)` block of `parcelDetail.ts`. With the old test: all 20
+  tests green (the gap: the invalid body was rejected by the shape check). With the new test: red ("the status is
+  500"). Code restored, 20 green.
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.
