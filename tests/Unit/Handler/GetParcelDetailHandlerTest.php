@@ -86,6 +86,18 @@ final class GetParcelDetailHandlerTest extends TestCase
         );
     }
 
+    #[Test]
+    public function it_answers_the_cadastral_area_and_the_municipality_as_separate_members(): void
+    {
+        $response = $this->handler()->handle($this->request('99225194010'));
+
+        self::assertSame(200, $response->status);
+        $body = json_decode($response->body, true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame(['code' => 740225, 'name' => 'Robousy'], $body['cadastralArea'] ?? null);
+        self::assertSame(['code' => 572659, 'name' => 'Jičín'], $body['municipality'] ?? null);
+    }
+
     private function request(string $id): Request
     {
         return new Request('GET', '/api/parcels', [], ['version' => self::VERSION, 'id' => $id]);
@@ -93,16 +105,6 @@ final class GetParcelDetailHandlerTest extends TestCase
 
     private function handler(): GetParcelDetailHandler
     {
-        $start = new Coordinates(15.35, 50.43);
-        $parcel = new Parcel(
-            new ParcelId(1753295604),
-            new CadastralArea(new CadastralAreaCode(659541), 'Jičín', new Municipality(new MunicipalityCode(572659), 'Jičín')),
-            new ParcelNumber(ParcelKind::Building, 72, null),
-            new LandType(13),
-            null,
-            new Area(455),
-            ParcelBoundary::fromRings([[$start, new Coordinates(15.36, 50.43), new Coordinates(15.36, 50.44), $start]]),
-        );
         $tileset = new ParcelTileset(
             new TilesetVersion(self::VERSION),
             ExportDate::fromString('2026-10-31'),
@@ -113,7 +115,25 @@ final class GetParcelDetailHandlerTest extends TestCase
 
         return new GetParcelDetailHandler(new GetParcelDetailUseCase(
             new ParcelTilesetRepositoryUsingMemory($tileset),
-            new ParcelRepositoryUsingMemory(new TilesetVersion(self::VERSION), [$parcel]),
+            new ParcelRepositoryUsingMemory(new TilesetVersion(self::VERSION), [
+                self::parcel(1753295604, ParcelKind::Building, 72, null, 659541, 'Jičín'),
+                self::parcel(99225194010, ParcelKind::Land, 867, 121, 740225, 'Robousy'),
+            ]),
         ));
+    }
+
+    private static function parcel(int $id, ParcelKind $kind, int $base, ?int $subdivision, int $areaCode, string $areaName): Parcel
+    {
+        $start = new Coordinates(15.35, 50.43);
+
+        return new Parcel(
+            new ParcelId($id),
+            new CadastralArea(new CadastralAreaCode($areaCode), $areaName, new Municipality(new MunicipalityCode(572659), 'Jičín')),
+            new ParcelNumber($kind, $base, $subdivision),
+            new LandType(13),
+            null,
+            new Area(455),
+            ParcelBoundary::fromRings([[$start, new Coordinates(15.36, 50.43), new Coordinates(15.36, 50.44), $start]]),
+        );
     }
 }

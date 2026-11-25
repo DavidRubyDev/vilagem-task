@@ -472,6 +472,19 @@ Filled in by the implement agent, one entry per step.
 - `npm ci` works with a bind-mounted `/app/node_modules` (npm empties it instead of removing it).
 - The reproduction ran `make assets` on the shared tree; it was left rebuilt.
 
+### Step 3: `test(parcel): tell the cadastral area from the municipality in the detail tests (#011)`
+
+- New tests: `GetParcelDetailUseCaseTest::it_maps_the_cadastral_area_and_the_municipality_separately` and
+  `GetParcelDetailHandlerTest::it_answers_the_cadastral_area_and_the_municipality_as_separate_members` (area 740225
+  "Robousy", municipality 572659 "Jičín", fixture parcel 99225194010). The test helpers got parameters for the area.
+- Mutations (working tree only, never committed), old = the existing mapping tests of both classes (3 tests), new = the
+  two new tests; baseline: all 5 green.
+  - M1 use case, area name takes the municipality name: old green, new red (both new tests fail).
+  - M2 use case, municipality name takes the area name: old green, new red (both).
+  - M3 handler JSON, `cadastralArea.name` takes the municipality name: old green, new red (handler test).
+  - M4 handler JSON, `municipality.name` takes the area name: old green, new red (handler test).
+  - Code restored after each (`git checkout`).
+
 ## Review
 
 Filled in during the review loop (implement agent), one entry per round with findings.
