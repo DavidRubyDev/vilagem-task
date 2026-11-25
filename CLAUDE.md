@@ -253,7 +253,7 @@ form is shown where useful. `PHP` below means `docker compose run --rm --no-deps
 ```bash
 make check          # full test + QA (what CI runs, one after another); use for git rebase --exec
 make qa             # cs phpstan deptrac lint-ci typecheck lint-frontend
-make test           # test-hooks test-unit test-integration test-api test-frontend test-e2e (run make assets first)
+make test           # test-hooks test-unit test-integration test-api test-frontend test-e2e
 make test-unit      # PHP vendor/bin/phpunit --testsuite unit
 make test-integration  # PHP vendor/bin/phpunit --testsuite integration (real GDAL/tippecanoe/SQLite, local HTTP server)
 make test-api       # starts the test app (project parcel-map-test, fixture data), then PHP vendor/bin/phpunit --testsuite api in it
@@ -264,7 +264,8 @@ make typecheck      # NODE npm run typecheck (tsc -b)
 make lint-frontend  # NODE npm run lint (ESLint) and npm run format:check (Prettier)
 make format         # cs-fix + NODE npm run format
 make test-frontend  # NODE npm test (Vitest)
-make test-e2e       # starts the test app, then NODE npm run e2e in the test project (Playwright; needs make assets first)
+make test-e2e       # builds the frontend into var/e2e/ (make e2e-assets), starts the test app, then NODE npm run e2e in the test project (Playwright)
+make e2e-assets     # npm ci and npm run build in the test project into var/e2e/node_modules and var/e2e/build (independent of make assets)
 make up-app         # starts the test app: docker compose -p parcel-map-test -f compose.yaml -f compose.test.yaml up -d --wait --no-deps app
 make data           # PHP composer install, then PHP bin/console parcels:import: download the RÚIAN export (cached) and build data/tiles/parcels.mbtiles, the parcel store and the search index
 make perf           # NODE npm run perf; Playwright measurement of the running app (make up) with real data (make data); not part of check

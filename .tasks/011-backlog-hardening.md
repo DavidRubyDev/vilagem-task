@@ -405,9 +405,9 @@ because the raw `ProcessNotStarted` reaches the test:
       duration).
 - [x] The README no longer names a flaky E2E test, and no longer claims that Playwright's request context and
       Chromium add about 40 ms; `tests/Perf/search.spec.ts` says the same.
-- [ ] `make test-e2e` builds into `var/e2e/` and does not read `node_modules/` or `public/build/` of the working tree;
+- [x] `make test-e2e` builds into `var/e2e/` and does not read `node_modules/` or `public/build/` of the working tree;
       the scripted reproduction of step 2 is red before and green after (logged).
-- [ ] CLAUDE.md Commands section and the README targets table match the Makefile.
+- [x] CLAUDE.md Commands section and the README targets table match the Makefile.
 - [ ] Every mutation of steps 3–6 fails its new or strengthened test, and each is logged with its result.
 - [ ] `adopt` mutation A fails the existing link test (or implement stopped and reported); mutation B is logged.
 - [ ] `ParcelBoundary` has `equals()`, covered by the five unit scenarios of step 7.
@@ -456,6 +456,21 @@ Filled in by the implement agent, one entry per step.
 - Verification: full suite in the test project, `--repeat-each=10`: 1110 passed (111 tests x 10), 3.9 minutes, 0 failed.
   (This network has no search domains, so this run could not show the flake itself; the 2026-11-24 measurements in
   the plan did.)
+
+### Step 2: `build(e2e): give the E2E tests their own node_modules and frontend build (#011)`
+
+- Done as planned: `compose.test.yaml` mounts `var/e2e/node_modules` and `var/e2e/build` into the node service (build
+  also read-only into the app service); Makefile `e2e-dirs`, `e2e-assets`; `up-app: e2e-dirs`;
+  `test-e2e: e2e-assets up-app`; `e2e` no longer depends on `assets`. CLAUDE.md Commands and the README table and test
+  project paragraph updated.
+- Scripted reproduction (Decision 4), `make test-e2e` with `make assets` looping in a second process
+  (`/tmp/.../scratchpad/repro.sh`):
+  - Before the change (commit a459def): red at once, `sh: 1: playwright: not found` (`npm ci` of `make assets` had
+    deleted `node_modules/`), `make: *** [Makefile:94: test-e2e] Error 127`; 1 asset rebuild ran.
+  - After the change: green, 111 passed in 38.4 s while `make assets` ran to completion 10 times.
+  - Plain `make test-e2e` after the change (first run, builds `var/e2e/` from scratch): 111 passed.
+- `npm ci` works with a bind-mounted `/app/node_modules` (npm empties it instead of removing it).
+- The reproduction ran `make assets` on the shared tree; it was left rebuilt.
 
 ## Review
 

@@ -215,7 +215,8 @@ title and the fallback error of `frontend/index.html` repeat the Czech texts and
 | `make format`     | `PHP vendor/bin/php-cs-fixer fix`, `NODE npm run format`                      | Format PHP and frontend code                  |
 | `make test-frontend` | `NODE npm test`                                                            | Vitest unit tests                             |
 | `make perf`       | `NODE npm run perf`                                                           | Browser measurement of the district views against the app of `make up` with real data (`make data` first); not part of `make check` |
-| `make test-e2e`   | starts the test app, then `npm run e2e` in the test project                   | Playwright E2E (needs `make assets` first)    |
+| `make test-e2e`   | `make e2e-assets`, starts the test app, then `npm run e2e` in the test project | Playwright E2E                                |
+| `make e2e-assets` | `npm ci` and `npm run build` in the test project, into `var/e2e/`             | The E2E tests' own `node_modules` and frontend build |
 | `make assets`     | `NODE npm ci`, `NODE npm run build`                                           | Build the frontend into `public/build/`       |
 | `make watch`      | `NODE npm run watch`                                                          | Rebuild the frontend on change                |
 | `make lint-ci`    | `docker run --rm -v "$PWD":/repo -w /repo rhysd/actionlint:1.7.12 .github/workflows/ci.yml` | Lint the GitHub workflow        |
@@ -224,7 +225,9 @@ Run `composer install` first (`make install-php`); the `make` check groups do it
 
 The API and E2E tests run against their own app: a separate compose project (`parcel-map-test`,
 `compose.test.yaml`) with no published port and the fixture data in `tests/Fixtures/data`, so
-`make check` never restarts or changes the app of `make up`. `make down` stops both projects.
+`make check` never restarts or changes the app of `make up`. The test project also has its own `node_modules` and
+frontend build in `var/e2e/` (`make e2e-assets`), so `make assets`, `make watch` or the dev stack cannot break a
+running E2E test. `make down` stops both projects.
 
 ### Smoothness evidence
 
