@@ -8,6 +8,7 @@ use ParcelMap\Application\Import\ConversionFailed;
 use ParcelMap\Application\Import\ConvertedPlaces;
 use ParcelMap\Application\Import\DownloadedExport;
 use ParcelMap\Application\Import\PlaceConverter;
+use ParcelMap\Infrastructure\Process\ProcessNotStarted;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
 
 /**
@@ -34,16 +35,20 @@ final readonly class PlaceConverterUsingOgr2ogr implements PlaceConverter
             throw ConversionFailed::because('cannot delete ' . $output . '.');
         }
 
-        $result = $this->runner->run([
-            'ogr2ogr',
-            '-f', 'SQLite',
-            $output,
-            sprintf('/vsizip/%s/%s', $export->path, basename($export->path, '.zip')),
-            'CastiObci', 'Ulice', 'StavebniObjekty', 'AdresniMista',
-            '-t_srs', 'EPSG:4326',
-            '-oo', 'READ_MODE=SEQUENTIAL_LAYERS',
-            '-lco', 'FORMAT=WKT',
-        ]);
+        try {
+            $result = $this->runner->run([
+                'ogr2ogr',
+                '-f', 'SQLite',
+                $output,
+                sprintf('/vsizip/%s/%s', $export->path, basename($export->path, '.zip')),
+                'CastiObci', 'Ulice', 'StavebniObjekty', 'AdresniMista',
+                '-t_srs', 'EPSG:4326',
+                '-oo', 'READ_MODE=SEQUENTIAL_LAYERS',
+                '-lco', 'FORMAT=WKT',
+            ]);
+        } catch (ProcessNotStarted $exception) {
+            throw ConversionFailed::because($exception->getMessage());
+        }
         if ($result->exitCode !== 0) {
             @unlink($output);
 

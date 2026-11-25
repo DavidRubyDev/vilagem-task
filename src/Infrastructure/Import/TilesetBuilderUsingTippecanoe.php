@@ -9,6 +9,7 @@ use ParcelMap\Application\Import\ConvertedParcels;
 use ParcelMap\Application\Import\TileBuildFailed;
 use ParcelMap\Application\Import\TilesetBuilder;
 use ParcelMap\Domain\Map\TileSizeBudget;
+use ParcelMap\Infrastructure\Process\ProcessNotStarted;
 use ParcelMap\Infrastructure\Process\ProcessRunner;
 
 /**
@@ -35,28 +36,32 @@ final readonly class TilesetBuilderUsingTippecanoe implements TilesetBuilder
         }
         $output = $this->workDir . '/parcels.mbtiles';
 
-        $result = $this->runner->run([
-            'tippecanoe',
-            '--output=' . $output,
-            '--force',
-            '--quiet',
-            '--layer=parcels',
-            '--name=Parcels',
-            '--minimum-zoom=9',
-            '--maximum-zoom=16',
-            '--use-attribute-for-id=id',
-            '--include=landType',
-            '--detect-shared-borders',
-            '--maximum-tile-bytes=' . $budget->maxBytes,
-            '--drop-smallest-as-needed',
-            '--simplification=4',
-            '--simplify-only-low-zooms',
-            '--extend-zooms-if-still-dropping',
-            '--no-tiny-polygon-reduction-at-maximum-zoom',
-            '--read-parallel',
-            '--temporary-directory=' . $temporaryDirectory,
-            ...array_map(static fn(ConvertedParcels $converted): string => $converted->path, $parcels),
-        ]);
+        try {
+            $result = $this->runner->run([
+                'tippecanoe',
+                '--output=' . $output,
+                '--force',
+                '--quiet',
+                '--layer=parcels',
+                '--name=Parcels',
+                '--minimum-zoom=9',
+                '--maximum-zoom=16',
+                '--use-attribute-for-id=id',
+                '--include=landType',
+                '--detect-shared-borders',
+                '--maximum-tile-bytes=' . $budget->maxBytes,
+                '--drop-smallest-as-needed',
+                '--simplification=4',
+                '--simplify-only-low-zooms',
+                '--extend-zooms-if-still-dropping',
+                '--no-tiny-polygon-reduction-at-maximum-zoom',
+                '--read-parallel',
+                '--temporary-directory=' . $temporaryDirectory,
+                ...array_map(static fn(ConvertedParcels $converted): string => $converted->path, $parcels),
+            ]);
+        } catch (ProcessNotStarted $exception) {
+            throw TileBuildFailed::because($exception->getMessage());
+        }
         if ($result->exitCode !== 0) {
             throw TileBuildFailed::because('tippecanoe failed: ' . trim($result->stderr));
         }

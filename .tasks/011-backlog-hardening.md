@@ -1,6 +1,6 @@
 # 011: Backlog hardening: stable E2E runs, stronger parcel tests, programs that cannot start
 
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-11-25
 - **Branch:** `refactor/011-backlog-hardening`
 - **Request:** "merged. Lets do all the backlog stuff", then "lets plan 011, 012 and 013 as one refactor/fix task".
@@ -412,14 +412,14 @@ because the raw `ProcessNotStarted` reaches the test:
 - [x] `adopt` mutation A fails the existing link test (or implement stopped and reported); mutation B is logged.
 - [x] `ParcelBoundary` has `equals()`, covered by the five unit scenarios of step 7.
 - [x] `.tasks/006-parcel-detail-panel.md` records review round 2 with the confirmed finding and its fixing commit.
-- [ ] `git grep ProcessNotStarted -- src` outside `src/Infrastructure/Process/` lists only the four adapters (import
+- [x] `git grep ProcessNotStarted -- src` outside `src/Infrastructure/Process/` lists only the four adapters (import
       and catch).
-- [ ] With ogr2ogr missing, both commands print the one-line failure shown above, exit code 1, no stack trace.
-- [ ] Steps 3–6 and 8 change no production file. The only production changes are `compose.yaml`,
+- [x] With ogr2ogr missing, both commands print the one-line failure shown above, exit code 1, no stack trace.
+- [x] Steps 3–6 and 8 change no production file. The only production changes are `compose.yaml`,
       `compose.test.yaml` and `Makefile` (steps 1–2), `ParcelBoundary` (step 7) and the four process adapters
       (steps 9–10).
-- [ ] Exit codes, HTTP status codes and the map's behaviour are unchanged; no existing test is weakened.
-- [ ] `make check` passes at every commit (`git rebase --exec "make check" main`).
+- [x] Exit codes, HTTP status codes and the map's behaviour are unchanged; no existing test is weakened.
+- [x] `make check` passes at every commit (`git rebase --exec "make check" main`).
 
 ## Risks and assumptions
 
