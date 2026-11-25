@@ -535,6 +535,15 @@ Filled in by the implement agent, one entry per step.
     highlight assertion).
   - `main.ts` restored and the build redone; the test is green again. No production change committed.
 
-## Review
+### Step 9: `fix(coverage): report an ogr2ogr that cannot start as a coverage generation failure (#011)`
 
-Filled in during the review loop (implement agent), one entry per round with findings.
+- Red (outer test first): `GenerateCoverageCommandTest::it_fails_when_ogr2ogr_cannot_be_started_and_writes_nothing`
+  failed with `Unexpected error: Cannot start "ogr2ogr": proc_open(): posix_spawn() failed: No such file or directory`;
+  the integration test `DistrictAreaExtractorUsingOgr2ogrTest::it_reports_that_ogr2ogr_cannot_be_started` failed
+  with the raw `ProcessNotStarted`.
+- Green: `DistrictAreaExtractorUsingOgr2ogr::query()` catches `ProcessNotStarted` around the runner call and throws
+  `StructureReadFailed::because($exception->getMessage())`. New test helper `tests/Support/ProgramSearchPath`
+  (`hideAllPrograms()`, `restore()`, plus the constant `NO_PROGRAMS` that the API tests pass as `PATH`); the
+  integration test restores `PATH` in `tearDown()`. `GenerateCoverageCommandTest::generate()` takes an optional
+  environment.
+ the review loop (implement agent), one entry per round with findings.
